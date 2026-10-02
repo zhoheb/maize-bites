@@ -1,5 +1,6 @@
 import { createDb, loadRootEnvFile, sql } from '@maize-bites/db';
 import { parseEnv } from './env.js';
+import { authCleanupJob, pruneEventsJob } from './jobs/housekeeping.js';
 import {
   deliveryFromEnv,
   digestJob,
@@ -21,7 +22,14 @@ if (!env.RESEND_API_KEY)
   console.warn('[worker] RESEND_API_KEY is not set; alert emails are printed to this log');
 if (!env.VAPID_PRIVATE_KEY) console.warn('[worker] VAPID keys are not set; push alerts will fail');
 
-const jobs: Job[] = [digestJob(db, console, delivery, env.WEB_ORIGIN)];
+const jobs: Job[] = [
+  digestJob(db, console, delivery, env.WEB_ORIGIN),
+  authCleanupJob(db, console),
+  pruneEventsJob(db, console, {
+    retentionDays: env.EVENT_RETENTION_DAYS,
+    intervalMinutes: env.PRUNE_INTERVAL_MINUTES,
+  }),
+];
 if (env.INGEST_CONTACT_EMAIL) {
   const llm = llmDepsFromEnv(env);
   if (!llm)

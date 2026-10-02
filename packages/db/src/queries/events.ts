@@ -267,3 +267,21 @@ export async function getPublishedEvent(
   });
   return items[0] ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// Retention
+// ---------------------------------------------------------------------------
+
+/**
+ * Deletes events whose effective end is before `cutoff`, whatever their status. Their
+ * classifications, reports, review flags, and notification log rows cascade; a submission keeps
+ * its row with event_id set to null. The eval set (eval/labeled.json) embeds its own copy of each
+ * event, so it doesn't depend on these rows. Returns the number of events deleted.
+ */
+export async function pruneEndedEvents(db: Database, cutoff: Date): Promise<number> {
+  const deleted = await db
+    .delete(events)
+    .where(sql`${effectiveEnd} < ${timestampParam(cutoff)}`)
+    .returning({ id: events.id });
+  return deleted.length;
+}

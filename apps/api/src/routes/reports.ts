@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { notImplemented } from '../errors.js';
 
-// Mounted at /api/events/:id/reports. Phase 2.
+// Mounted at /api/events/:id/reports. Phase 7.
 export function reportsRouter(): Router {
   const router = Router({ mergeParams: true });
 

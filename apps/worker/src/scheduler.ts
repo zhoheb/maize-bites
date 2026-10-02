@@ -11,6 +11,30 @@ export interface Job {
 
 export type Logger = Pick<Console, 'info' | 'warn' | 'error'>;
 
+/**
+ * A cron expression that fires every `minutes`. Cron steps only divide evenly within an hour or
+ * a day, so `minutes` must divide 60, or be whole hours that divide 24. Anything else throws.
+ */
+export function everyMinutesCron(minutes: number): string {
+  if (Number.isInteger(minutes) && minutes >= 1 && minutes < 60 && 60 % minutes === 0)
+    return minutes === 1 ? '* * * * *' : `*/${minutes} * * * *`;
+  const hours = minutes / 60;
+  if (Number.isInteger(hours) && hours >= 1 && hours <= 24 && 24 % hours === 0)
+    return hours === 1 ? '0 * * * *' : hours === 24 ? '0 0 * * *' : `0 */${hours} * * *`;
+  throw new Error(
+    `Unsupported interval ${minutes} min: use a divisor of 60, or whole hours that divide 24`,
+  );
+}
+
+export function isSupportedInterval(minutes: number): boolean {
+  try {
+    everyMinutesCron(minutes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface Scheduler {
   /** Stops scheduling new runs and resolves once in-flight runs finish. */
   stop: () => Promise<void>;

@@ -13,6 +13,7 @@ import { createTestDb, eventInput } from '@maize-bites/db/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { classifyPendingEvents } from '../classifier/classify-events.js';
 import type { FeedWindow } from '../happening/client.js';
+import { fakeMessage, mockAnthropic, verdictJson } from '../test/anthropic-mock.js';
 import { sampleFeed } from '../test/fixture.js';
 import {
   MIN_INGEST_INTERVAL_MS,
@@ -167,6 +168,40 @@ describe('classification step', () => {
     expect(live).toBeGreaterThan(0);
     const [run] = await db.select().from(ingestionRuns);
     expect(run?.classified).toBe(live);
+  });
+
+  it('counts rules and LLM verdicts together', async () => {
+    const [first] = sampleFeed as Record<string, unknown>[];
+    // Live at NOW (12:00 Ann Arbor time), and a rules candidate.
+    const item = {
+      ...first,
+      combined_title: 'Free pizza night',
+      datetime_start: '20260930T180000',
+      datetime_end: '20260930T200000',
+      has_end_time: 1,
+    };
+
+    const result = await runIngestion(
+      deps({
+        fetchWindow: () => Promise.resolve(windowOf([item])),
+        classify: (now) =>
+          classifyPendingEvents({
+            db,
+            logger,
+            now,
+            llm: {
+              createMessage: mockAnthropic(fakeMessage(verdictJson({ evidence: 'Free pizza' }))),
+              maxCalls: 10,
+            },
+          }),
+      }),
+    );
+
+    const rows = await db.select({ method: classifications.method }).from(classifications);
+    expect(rows.map((r) => r.method).sort()).toEqual(['llm', 'rules']);
+    expect(result.classified).toBe(2);
+    const [run] = await db.select().from(ingestionRuns);
+    expect(run?.classified).toBe(2);
   });
 
   it('records a classifier crash as a run error without losing the ingested events', async () => {

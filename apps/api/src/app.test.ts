@@ -79,10 +79,6 @@ describe('consistent error format', () => {
   it.each([
     ['post', '/api/submissions'],
     ['post', '/api/events/6f1c1b7e-8d8a-4f3e-9d61-2b3c6f0e9a11/reports'],
-    ['get', '/api/admin/review-queue'],
-    ['post', '/api/admin/events/6f1c1b7e-8d8a-4f3e-9d61-2b3c6f0e9a11/override'],
-    ['post', '/api/admin/submissions/6f1c1b7e-8d8a-4f3e-9d61-2b3c6f0e9a11'],
-    ['get', '/api/admin/metrics'],
   ] as const)('501 for planned route %s %s', async (method, path) => {
     const res = await request(api.app)[method](path);
     expect(res.status).toBe(501);

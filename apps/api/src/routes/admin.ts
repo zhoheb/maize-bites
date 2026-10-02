@@ -1,9 +1,11 @@
 import { Router } from 'express';
+import { requireAdmin } from '../auth/session.js';
 import { notImplemented } from '../errors.js';
 
-// Mounted at /api/admin. Phase 2. All routes require users.is_admin.
+// Mounted at /api/admin. Phase 7. All routes require users.is_admin.
 export function adminRouter(): Router {
   const router = Router();
+  router.use(requireAdmin);
 
   // TODO GET /review-queue  listReviewQueue (review-band verdicts + LLM failures) and pending submissions.
   router.get('/review-queue', notImplemented);

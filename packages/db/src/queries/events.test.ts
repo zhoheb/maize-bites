@@ -1,12 +1,14 @@
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Database, DbHandle } from '../client.js';
 import { computeContentHash } from '../content-hash.js';
-import { buildings, events, type BuildingRow, type EventRow } from '../schema.js';
+import { buildings, classifications, events, type BuildingRow, type EventRow } from '../schema.js';
 import { createTestDb, eventInput, insertClassification } from '../testing.js';
 import {
   getActiveClassification,
   getPublishedEvent,
   listPublishedEvents,
+  pruneEndedEvents,
   upsertEvent,
   type PublishedEventFilters,
 } from './events.js';
@@ -398,5 +400,46 @@ describe('getPublishedEvent', () => {
     const a = await publishedEvent({ title: 'a' });
     await publishedEvent({ title: 'b' });
     expect(await titles({ ids: [a.id] })).toEqual(['a']);
+  });
+});
+
+describe('pruneEndedEvents', () => {
+  const insert = async (input: Parameters<typeof eventInput>[0]) =>
+    (await upsertEvent(db, eventInput(input), T0)).event;
+
+  it('deletes events that ended before the cutoff, by effective end, whatever their status', async () => {
+    const ended = await insert({ startsAt: later(-180), endsAt: later(-120) });
+    const endedRemoved = await insert({ startsAt: later(-180), endsAt: later(-90) });
+    await db.update(events).set({ status: 'removed' }).where(eq(events.id, endedRemoved.id));
+    // No end time: effective end is start + 1h, so this one ended at T0 - 61min.
+    const noEndOld = await insert({ startsAt: later(-121), endsAt: null });
+    // No end time, effective end T0 + 30min: still going at the cutoff.
+    const noEndRecent = await insert({ startsAt: later(-30), endsAt: null });
+    const endsAfter = await insert({ startsAt: later(-180), endsAt: later(10) });
+
+    expect(await pruneEndedEvents(db, later(-60))).toBe(3);
+
+    const left = await db.select({ id: events.id }).from(events);
+    expect(left.map((e) => e.id).sort()).toEqual([noEndRecent.id, endsAfter.id].sort());
+    expect(left.map((e) => e.id)).not.toContain(ended.id);
+    expect(left.map((e) => e.id)).not.toContain(noEndOld.id);
+  });
+
+  it('cascades to classifications', async () => {
+    const old = await insert({ startsAt: later(-300), endsAt: later(-240) });
+    const kept = await insert({ startsAt: later(60), endsAt: later(120) });
+    await insertClassification(db, old);
+    await insertClassification(db, kept);
+
+    await pruneEndedEvents(db, T0);
+
+    const rows = await db.select({ eventId: classifications.eventId }).from(classifications);
+    expect(rows).toEqual([{ eventId: kept.id }]);
+  });
+
+  it('deletes nothing when every event ends after the cutoff', async () => {
+    await insert({ startsAt: later(0), endsAt: later(60) });
+    expect(await pruneEndedEvents(db, T0)).toBe(0);
+    expect(await db.$count(events)).toBe(1);
   });
 });

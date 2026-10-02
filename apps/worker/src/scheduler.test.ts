@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { startScheduler, type Job, type SchedulerOptions } from './scheduler.js';
+import {
+  everyMinutesCron,
+  isSupportedInterval,
+  startScheduler,
+  type Job,
+  type SchedulerOptions,
+} from './scheduler.js';
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -131,5 +137,25 @@ describe('startScheduler', () => {
 
     cron.tick();
     expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('everyMinutesCron', () => {
+  it.each([
+    [1, '* * * * *'],
+    [5, '*/5 * * * *'],
+    [30, '*/30 * * * *'],
+    [60, '0 * * * *'],
+    [120, '0 */2 * * *'],
+    [720, '0 */12 * * *'],
+    [1440, '0 0 * * *'],
+  ])('%i min → %s', (minutes, expected) => {
+    expect(everyMinutesCron(minutes)).toBe(expected);
+    expect(isSupportedInterval(minutes)).toBe(true);
+  });
+
+  it.each([0, -5, 7, 45, 90, 300, 2880, 1.5])('rejects %d min', (minutes) => {
+    expect(() => everyMinutesCron(minutes)).toThrow(/Unsupported interval/);
+    expect(isSupportedInterval(minutes)).toBe(false);
   });
 });

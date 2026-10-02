@@ -1,5 +1,6 @@
 import { databaseEnvSchema } from '@maize-bites/db';
 import { z } from 'zod';
+import { isSupportedInterval } from './scheduler.js';
 
 const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
 
@@ -10,6 +11,14 @@ export const workerEnvSchema = databaseEnvSchema.extend({
   ANTHROPIC_API_KEY: z.preprocess(emptyAsUndefined, z.string().min(1).optional()),
   /** Hard cap on Anthropic API requests per ingestion run (retries included). */
   LLM_MAX_CALLS_PER_RUN: z.coerce.number().int().min(0).max(2000).default(100),
+  /** Events that ended more than this many days ago are deleted (with their classifications). */
+  EVENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
+  /** How often the prune job runs. Must divide 60, or be whole hours that divide 24. */
+  PRUNE_INTERVAL_MINUTES: z.coerce
+    .number()
+    .int()
+    .refine(isSupportedInterval, 'must divide 60, or be whole hours that divide 24')
+    .default(60),
   /** Public web origin, for links in alerts. */
   WEB_ORIGIN: z.url().default('http://localhost:5173'),
   /** Resend API key. Without it, alert emails are printed to the log (development). */

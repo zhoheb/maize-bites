@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { notImplemented } from '../errors.js';
 
-// Mounted at /api/submissions. Phase 2: crowdsourced tips.
+// Mounted at /api/submissions. Phase 7: crowdsourced tips.
 export function submissionsRouter(): Router {
   const router = Router();
 
