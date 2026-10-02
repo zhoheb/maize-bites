@@ -1,0 +1,10 @@
+import { EmptyState } from '../components/States';
+
+export function NotFoundPage() {
+  return (
+    <div className="mx-auto max-w-xl px-4 py-12">
+      <h1 className="sr-only">Page not found</h1>
+      <EmptyState title="That page doesn't exist." action={{ label: 'Find free food', to: '/' }} />
+    </div>
+  );
+}

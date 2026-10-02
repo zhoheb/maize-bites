@@ -1,0 +1,464 @@
+{
+  "version": 1,
+  "instructions": "Hand labels for `pnpm --filter worker eval`. For each item set label.has_free_food to true if an attendee can get free food or drinks (RSVP-required still counts; sold, discounted, or ticket-included food does not), false otherwise. Optionally set label.audience to \"open\", \"members\", \"rsvp\", or \"unknown\". Items with has_free_food null are skipped. Aim for ~200 items with a healthy share of positives; add more by copying events from fixtures/happening-sample.json or a newer feed capture.",
+  "items": [
+    {
+      "id": "150925-21910442",
+      "event": {
+        "title": "LSA@Play: Pop-Up Free Lunch: College of LSA Student Event",
+        "description": "The best surprises happen between classes! Keep an eye out during the week of Sept 28 for a pop-up lunch in Regents Plaza. Subscribe to our text updates to be the first to know when and where to find free sliders and fries! \n\nSubscribe (https://lsa.umich.edu/lsa/news-events/events/lsa-play.html#Subscribe)\n\nGrab a bite and take a break with fellow LSA students. Vegan and gluten-free options available.\n__________\nFor LSA undergrads only. Join us for LSA@Play, a series of events designed to bring students together, build community, and make time for fun, new experiences, and well-being. From creative activities and social events to opportunities to recharge and try something new, LSA@Play offers plenty of ways to get involved. And yes, there’s free food and LSA swag, too!\n\nVisit the LSA@Play webpage (lsa.umich.edu/play) for more details, subscribe to receive text/email updates, and check for additional events being added soon! Events are first-come, first-served, while supplies last. One swag item per student. You must be present with an MCard to receive swag.\n\nAccessibility: LSA values inclusion and access for all. Reasonable accommodations are available. Please email organizer8@example.edu with accommodation requests or questions. Advance notice is appreciated to allow time to arrange accommodations.",
+        "locationName": "Regents Plaza",
+        "room": null,
+        "startsAt": "2026-09-30T04:00:00.000Z",
+        "endsAt": "2026-10-01T03:59:00.000Z",
+        "tags": ["Food", "Free", "Undergraduate Students", "Welcome to Michigan", "Well-being"],
+        "sponsor": "Organizer One Hundred Sixty",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "151404-21911531",
+      "event": {
+        "title": "Welcome Wednesdays",
+        "description": "Kick-start your Wednesday with free coffee, tea, hot chocolate, and a breakfast snack! Stop by the Alumni Center from 9 a.m.–noon on select Wednesdays during the fall and winter semesters. Bring your Mcard—and keep an eye out for Bagely, the beloved bagel mascot! ☕🥯〽️",
+        "locationName": "Alumni Center",
+        "room": null,
+        "startsAt": "2026-09-30T13:00:00.000Z",
+        "endsAt": "2026-09-30T16:00:00.000Z",
+        "tags": ["Breakfast", "food", "free food"],
+        "sponsor": "Organizer Nine",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "151953-21912502",
+      "event": {
+        "title": "Tiffany Ng & Bjorn Brolin-Olson, carillon",
+        "description": "Tiffany Ng & Bjorn Brolin-Olson perform on the Ann & Robert H. Lurie Carillon, an instrument of 60 bells with the lowest bell (bourdon) weighing 6 tons.\n\nThirty-minute recitals are performed on the Lurie Carillon every weekday that classes are in session. During these recitals, visitors may take the elevator to level 2 to view the largest bells, or to level 3 to see the carillonist performing. (Visitors subject to acrophobia are recommended to visit level 2 only.) An optional spiral stairway between levels 2 and 3 allows for up-close views of some of the largest bells.",
+        "locationName": "Lurie Ann & Robert H. Tower",
+        "room": null,
+        "startsAt": "2026-09-30T17:20:00.000Z",
+        "endsAt": "2026-09-30T17:50:00.000Z",
+        "tags": ["Concert", "Free", "North Campus"],
+        "sponsor": "Organizer One Hundred Forty-One",
+        "cost": "Free - no tickets required"
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "152442-21913749",
+      "event": {
+        "title": "Climate Week Wonder Walk: Strategies for Resilience",
+        "description": "Taking a positive step!  Learn about native plantings and bioswales as climate action\n\n----\n\nMatthaei Botanical Gardens hosts free guided Wonder Walks on select Wednesdays and Sundays throughout the season, with occasional additional walks and special-topic programs offered on other days. Walk themes, times, and formats may vary.\n\nWonder Walks are designed for all ages to inspire curiosity and learning from each other through activities that encourage observation, exploration, and connection with nature. If we have a sizeable mixed-age group, we may split into two groups to deliver the same content at different engagement levels.\n\nWednesday walks begin at 5:00 pm. Sunday walks begin at 1:00 pm unless otherwise noted. We recommend gathering in the lobby at Matthaei Botanical Gardens about 10 minutes before the start.",
+        "locationName": "Matthaei Botanical Gardens",
+        "room": null,
+        "startsAt": "2026-09-30T21:00:00.000Z",
+        "endsAt": "2026-09-30T22:30:00.000Z",
+        "tags": ["Free", "Nature", "Outdoors"],
+        "sponsor": "Organizer One Hundred Four",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "150770-21910148",
+      "event": {
+        "title": "Korea Week | Korean Food: Culture, Politics, and Identities: Rory Walsh, University of Michigan",
+        "description": "Korean food is having a moment–one that's been decades in the making. Dr. Rory Walsh explores what Korean food is, how it got that way, and how it's changing under our noses. From Ann Arbor to Seoul, this talk explores what food has to do with tradition, identity, international politics, ancient history, family, self, and, of course, the deceptively complicated concept of authenticity.\n\nRory Walsh has been studying the anthropology of Korea since 2012, and has eaten her way across the peninsula (and Jeju!). She has written extensively on Korean archaeology and hosts the UM Nam Center for Korean Studies' podcast, \"Korea in Maize and Blue: How Did You Get Here?\", interviewing Korean scholars and other professionals across disciplines.\n\nThis event is part of Korea Week, and is held in partnership with the Ann Arbor District Library and the Korean Cultural Center of Washington D.C. For more information, visit https://myumi.ch/9JJ4g.\n\n*If there is anything we can do to make this event accessible to you, please contact us. Please be aware that advance notice is necessary as some accommodations may require more time for the university to arrange.*",
+        "locationName": "Ann Arbor District Library Downtown, 343 S 5th Ave, Ann Arbor, MI 48104",
+        "room": "1st Floor Lobby",
+        "startsAt": "2026-09-30T22:00:00.000Z",
+        "endsAt": "2026-09-30T23:00:00.000Z",
+        "tags": [
+          "Asian Languages And Cultures",
+          "Cooking",
+          "Culture",
+          "Food",
+          "Free",
+          "In Person",
+          "Korea",
+          "Korean Studies"
+        ],
+        "sponsor": "Organizer One Hundred Eighteen, Organizer Eighty-Three, Organizer Twelve",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "153052-21914986",
+      "event": {
+        "title": "Cook Scholars Free Sips: Sober October",
+        "description": "One month in, are you looking for direction in networking, searching student orgs, or finding your way around Ann Arbor, talk to us. We can help. And while you're here in October, we'll treat you to Free Sips of your favorite beverage. Please indicate you're a Cook Scholar, when you use the registration intake form (links on right).\n\n(Or Pierpont, if indicated on appointment availability.)",
+        "locationName": "Michigan League",
+        "room": null,
+        "startsAt": "2026-10-01T04:00:00.000Z",
+        "endsAt": "2026-10-02T03:59:00.000Z",
+        "tags": ["Cook Scholars", "Free", "Networking", "Undergraduate Students"],
+        "sponsor": "Organizer Twenty-Nine",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "152722-21914429",
+      "event": {
+        "title": "CASC Major Info-Session",
+        "description": "Join the Undergraduate Education Programs in learning more about the brand NEW CASC Major in the School of Social Work! This info-session will walk undergraduate students and any interested staff/faculty members through the new major, application timelines, and answer any questions. Lunch will be provided - all are welcome to come learn more!\n\nPlease email organizer3@example.edu if you cannot find the building or classroom.",
+        "locationName": "School of Social Work Building",
+        "room": "1636",
+        "startsAt": "2026-10-01T16:00:00.000Z",
+        "endsAt": "2026-10-01T17:00:00.000Z",
+        "tags": [
+          "Activism",
+          "community activism",
+          "Community Engagement",
+          "community health",
+          "Community Organizing",
+          "Community Organzing",
+          "Community Service",
+          "Democratic Engagement",
+          "Diversity Equity and Inclusion",
+          "Equity",
+          "Health Professions",
+          "human dignity",
+          "human rights",
+          "Inclusion",
+          "Interdisciplinary",
+          "Interprofessional",
+          "Mental Health",
+          "Poverty Solutions",
+          "school of social work",
+          "Social Change",
+          "social impact",
+          "social justice",
+          "social work",
+          "Undergraduate",
+          "Undergraduate Students"
+        ],
+        "sponsor": "Organizer One Hundred Forty-Three, Organizer One Hundred Forty-Two",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "150373-21909125",
+      "event": {
+        "title": "Naval Architecture & Marine Engineering Open House",
+        "description": "Curious about majoring in Naval Architecture & Marine Engineering? Come hang with us at the NA&ME Open House!\n\n🗓 October 1st | 1–4 PM\n📍Marine Hydrodynamics Lab, West Hall (1085 S. University Ave, Ann Arbor)\n\nCheck out our labs, take a ride on the tow tank carriage, chat with students and professors, learn what makes our major unique, and of course grab some snacks and swag. \nWe hope to see you there!",
+        "locationName": "West Hall",
+        "room": "Marine Hydrodynamics Laboratory",
+        "startsAt": "2026-10-01T17:00:00.000Z",
+        "endsAt": "2026-10-01T20:00:00.000Z",
+        "tags": [
+          "Engineering",
+          "Marine Engineering",
+          "Michigan Engineering",
+          "Naval Architecture",
+          "Undergraduate Students"
+        ],
+        "sponsor": "Organizer One Hundred Twenty",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "148903-21905157",
+      "event": {
+        "title": "Hopwood Tea",
+        "description": "Enjoy coffee, tea, and refreshments in a beautiful, book-filled space. Check out a book from the Hopwood library or engage with other readers and writers. All are welcome.",
+        "locationName": "Angell Hall",
+        "room": "1176 (Hopwood Room)",
+        "startsAt": "2026-10-01T19:00:00.000Z",
+        "endsAt": "2026-10-01T21:00:00.000Z",
+        "tags": [
+          "Ann Arbor",
+          "Books",
+          "Creative Writing",
+          "English Language And Literature",
+          "Food",
+          "Free",
+          "Graduate Students",
+          "Hopwood Program",
+          "Literary Arts",
+          "Literature",
+          "The Helen Zell Writers' Program",
+          "Undergraduate Students",
+          "Well-being",
+          "Writing"
+        ],
+        "sponsor": "Organizer Seventy-Five, Organizer One Hundred Sixty-Eight, Organizer Forty-One",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "152724-21914431",
+      "event": {
+        "title": "Outdoor Club Kickoff Happy Hour",
+        "description": "Hey, ROCers! We're kicking off a year of fun outdoor club events with a happy hour at Bill's on 10/1. Come by to connect with some new outdoorsy friends and grab a beer and a slice before Skeeps (pizza funded by club and available for members). \r\nThe ROC leadership team will be on-hand to chat about our upcoming events calendar and answer any questions. Really pumped to meet you all!",
+        "locationName": "Bill's Beer Garden",
+        "room": null,
+        "startsAt": "2026-10-01T21:30:00.000Z",
+        "endsAt": "2026-10-01T23:30:00.000Z",
+        "tags": [],
+        "sponsor": "Organizer One Hundred One",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "150244-21908461",
+      "event": {
+        "title": "OGPS Academic Careers Series - Fall 2026: Writing Your Academic Research Statement",
+        "description": "This workshop series supports graduate students and postdoctoral fellows preparing for academic careers. Through interactive sessions, you will gain insights and strategies for navigating the academic job market, securing a postdoctoral position, and preparing application materials that highlight your research expertise and career potential. Each session combines presentations, discussion, and hands-on activities to equip you with practical tools for a successful transition into academia.Learning ObjectivesBy the end of this series, participants will be able to:Understand the structure of the academic job market and how to prepare for each stage of the search.Identify strategies for exploring opportunities and applying for postdoctoral positions.Prepare strong academic CVs and cover letters that effectively communicate expertise and fit.Write a compelling research statement that highlights motivation, significance, and future directions.",
+        "locationName": "Taubman Health Sciences Library 2903",
+        "room": null,
+        "startsAt": "2026-09-23T14:00:00.000Z",
+        "endsAt": "2026-09-30T15:00:00.000Z",
+        "tags": ["Sessions"],
+        "sponsor": "Organizer One Hundred Forty-Five",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "149376-21906291",
+      "event": {
+        "title": "CDB Seminar Series: Steven Vokes",
+        "description": "Speaker: Steven Vokes, Professor, The University of Austin at Texas\n\nTitle: TBA\n\nHost: Organizer Six\n\nThe venue is accessible via elevator and ramp. If you require any accommodations in order to fully participate in this activity, please inform Organizer One.\nPhone: (734) 555-0101\nEmail: organizer11@example.edu",
+        "locationName": "Taubman Biomedical Science Research Building",
+        "room": "ABC Seminar Rooms",
+        "startsAt": "2026-09-30T13:30:00.000Z",
+        "endsAt": "2026-09-30T14:30:00.000Z",
+        "tags": ["Basic Science", "Biology", "Biosciences", "Science"],
+        "sponsor": "Organizer Nineteen",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "149541-21906607",
+      "event": {
+        "title": "Cosmo Whyte: Under the Quiet, Beyond the Eye",
+        "description": "Curated by Srimoyee Mitra\n\nStamps Gallery kicks off the fall 2026 semester with an ambitious mid-career survey of interdisciplinary artist Cosmo Whyte. Born and raised in Jamaica, Whyte completed a BFA from Bennington College and earned an MFA from the University of Michigan. He is currently a faculty member at the School of the Arts and Architecture, UCLA.\n\nThis exhibition brings together two central concerns that animate Whyte’s artistic practice: the archive, both personal and public, as a site of disturbance; and migration as a lived experience of refuge, refusal, and reinvention. In Whyte’s work, the archive is never static or neutral. Rather, it is a contested space where official histories encounter memory, inheritance, and the fragments of stories carried across generations. His practice moves within this charged interstitial terrain, between what has been recorded and what has been remembered, between institutional knowledge and embodied experience. Whyte invites the viewer to consider the fluidity of geographic borders and layered cultural identities that have persisted despite societal unrest caused by racial and socio-economic hierarchies across generations. In an era of intensified border politics and renewed debates over national identity, Whyte’s work offers a timely meditation on memory, movement, and belonging.\n\nPresented with support from the U-M Institute for Humanities, the U-M LSA Center for Latin American and Caribbean Studies, and the U-M Library.",
+        "locationName": "Stamps Gallery, 201 South Division Street Ann Arbor, Michigan 48104",
+        "room": null,
+        "startsAt": "2026-09-30T16:00:00.000Z",
+        "endsAt": "2026-09-30T21:00:00.000Z",
+        "tags": ["Art"],
+        "sponsor": "Organizer One Hundred Twenty-Nine",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "149657-21906898",
+      "event": {
+        "title": "Algebraic Geometry Seminar: Crepant resolutions via stacks: Jeremy Usatine, Florida State University",
+        "description": "Consider an invariant that behaves nicely for smooth varieties, such as Euler number, Betti numbers, or Hodge numbers. Suppose we want a version of this invariant for singular varieties that sees interesting information about the singularities. I will discuss how this naturally leads to the notion of crepant resolutions of singularities. However, crepant resolutions (by varieties) are rare in practice. I will discuss joint work with M. Satriano in which we show that crepant resolutions actually exist in broad generality, as long as one is willing to consider algebraic stacks. Specifically, any variety with log-terminal singularities admits a crepant resolution by a smooth algebraic stack. As one consequence, in joint work with J. Huang and M. Satriano, we obtain a cohomological interpretation for Batyrev's stringy Hodge numbers. This talk will not assume familiarity with stacks.",
+        "locationName": "East Hall",
+        "room": "4096",
+        "startsAt": "2026-09-30T19:30:00.000Z",
+        "endsAt": "2026-09-30T20:50:00.000Z",
+        "tags": ["Mathematics"],
+        "sponsor": "Organizer Eight, Organizer Forty-Three",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "152818-21914564",
+      "event": {
+        "title": "Foraging a Better Future: An evening with \"Black Forager\" Alexis N. Nelson",
+        "description": "Join award-winning forager, outdoor educator and James Beard Award winner Alexis Nikole Nelson for a lively conversation about wild foods, sustainability and the rich cultural traditions connected to the plants growing all around us. With more than five million followers across Instagram and TikTok, Nelson has become a beloved social media creator known for her joyful and informative foraging videos. She inspires audiences to see the natural world in a new way while exploring the intersections of food, history and environmental stewardship. Through storytelling, humor and practical insights, she invites us to reconnect with the land—and maybe discover a few tasty surprises hiding in plain sight. \n\nNelson will be signing her new book, \"Happy Snacking, Don't Die!\" Booksweet will have them available for purchase while supplies last. Purchase in advance from Booksweet. \n\nThis event will be moderated by Will Brinkerhoff, a SEAS agroecologist, chef and science communicator.\n\nThe event is free and open to the public, but a ticket is required for entry. The event is FULL. Everyone on the wait list will be emailed a link to the livestream.",
+        "locationName": null,
+        "room": "Rackham Auditorium",
+        "startsAt": "2026-09-30T21:30:00.000Z",
+        "endsAt": "2026-09-30T23:30:00.000Z",
+        "tags": [
+          "agriculture",
+          "Climate Week",
+          "Climate Week 2026",
+          "Ecology",
+          "Environmental Advocacy",
+          "Food Justice",
+          "food sustainability",
+          "Sustainability"
+        ],
+        "sponsor": "Organizer One Hundred Four",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "149899-21907357",
+      "event": {
+        "title": "Community Story Exchange: Facilitated by Narrative 4",
+        "description": "*\"You tell my story, I tell yours. In the first-person. Face to face.\" *\n    * –Colum McCann, co-founder of Narrative 4*\n\nHeld in conjunction with The Stories We Carry, featuring acclaimed novelist Colum McCann in conversation with Michigan Public's April Baer (https://myumi.ch/NXrg9), this facilitated workshop offers the opportunity to put the evening's ideas into practice. Participants will pair with another attendee, share a personal story in response to a common prompt, and then retell their partner's story in the first person—a powerful exercise in empathy, perspective-taking, and human connection.\n\nNo storytelling experience is required. Whether or not you attended the preceding conversation with Colum McCann, you are welcome to participate. Space is limited, and advance registration is suggested. Register to attend the story exchange at https://forms.gle/pQP3PbMdD3LvZ3tQA.\n\nNarrative 4 is a global nonprofit that believes stories can change the world. Co-founded by acclaimed novelist Colum McCann, Narrative 4 brings people together through its signature Story Exchange, an evidence-informed practice that invites participants to share a personal story and then tell their partner's story in the first person. Used in schools, universities, and communities around the world, the Story Exchange cultivates empathy, deep listening, and meaningful human connection across lines of difference.",
+        "locationName": "Museum of Art",
+        "room": "Helmut Stern Auditorium",
+        "startsAt": "2026-09-30T23:00:00.000Z",
+        "endsAt": "2026-10-01T00:30:00.000Z",
+        "tags": [
+          "Community Conversation",
+          "First-generation",
+          "Humanities",
+          "Inclusion",
+          "Storytelling",
+          "Undergraduate Students"
+        ],
+        "sponsor": "Organizer Eighty-One",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "152797-21914532",
+      "event": {
+        "title": "Naval Architecture & Marine Engineering Career Chats",
+        "description": "Hey Naval Architecture & Marine Engineering Students - This is for YOU!\n\nAre you feeling overwhelmed by your full-time job or internship search? Not sure where to begin, or just need a little guidance? Whether you're just starting out or already deep in the search process, we're here to help!\n\nJoin us for a quick 15-minute virtual chat with an Engineering Career Advisor. Ask us anythingfrom where your peers are landing jobs, to job search strategies, to personalized resume feedback. Its a chance to get the advice you need, fast!\n\nDont navigate your career path alone - we've got your back!\n\nNote: Only students within the NAME department are eligible for this event.",
+        "locationName": "Virtual",
+        "room": null,
+        "startsAt": "2026-10-01T13:00:00.000Z",
+        "endsAt": "2026-10-01T21:00:00.000Z",
+        "tags": ["Career", "Graduate Students", "Michigan Engineering", "Undergraduate Students"],
+        "sponsor": "Organizer Sixty-One",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "152798-21914534",
+      "event": {
+        "title": "DCMB Tools and Technology Seminar by Shiting Li (Computational Medicine & Bioinformatics): “TFBSpedia: a comprehensive human and mouse transcription factor binding sites database”",
+        "description": "About the DCMB Tools & Technology Seminar Series\n\nThe DCMB Tools and Technology Seminar Series is held in Medical Science Building 1 (MS1), Room 4B700, each Thursday at 12pm EST. Each seminar highlights a computational tool, technology, or methodology that is under development or in current use and is of special interest to DCMB and University researchers. Presenters are U-M researchers and students.\n\nThese seminars are live-streamed and recorded and made available for future viewing via the DCMB YouTube Channel\n\nMS1 B-Wing",
+        "locationName": "Medical Science Unit I",
+        "room": "4B700",
+        "startsAt": "2026-10-01T16:00:00.000Z",
+        "endsAt": "2026-10-01T17:00:00.000Z",
+        "tags": [
+          "Basic Science",
+          "Bioinformatics",
+          "Biology",
+          "Computational Science",
+          "Life Science"
+        ],
+        "sponsor": "Organizer Thirty-Eight",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "153007-21914910",
+      "event": {
+        "title": "Astronomy Colloquium | AI Discovery in Physics and Astronomy: Dr. Cecilia Garraffo",
+        "description": "AI may change how science answers its hardest open questions, and even which questions it asks. Today's vast datasets hold physical information we do not yet know how to look for, and AI offers a way to search for the unexpected. To trust AI discoveries, we need to judge models by whether they obey the laws of physics. How convincing their outputs look is not enough. In this talk I will discuss the promise and challenges of cutting-\nedge AI for science, and how to define and build physical realism into our models. I will present recent progress\non physical, probabilistic, and generative models for astronomy. I will also show where classical physics\nmodels, machine learning, and agentic AI each reach their limits.",
+        "locationName": "West Hall",
+        "room": "411",
+        "startsAt": "2026-10-01T19:30:00.000Z",
+        "endsAt": "2026-10-01T20:30:00.000Z",
+        "tags": ["Astronomy", "astrophysics", "Colloquium", "Colloquium Series", "Physics", "Talk"],
+        "sponsor": "Organizer Thirteen, Organizer One Hundred Thirty",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    },
+    {
+      "id": "149207-21914659",
+      "event": {
+        "title": "Northwood (2026-2027) (Housing): Multiple conference events and sessions: Be Well: Yoga and Meditation",
+        "description": null,
+        "locationName": "Northwood Community Center MPR (1000 McIntyre)",
+        "room": null,
+        "startsAt": "2026-10-01T21:00:00.000Z",
+        "endsAt": "2026-10-01T22:00:00.000Z",
+        "tags": ["Sessions"],
+        "sponsor": "Organizer One Hundred Forty-Five",
+        "cost": null
+      },
+      "label": {
+        "has_free_food": null,
+        "audience": null
+      },
+      "notes": ""
+    }
+  ]
+}

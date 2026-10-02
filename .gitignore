@@ -1,0 +1,32 @@
+node_modules
+dist
+dev-dist
+coverage
+*.tsbuildinfo
+.vite
+
+# Secrets: only the placeholder template is committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local database data (docker-compose uses a named volume; these catch bind mounts and dumps).
+pgdata/
+postgres-data/
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+
+# Model and data artifacts. Committed fixtures live in apps/worker/fixtures and eval/labeled.json.
+*.onnx
+*.safetensors
+*.gguf
+*.bin
+*.parquet
+eval/results/
+
+.DS_Store
+*.log

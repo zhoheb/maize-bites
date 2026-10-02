@@ -1,0 +1,35 @@
+{
+  "name": "maize-bites",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "pnpm db:up && pnpm db:migrate && pnpm --filter \"./apps/*\" --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:pg": "pnpm db:up && TEST_DB=postgres pnpm -r test",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @maize-bites/db db:generate",
+    "db:migrate": "pnpm --filter @maize-bites/db db:migrate",
+    "db:seed": "pnpm --filter @maize-bites/db db:seed",
+    "db:studio": "pnpm --filter @maize-bites/db db:studio",
+    "ingest:once": "pnpm --filter @maize-bites/worker ingest:once"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:",
+    "eslint-plugin-react-refresh": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

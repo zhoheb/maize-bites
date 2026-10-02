@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-maize: #ffcb05;
+  --color-michigan-blue: #00274c;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --spacing-18: 4.5rem;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Fallback focus ring for anything without its own focus-visible style. */
+  :focus-visible {
+    outline: 3px solid var(--color-michigan-blue);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Map markers: MapLibre owns the button's `transform` (positioning); style and scale the dot. */
+.map-pin {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.map-pin-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: var(--color-maize);
+  border: 3px solid var(--color-michigan-blue);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  transition: transform 120ms ease;
+}
+.map-pin:hover .map-pin-dot,
+.map-pin.is-highlighted .map-pin-dot {
+  transform: scale(1.35);
+}
+.map-pin.is-selected .map-pin-dot {
+  background: var(--color-michigan-blue);
+  border-color: var(--color-maize);
+  transform: scale(1.35);
+}
+.map-pin.is-highlighted,
+.map-pin.is-selected {
+  z-index: 2;
+}
+.map-pin:focus-visible {
+  outline: 3px solid var(--color-michigan-blue);
+  outline-offset: 1px;
+}
