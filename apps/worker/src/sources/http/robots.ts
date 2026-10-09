@@ -1,3 +1,5 @@
+import { headersForHost, type HostHeaders } from './client.js';
+
 // A small robots.txt reader (RFC 9309): groups by user agent, Allow/Disallow with `*` and `$`,
 // longest match wins, Allow wins ties. Plus Crawl-delay, which the RFC leaves out but sites use.
 
@@ -109,6 +111,8 @@ export function createRobotsChecker(options: {
   okTtlMs?: number;
   /** How long a failed lookup is remembered before trying again. Default 1h. */
   failTtlMs?: number;
+  /** Per-host access headers, as in HttpOptions. A host that needs one needs it for robots.txt too. */
+  hostHeaders?: HostHeaders;
 }): RobotsChecker {
   const {
     userAgent,
@@ -118,15 +122,22 @@ export function createRobotsChecker(options: {
     now = Date.now,
     okTtlMs = 24 * 3_600_000,
     failTtlMs = 3_600_000,
+    hostHeaders,
   } = options;
   const cache = new Map<string, { value: Cached; expiresAt: number }>();
 
   async function load(origin: string): Promise<Cached> {
     try {
-      const res = await fetchFn(new URL('/robots.txt', origin), {
-        headers: { 'User-Agent': userAgent, Accept: 'text/plain' },
+      const url = new URL('/robots.txt', origin);
+      const secret = headersForHost(hostHeaders, url);
+      const res = await fetchFn(url, {
+        headers: { 'User-Agent': userAgent, Accept: 'text/plain', ...secret },
+        // With an access header, never let fetch carry it across a redirect.
+        ...(Object.keys(secret).length > 0 ? { redirect: 'manual' as const } : {}),
         signal: AbortSignal.timeout(timeoutMs),
       });
+      if (res.status >= 300 && res.status < 400)
+        return { unavailable: `robots.txt redirected (HTTP ${res.status}); not followed` };
       if (res.headers.get('cf-mitigated') === 'challenge')
         return { unavailable: `robots.txt is behind a Cloudflare challenge (HTTP ${res.status})` };
       if (res.status === 404 || res.status === 410)

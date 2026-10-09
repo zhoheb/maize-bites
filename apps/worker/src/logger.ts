@@ -12,6 +12,9 @@ const REDACT = [
   'res.headers["set-cookie"]',
   '*.password',
   '*.token',
+  // The events.umich.edu integration header, wherever request headers might be logged.
+  'headers["x-umich-integration"]',
+  '*.headers["x-umich-integration"]',
 ];
 
 export function createPinoLogger(

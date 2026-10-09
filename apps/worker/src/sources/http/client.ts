@@ -19,7 +19,28 @@ export interface HttpOptions {
   robots?: RobotsChecker;
   /** When set, requests to one host are spaced out. */
   rateLimiter?: HostRateLimiter;
+  /**
+   * Extra headers for exact hostnames, e.g. an access token one site issued us. They are sent
+   * only when the request URL's hostname is exactly the key, and never follow a redirect to
+   * another host. Values are secrets: they are never logged or put in error messages.
+   */
+  hostHeaders?: HostHeaders;
 }
+
+export type HostHeaders = Readonly<Record<string, Readonly<Record<string, string>>>>;
+
+/** The headers configured for exactly this URL's hostname, if any. */
+export function headersForHost(
+  hostHeaders: HostHeaders | undefined,
+  url: URL,
+): Record<string, string> {
+  const headers =
+    hostHeaders && Object.hasOwn(hostHeaders, url.hostname) ? hostHeaders[url.hostname] : undefined;
+  return { ...headers };
+}
+
+/** How many same-host redirects to follow when host headers are in play. */
+const MAX_SAME_HOST_REDIRECTS = 3;
 
 /** `challenge` and `robots` mean the site said no; callers must not look for another way in. */
 export type FeedErrorKind = 'http' | 'challenge' | 'robots';
@@ -29,6 +50,8 @@ export class FeedHttpError extends Error {
     message: string,
     readonly retryable: boolean,
     readonly kind: FeedErrorKind = 'http',
+    /** The HTTP status, when the failure was a response. */
+    readonly status?: number,
   ) {
     super(message);
     this.name = 'FeedHttpError';
@@ -89,6 +112,7 @@ export async function httpGet<T>(
     logger = console,
     robots,
     rateLimiter,
+    hostHeaders,
   } = options;
 
   let crawlDelayMs: number | null = null;
@@ -108,12 +132,42 @@ export async function httpGet<T>(
   if (request.validators?.lastModified)
     headers['If-Modified-Since'] = request.validators.lastModified;
 
+  const secret = headersForHost(hostHeaders, url);
+  const hasSecret = Object.keys(secret).length > 0;
+
+  /**
+   * One request. With host headers, redirects are followed by hand so the headers can be
+   * dropped the moment a redirect points at a different host; otherwise fetch follows them.
+   */
+  const send = async (): Promise<Response> => {
+    if (!hasSecret) return fetchFn(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    let target = url;
+    for (let hop = 0; ; hop++) {
+      const res = await fetchFn(target, {
+        headers: { ...headers, ...headersForHost(hostHeaders, target) },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+      if (location === null) return res;
+      const next = new URL(location, target);
+      if (next.hostname !== url.hostname || next.protocol !== url.protocol)
+        throw new FeedHttpError(
+          `GET ${url.pathname}${url.search} → redirected to another host (${next.hostname}); not followed`,
+          false,
+        );
+      if (hop >= MAX_SAME_HOST_REDIRECTS)
+        throw new FeedHttpError(`GET ${url.pathname}${url.search} → too many redirects`, false);
+      target = next;
+    }
+  };
+
   for (let attempt = 1; ; attempt++) {
     let error: FeedHttpError;
     let waitHint: number | null = null;
     await rateLimiter?.wait(url.host, crawlDelayMs);
     try {
-      const res = await fetchFn(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      const res = await send();
       if (res.status === 304 && request.validators) return { status: 'not_modified' };
       if (res.ok) {
         const body = await request.parse(res);
@@ -134,8 +188,11 @@ export async function httpGet<T>(
         `GET ${url.pathname}${url.search} → HTTP ${res.status}${challenged ? ' (blocked by a Cloudflare challenge)' : ''}`,
         retryable,
         challenged ? 'challenge' : 'http',
+        res.status,
       );
     } catch (cause) {
+      // A refusal to follow a redirect is final, not a network blip.
+      if (cause instanceof FeedHttpError) throw cause;
       // Network failure, timeout (AbortSignal), or an unreadable body: all worth retrying.
       error = new FeedHttpError(
         `GET ${url.pathname}${url.search} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
