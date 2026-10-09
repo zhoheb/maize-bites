@@ -7,6 +7,7 @@ import {
   type LlmOutcome,
 } from '../classifier/llm.js';
 import { mapWithConcurrency } from '../classifier/pool.js';
+import { decideRulesMode } from '../classifier/rules-mode.js';
 import { prefilter } from '../classifier/rules.js';
 import { LLM_CONCURRENCY } from '../classifier/classify-events.js';
 import { toClassifierInput, type LabeledItem } from './labeled.js';
@@ -16,6 +17,8 @@ export interface EvalRow {
   item: LabeledItem;
   actual: boolean;
   rulesCandidate: boolean;
+  /** What CLASSIFIER_MODE=rules would publish: the strict rules-mode decider's verdict. */
+  rulesModePublished: boolean;
   /** Absent when the LLM stage didn't run for this item (not a candidate, or rules-only). */
   llm?: LlmOutcome | { status: 'error'; message: string };
   /** Final publish decision under rules + LLM. */
@@ -26,6 +29,8 @@ export interface EvalReport {
   totalItems: number;
   labeled: number;
   rules: BinaryMetrics;
+  /** CLASSIFIER_MODE=rules: the strict decider alone, no LLM. */
+  rulesMode: BinaryMetrics;
   /** null in rules-only mode. */
   combined: BinaryMetrics | null;
   llmCalls: number;
@@ -39,7 +44,8 @@ export interface EvalReport {
 }
 
 /**
- * Scores rules-only (candidate = positive) and rules + LLM (the publish rule: LLM says free
+ * Scores the prefilter (candidate = positive), rules mode (the strict decider's verdict), and
+ * rules + LLM (the publish rule: LLM says free
  * food with confidence >= PUBLISH_CONFIDENCE) against hand labels.
  */
 export async function runEval(
@@ -57,7 +63,12 @@ export async function runEval(
     async (item): Promise<EvalRow> => {
       const input = toClassifierInput(item);
       const rulesCandidate = prefilter(input).candidate;
-      const base = { item, actual: item.label.has_free_food, rulesCandidate };
+      const base = {
+        item,
+        actual: item.label.has_free_food,
+        rulesCandidate,
+        rulesModePublished: decideRulesMode(input).hasFreeFood,
+      };
       if (!rulesCandidate || !options.createMessage) return { ...base, published: false };
       try {
         const llm = await classifyWithLlm(options.createMessage, input, budget);
@@ -101,6 +112,9 @@ export async function runEval(
     totalItems: items.length,
     labeled: labeled.length,
     rules: binaryMetrics(rows.map((r) => ({ predicted: r.rulesCandidate, actual: r.actual }))),
+    rulesMode: binaryMetrics(
+      rows.map((r) => ({ predicted: r.rulesModePublished, actual: r.actual })),
+    ),
     combined: options.createMessage
       ? binaryMetrics(rows.map((r) => ({ predicted: r.published, actual: r.actual })))
       : null,

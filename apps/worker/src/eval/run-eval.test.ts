@@ -114,3 +114,43 @@ describe('runEval', () => {
     expect(report.deferred).toBe(1);
   });
 });
+
+describe('runEval rules mode', () => {
+  it('scores the strict rules-mode decider alongside the prefilter, with no LLM call', async () => {
+    const create = mockAnthropic();
+    const report = await runEval(
+      [
+        item('a', 'Build night', true, 'Free pizza while we sort parts.'),
+        item('b', 'Pizza and politics', false, 'Talk about the midterms.'),
+        item('c', 'Mixer', true, 'Join us for dinner and conversation.'),
+        item('d', 'Banquet', false, 'Dinner will be served. $15 per person.'),
+        item('e', 'Algebra seminar', false),
+        item('f', 'Unlabeled', null, 'Free pizza'),
+      ],
+      { createMessage: null, maxCalls: 0 },
+    );
+
+    expect(create).not.toHaveBeenCalled();
+    expect(report.labeled).toBe(5);
+    // Rules mode publishes only the explicit statement: one hit, one miss, no false positive.
+    expect(report.rulesMode).toMatchObject({
+      tp: 1,
+      fp: 0,
+      fn: 1,
+      tn: 3,
+      precision: 1,
+      recall: 0.5,
+    });
+    // The prefilter is tuned for recall instead: it also passes the lone food word and the
+    // priced banquet, leaving both for the LLM to reject.
+    expect(report.rules).toMatchObject({ tp: 2, fp: 2, fn: 0 });
+    expect(report.rows.map((r) => [r.item.id, r.rulesModePublished])).toEqual([
+      ['a', true],
+      ['b', false],
+      ['c', false],
+      ['d', false],
+      ['e', false],
+    ]);
+    expect(report.combined).toBeNull();
+  });
+});

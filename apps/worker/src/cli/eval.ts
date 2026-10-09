@@ -1,5 +1,6 @@
-// pnpm --filter worker eval [--rules-only] [--max-llm-calls N]
-// Scores the classifier against eval/labeled.json. Rules + LLM needs ANTHROPIC_API_KEY and
+// pnpm --filter worker eval [--mode rules] [--rules-only] [--max-llm-calls N]
+// Scores the classifier against eval/labeled.json. --mode rules scores CLASSIFIER_MODE=rules (the
+// strict rules-mode decider, no LLM, free to run) next to the prefilter. Rules + LLM needs ANTHROPIC_API_KEY and
 // spends real money (bounded by --max-llm-calls; the estimate is printed at the end).
 import { parseArgs } from 'node:util';
 import { loadRootEnvFile } from '@maize-bites/db';
@@ -13,10 +14,14 @@ import { runEval } from '../eval/run-eval.js';
 
 const { values } = parseArgs({
   options: {
+    mode: { type: 'string', default: 'llm' },
     'rules-only': { type: 'boolean', default: false },
     'max-llm-calls': { type: 'string', default: '250' },
   },
 });
+if (values.mode !== 'llm' && values.mode !== 'rules')
+  throw new Error('--mode must be "llm" or "rules"');
+const rulesMode = values.mode === 'rules';
 const maxCalls = Number(values['max-llm-calls']);
 if (!Number.isInteger(maxCalls) || maxCalls < 0)
   throw new Error('--max-llm-calls must be a non-negative integer');
@@ -25,9 +30,9 @@ loadRootEnvFile();
 const env = parseEnv(process.env);
 const file = loadLabeledFile();
 
-const useLlm = !values['rules-only'] && env.ANTHROPIC_API_KEY !== undefined;
-if (!values['rules-only'] && !useLlm)
-  console.warn('ANTHROPIC_API_KEY is not set: running rules only.\n');
+const skipLlm = rulesMode || values['rules-only'];
+const useLlm = !skipLlm && env.ANTHROPIC_API_KEY !== undefined;
+if (!skipLlm && !useLlm) console.warn('ANTHROPIC_API_KEY is not set: running rules only.\n');
 
 const report = await runEval(file.items, {
   createMessage:
@@ -49,8 +54,21 @@ const line = (name: string, m: BinaryMetrics) =>
 console.log(
   `${''.padEnd(14)}${'precision'.padStart(10)}${'recall'.padStart(9)}${'F1'.padStart(8)}${'TP'.padStart(6)}${'FP'.padStart(5)}${'FN'.padStart(5)}${'TN'.padStart(5)}`,
 );
-console.log(line('rules only', report.rules));
+console.log(line(rulesMode ? 'prefilter' : 'rules only', report.rules));
+if (rulesMode) console.log(line('rules mode', report.rulesMode));
 if (report.combined) console.log(line('rules + LLM', report.combined));
+
+if (rulesMode) {
+  console.log(
+    '\nprefilter = what llm mode sends to the model; rules mode = what CLASSIFIER_MODE=rules publishes.',
+  );
+  const misses = report.rows.filter((r) => r.rulesModePublished !== r.actual);
+  if (misses.length > 0) {
+    console.log('\nDisagreements (rules mode):');
+    for (const r of misses)
+      console.log(`  ${r.actual ? 'FN' : 'FP'}  ${r.item.id}  ${r.item.event.title.slice(0, 70)}`);
+  }
+}
 
 if (report.combined) {
   const perItem = report.labeled > 0 ? report.estimatedCostUsd / report.labeled : 0;
