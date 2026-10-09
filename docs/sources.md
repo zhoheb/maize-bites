@@ -2,6 +2,21 @@
 
 Checked 2026-10-09. Recheck robots.txt and terms before building against any source; they change.
 
+## Current status (2026-10-09)
+
+- **Happening @ Michigan: off.** Its feed answers non-browser clients with a Cloudflare
+  challenge (it loads in a browser; `curl` gets 403). `HAPPENING_ENABLED=false` locally until
+  the owners allow our client. We do not work around it.
+- **Maize Pages: on.** `/events.ics` is the live source (`MAIZEPAGES_ENABLED=true` locally).
+- **Classifier: rules mode** locally (`CLASSIFIER_MODE=rules`), because there is no Anthropic
+  key. Strict keyword rules decide what is published; see `CLAUDE.md`. Expect fewer events than
+  the LLM would find, and the occasional wrong one.
+- **No "Free Food" perk in the feeds.** Engage lets organizers tick a free-food perk, but
+  neither `/events.ics` nor `/events.rss` carries it (checked both captured feeds: no perk
+  field, and `CATEGORIES` holds themes like "Social" and "Athletics"). It is only served by
+  `/api/discovery`, which robots.txt disallows, so we don't read it. If a feed ever lists it as
+  a category, rules mode already treats a "Free Food" tag as a strong positive.
+
 ## Rules
 
 1. Prefer an official feed or API (JSON, ICS, RSS) over HTML.

@@ -42,6 +42,11 @@ export function AboutPage() {
           </li>
           <li>Locations are matched to campus buildings so events show up on the map.</li>
         </ol>
+        <p className="mt-3">
+          Free food is detected automatically: by keyword rules, and by the AI classifier when it is
+          switched on. Either can be wrong. Check the listing before you make the trip, and use the
+          report buttons on an event if we got it wrong.
+        </p>
       </Section>
 
       <Section title="Data sources">
