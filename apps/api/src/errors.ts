@@ -33,12 +33,6 @@ export const notFoundHandler: RequestHandler = (req, res) => {
   });
 };
 
-/** For routes that are designed but not built yet. */
-export const notImplemented: RequestHandler = (req) => {
-  const path = req.originalUrl.split('?')[0] ?? req.originalUrl;
-  throw new HttpError(501, 'not_implemented', `${req.method} ${path} is not implemented yet`);
-};
-
 function isBodyParseError(err: unknown): boolean {
   return err instanceof SyntaxError && (err as { type?: unknown }).type === 'entity.parse.failed';
 }

@@ -79,12 +79,12 @@ describe('consistent error format', () => {
   it.each([
     ['post', '/api/submissions'],
     ['post', '/api/events/6f1c1b7e-8d8a-4f3e-9d61-2b3c6f0e9a11/reports'],
-  ] as const)('501 for planned route %s %s', async (method, path) => {
+  ] as const)('401 in the same format for a signed-out write: %s %s', async (method, path) => {
     const res = await request(api.app)[method](path);
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(401);
     expect(apiErrorSchema.parse(res.body).error).toMatchObject({
-      code: 'not_implemented',
-      message: `${method.toUpperCase()} ${path} is not implemented yet`,
+      code: 'unauthorized',
+      message: 'Sign in to continue',
     });
   });
 

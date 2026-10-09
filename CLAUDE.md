@@ -84,7 +84,8 @@ pnpm --filter @maize-bites/api test   # target a single package
   - Every error body is `{ error: { code, message, requestId, issues? } }` (`apiErrorSchema`). Never hand-roll an error response.
   - Response bodies are typed with shared types (`ListEventsResponse`, `EventDetail`, ...).
   - CORS allows only `WEB_ORIGIN`. Helmet and pino-http (with `X-Request-Id`) run on every request.
-  - Routes that are designed but not built return 501 from their stub router; the TODOs there are the spec.
+  - Writes by signed-in users are rate limited per user (`byUser` in `rate-limit.ts`), not per IP.
+  - Every admin write calls `recordAudit` with the actor. Admin routes sit behind `requireAdmin`.
 - **Web:**
   - Home page state (tab, filters, selected event, list/map view) lives in the URL (`lib/filters.ts`, `hooks/useHomeParams.ts`).
   - Validate API responses with shared schemas in `api/`.
