@@ -34,21 +34,34 @@ const jobs: Job[] = [
   }),
 ];
 const sources = sourcesFromEnv(db, env, logger);
+const llm = llmDepsFromEnv(env);
+if (env.CLASSIFIER_MODE === 'rules')
+  logger.warn('[worker] classifier: rules mode, LLM disabled, rules-only verdicts are published');
+else if (!llm)
+  logger.warn('[worker] ANTHROPIC_API_KEY is not set; the classifier will run rules only');
+
 if (sources.length > 0) {
-  const llm = llmDepsFromEnv(env);
-  if (!llm)
-    logger.warn('[worker] ANTHROPIC_API_KEY is not set; the classifier will run rules only');
   logger.info(`[worker] ingesting from: ${sources.map((s) => s.id).join(', ')}`);
-  jobs.push(
-    ingestJob(ingestDeps(db, sources, logger, llm, { delivery, webOrigin: env.WEB_ORIGIN })),
-  );
 } else {
   logger.warn(
     env.INGEST_CONTACT_EMAIL
-      ? '[worker] every source is disabled (HAPPENING_ENABLED, MAIZEPAGES_ENABLED); ingestion is off'
-      : '[worker] INGEST_CONTACT_EMAIL is not set; ingestion is disabled',
+      ? '[worker] every source is disabled (HAPPENING_ENABLED, MAIZEPAGES_ENABLED); nothing will be fetched'
+      : '[worker] INGEST_CONTACT_EMAIL is not set; nothing will be fetched',
   );
 }
+// The job runs even with no source to fetch: community tips still need classifying and alerts.
+jobs.push(
+  ingestJob(
+    ingestDeps(
+      db,
+      sources,
+      logger,
+      llm,
+      { delivery, webOrigin: env.WEB_ORIGIN },
+      env.CLASSIFIER_MODE,
+    ),
+  ),
+);
 
 const scheduler = startScheduler(jobs, { logger });
 logger.info(

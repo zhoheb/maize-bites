@@ -21,13 +21,20 @@ try {
     process.exitCode = 2;
   } else {
     const outcome = await ingestIfDue(
-      ingestDeps(db, sources, console, llmDepsFromEnv(env), {
-        delivery: deliveryFromEnv(db, env, console),
-        webOrigin: env.WEB_ORIGIN,
-      }),
+      ingestDeps(
+        db,
+        sources,
+        console,
+        llmDepsFromEnv(env),
+        { delivery: deliveryFromEnv(db, env, console), webOrigin: env.WEB_ORIGIN },
+        env.CLASSIFIER_MODE,
+      ),
     );
     if (outcome.status === 'skipped') {
-      console.info(`Not due yet; next run allowed at ${outcome.nextAllowedAt.toISOString()}.`);
+      console.info(
+        `No source was due, so nothing was fetched; stored events were classified. ` +
+          `Next fetch allowed at ${outcome.nextAllowedAt.toISOString()}.`,
+      );
     } else {
       console.info(JSON.stringify(outcome, null, 2));
       if (outcome.results.some((result) => !result.complete)) process.exitCode = 1;

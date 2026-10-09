@@ -4,6 +4,7 @@ import {
   listEventsNeedingRules,
   listLlmCandidates,
   recordClassification,
+  type ClassifierMode,
   type Database,
 } from '@maize-bites/db';
 import type { EventSource } from '@maize-bites/shared';
@@ -11,6 +12,7 @@ import type { Logger } from '../scheduler.js';
 import { classifierInputFromEvent } from './input.js';
 import { callBudget, classifyWithLlm, estimateCostUsd, type CreateMessage } from './llm.js';
 import { mapWithConcurrency } from './pool.js';
+import { decideRulesMode } from './rules-mode.js';
 import { prefilter } from './rules.js';
 
 /** Max LLM requests in flight. */
@@ -34,6 +36,11 @@ export interface ClassifyDeps {
   now: Date;
   /** Null when ANTHROPIC_API_KEY is unset: rules still run, candidates wait. */
   llm: LlmDeps | null;
+  /**
+   * "llm" (default): rules prefilter, then the LLM decides. "rules": the strict rules-mode
+   * decider is the final judge, its positives are published, and `llm` is never used.
+   */
+  mode?: ClassifierMode;
 }
 
 export interface ClassifyStats {
@@ -41,6 +48,8 @@ export interface ClassifyStats {
   bySource: Partial<Record<EventSource, number>>;
   rulesClassified: number;
   rulesCandidates: number;
+  /** Rules mode only: verdicts of free food, which are published as they stand. */
+  rulesPublished: number;
   llmPending: number;
   llmCalls: number;
   llmClassified: number;
@@ -52,17 +61,64 @@ export interface ClassifyStats {
   estimatedCostUsd: number;
 }
 
+/**
+ * Rules mode: one final verdict per content version, straight from the rules. A positive is
+ * stored above the publish threshold; everything else well below the review band.
+ */
+async function classifyInRulesMode(
+  { db, logger, now }: Pick<ClassifyDeps, 'db' | 'logger' | 'now'>,
+  stats: ClassifyStats,
+): Promise<ClassifyStats> {
+  for (const event of await listEventsNeedingRules(db, now, 'rules')) {
+    const verdict = decideRulesMode(classifierInputFromEvent(event));
+    // An approved tip is free food by a person's say-so; the rules only add the details.
+    const isTip = event.source === 'submission';
+    const hasFreeFood = isTip || verdict.hasFreeFood;
+    await recordClassification(db, {
+      eventId: event.id,
+      contentHash: event.contentHash,
+      method: 'rules',
+      rulesMode: true,
+      model: null,
+      hasFreeFood,
+      confidence: verdict.hasFreeFood
+        ? verdict.confidence
+        : isTip
+          ? RULES_MODE_TIP_CONFIDENCE
+          : verdict.confidence,
+      foodItems: verdict.foodItems,
+      mealType: verdict.mealType,
+      dietary: verdict.dietary,
+      audience: verdict.audience,
+      evidence: verdict.hasFreeFood || !isTip ? verdict.evidence : 'community tip',
+    });
+    stats.rulesClassified += 1;
+    stats.bySource[event.source] = (stats.bySource[event.source] ?? 0) + 1;
+    if (hasFreeFood) stats.rulesPublished += 1;
+  }
+  logger.info(
+    `[classify] rules mode: ${stats.rulesClassified} classified, ${stats.rulesPublished} published, ` +
+      `${stats.rulesClassified - stats.rulesPublished} not free food; no LLM calls`,
+  );
+  return stats;
+}
+
+/** A tip the rules found no free-food statement in is still a person's report of free food. */
+const RULES_MODE_TIP_CONFIDENCE = 0.75;
+
 /** Stage 1 for new content, then stage 2 for candidates that still need an LLM verdict. */
 export async function classifyPendingEvents({
   db,
   logger,
   now,
   llm,
+  mode = 'llm',
 }: ClassifyDeps): Promise<ClassifyStats> {
   const stats: ClassifyStats = {
     bySource: {},
     rulesClassified: 0,
     rulesCandidates: 0,
+    rulesPublished: 0,
     llmPending: 0,
     llmCalls: 0,
     llmClassified: 0,
@@ -73,6 +129,7 @@ export async function classifyPendingEvents({
     outputTokens: 0,
     estimatedCostUsd: 0,
   };
+  if (mode === 'rules') return classifyInRulesMode({ db, logger, now }, stats);
 
   for (const event of await listEventsNeedingRules(db, now)) {
     // Approved tips are free food by a person's say-so; skip the prefilter so the LLM extracts details.

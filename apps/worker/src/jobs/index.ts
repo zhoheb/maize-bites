@@ -1,4 +1,9 @@
-import { getHttpValidators, saveHttpValidators, type Database } from '@maize-bites/db';
+import {
+  getHttpValidators,
+  saveHttpValidators,
+  type ClassifierMode,
+  type Database,
+} from '@maize-bites/db';
 import { createMailer } from '@maize-bites/email';
 import { anthropicCreateMessage } from '../classifier/anthropic.js';
 import { classifyPendingEvents, type LlmDeps } from '../classifier/classify-events.js';
@@ -15,8 +20,9 @@ import { createMaizepagesSource } from '../sources/maizepages/index.js';
 import type { Source } from '../sources/types.js';
 import { ingestIfDue, type IngestDeps } from './ingest.js';
 
+/** Null in rules mode (the Anthropic client is never built) and when there is no API key. */
 export function llmDepsFromEnv(env: WorkerEnv): LlmDeps | null {
-  if (!env.ANTHROPIC_API_KEY) return null;
+  if (env.CLASSIFIER_MODE === 'rules' || !env.ANTHROPIC_API_KEY) return null;
   return {
     createMessage: anthropicCreateMessage(env.ANTHROPIC_API_KEY),
     maxCalls: env.LLM_MAX_CALLS_PER_RUN,
@@ -75,12 +81,13 @@ export function ingestDeps(
   logger: Logger,
   llm: LlmDeps | null,
   notify?: { delivery: Delivery; webOrigin: string },
+  mode: ClassifierMode = 'llm',
 ): IngestDeps {
   return {
     db,
     sources,
     logger,
-    classify: (now) => classifyPendingEvents({ db, logger, now, llm }),
+    classify: (now) => classifyPendingEvents({ db, logger, now, llm, mode }),
     ...(notify && {
       notify: (now: Date) => runInstantAlerts({ db, logger, now, ...notify }),
     }),

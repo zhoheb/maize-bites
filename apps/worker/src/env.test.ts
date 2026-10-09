@@ -11,6 +11,7 @@ describe('parseEnv', () => {
       LOG_LEVEL: 'info',
       HAPPENING_ENABLED: true,
       MAIZEPAGES_ENABLED: false,
+      CLASSIFIER_MODE: 'llm',
       LLM_MAX_CALLS_PER_RUN: 100,
       EVENT_RETENTION_DAYS: 30,
       PRUNE_INTERVAL_MINUTES: 60,
@@ -78,5 +79,25 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ DATABASE_URL, MAIZEPAGES_ENABLED: 'yes' })).toThrow(
       /MAIZEPAGES_ENABLED/,
     );
+  });
+
+  it('reads CLASSIFIER_MODE, defaulting to llm', () => {
+    const mode = (value?: string) =>
+      parseEnv({ DATABASE_URL, ...(value === undefined ? {} : { CLASSIFIER_MODE: value }) })
+        .CLASSIFIER_MODE;
+    expect(mode()).toBe('llm');
+    expect(mode('')).toBe('llm');
+    expect(mode('llm')).toBe('llm');
+    expect(mode('rules')).toBe('rules');
+    expect(() => mode('RULES')).toThrow(/CLASSIFIER_MODE/);
+    expect(() => mode('off')).toThrow(/CLASSIFIER_MODE/);
+  });
+
+  it('does not need an Anthropic key in rules mode, or forbid one', () => {
+    expect(parseEnv({ DATABASE_URL, CLASSIFIER_MODE: 'rules' }).ANTHROPIC_API_KEY).toBeUndefined();
+    expect(
+      parseEnv({ DATABASE_URL, CLASSIFIER_MODE: 'rules', ANTHROPIC_API_KEY: 'sk-ant-test' })
+        .CLASSIFIER_MODE,
+    ).toBe('rules');
   });
 });

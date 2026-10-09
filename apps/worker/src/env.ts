@@ -24,6 +24,12 @@ export const workerEnvSchema = databaseEnvSchema.extend({
   HAPPENING_ENABLED: flag(true),
   /** Maize Pages public events (maizepages.umich.edu ICS/RSS feeds). */
   MAIZEPAGES_ENABLED: flag(false),
+  /**
+   * "llm": keyword rules pick candidates and Claude decides; nothing from a feed is published
+   * without the model's say-so. "rules": no LLM at all; a stricter set of rules is the final
+   * judge and its positives are published. Rules mode misses more and is wrong more often.
+   */
+  CLASSIFIER_MODE: z.preprocess(emptyAsUndefined, z.enum(['llm', 'rules']).default('llm')),
   /** Enables the LLM classifier stage. Without it, rules still run and candidates wait. */
   ANTHROPIC_API_KEY: z.preprocess(emptyAsUndefined, z.string().min(1).optional()),
   /** Hard cap on Anthropic API requests per ingestion run (retries included). */
