@@ -19,7 +19,7 @@ export function AppShell() {
         Skip to content
       </a>
       <header className="bg-michigan-blue">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3">
           <NavLink
             to="/"
             className="flex items-center gap-2 rounded-lg focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-maize"
@@ -28,7 +28,7 @@ export function AppShell() {
             <span className="text-lg font-extrabold tracking-tight text-maize">Maize Bites</span>
           </NavLink>
           <nav aria-label="Main">
-            <ul className="flex items-center gap-1">
+            <ul className="-mx-1 flex flex-wrap items-center gap-1">
               <li>
                 <NavLink to="/" end className={navClass}>
                   Free food
@@ -40,10 +40,22 @@ export function AppShell() {
                 </NavLink>
               </li>
               <li>
+                <NavLink to="/submit" className={navClass}>
+                  Share
+                </NavLink>
+              </li>
+              <li>
                 <NavLink to="/about" className={navClass}>
                   About
                 </NavLink>
               </li>
+              {me.data?.isAdmin && (
+                <li>
+                  <NavLink to="/admin" className={navClass}>
+                    Admin
+                  </NavLink>
+                </li>
+              )}
               {!signedIn && me.isSuccess && (
                 <li className="hidden sm:block">
                   <NavLink to="/sign-in" className={navClass}>

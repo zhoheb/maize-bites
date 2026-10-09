@@ -6,11 +6,13 @@ import { registerSW } from 'virtual:pwa-register';
 import { shouldRetry } from './api/queries';
 import { AppShell } from './components/AppShell';
 import { AboutPage } from './pages/AboutPage';
+import { AdminPage } from './pages/AdminPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { EventPage } from './pages/EventPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SignInPage } from './pages/SignInPage';
+import { SubmitPage } from './pages/SubmitPage';
 import { VerifyPage } from './pages/VerifyPage';
 import './index.css';
 
@@ -33,6 +35,8 @@ createRoot(root).render(
             <Route path="events/:id" element={<EventPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="alerts" element={<AlertsPage />} />
+            <Route path="submit" element={<SubmitPage />} />
+            <Route path="admin" element={<AdminPage />} />
             <Route path="sign-in" element={<SignInPage />} />
             <Route path="auth/verify" element={<VerifyPage />} />
             <Route path="*" element={<NotFoundPage />} />
