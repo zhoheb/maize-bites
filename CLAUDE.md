@@ -12,6 +12,7 @@ web (React SPA) ──/api proxy──▶ api (Express) ──┐
 
 - **web** fetches from `/api/*`. The API serves everything under `/api`, and in dev Vite proxies `/api` to it unchanged.
 - **api** and **worker** share `@maize-bites/db` (Drizzle schema, queries, client) and read `DATABASE_URL`.
+- **api** and **worker** send mail through `@maize-bites/email` (Resend; without a key, messages are logged).
 - **shared** holds the wire contract: Zod schemas, the types inferred from them, and pure domain helpers. The web app imports it, so it must stay browser-safe (no Node APIs, no db).
 
 ## Layout
@@ -21,10 +22,12 @@ apps/web        React + Vite + Tailwind v4, TanStack Query, React Router, MapLib
                 src/{api,components,hooks,lib,pages,sw}; scripts/generate-icons.js writes public/icons
 apps/api        Express 5. createApp({ db, logger, webOrigin }) in app.ts; routes/ per resource (index.ts mounts
                 /api); errors.ts (HttpError + error format); serializers.ts; ics.ts; test/seed.ts (API fixtures)
-apps/worker     node-cron scheduler.ts, jobs/ (ingest-happening), happening/ (feed client, schema, normalizer),
-                locations/ (building matcher), classifier/ (rules + LLM), eval/ (harness + labeled.json),
-                cli/, fixtures/ (captured feed response)
+apps/worker     node-cron scheduler.ts, jobs/ (ingest-happening, housekeeping, index.ts wires them),
+                happening/ (feed client, schema, normalizer), locations/ (building matcher),
+                classifier/ (rules + LLM), notify/ (alert matching, notifier, delivery),
+                eval/ (harness + labeled.json), cli/, fixtures/ (captured feed response)
 packages/db     schema.ts, queries/, client.ts (createDb), testing.ts (createTestDb + fixtures), seed/ (buildings), drizzle/ migrations
+packages/email  mailer.ts (createMailer), templates.ts (sign-in link, instant alert, digest)
 packages/shared enums.ts (all enumerated values), events.ts (wire schemas + domain helpers)
 ```
 
@@ -58,6 +61,8 @@ pnpm --filter @maize-bites/api test   # target a single package
 - Enumerated values live in `shared/src/enums.ts`. Each pg enum in `schema.ts` repeats its values, and `schema.test.ts` fails if they drift. To add a value, change both, then run `pnpm db:generate`.
 - PGlite accepts some things postgres-js rejects (for example, raw `Date` params in `sql` expressions; bind them with `sql.param(value, column)`). Run `pnpm test:pg` when you touch queries.
 - **Ingestion** (`apps/worker/src/jobs/ingest-happening.ts`) runs hourly at :23 and once on startup. `ingestIfDue` skips any run within 59 min of the previous start, whatever triggered it. Each run fetches 14 local days from `events.umich.edu/list/json?v=2`, paged 200 at a time with a 1s pause. It sends a User-Agent carrying `INGEST_CONTACT_EMAIL`, uses a 10s timeout, and backs off exponentially on 429/5xx while honoring Retry-After. Events missing for 24h are marked `removed`, but only after a complete fetch, and only if they haven't ended and start inside the fetched window. Don't loosen these limits.
+- A Cloudflare challenge on the feed (`cf-mitigated: challenge`) fails the run without retrying. Don't add headers or clients meant to get past it.
+- **Housekeeping** (`apps/worker/src/jobs/housekeeping.ts`): `auth-cleanup` runs daily at 4:17 AM; `prune-events` deletes events that ended more than `EVENT_RETENTION_DAYS` ago, every `PRUNE_INTERVAL_MINUTES`.
 - The feed has no coordinates. Locations resolve by matching `building_name` then `location_name` against building names and aliases (`locations/matcher.ts`). Unmatched names accumulate in `location_misses`; add aliases to `packages/db/src/seed/buildings.ts` from there.
 - **Classifier** (`apps/worker/src/classifier/`) runs after each ingestion, once per content version:
   - **Rules** (`rules-config.ts` is the editable vocabulary) store a `rules` row for every live event. A candidate is stored as free food at confidence 0.3, which keeps it hidden and out of the review queue.
