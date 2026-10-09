@@ -43,8 +43,8 @@ Result from this network, 2026-10-09 04:45 UTC, with our real User-Agent:
 - [x] Live `ingest:once` with only Maize Pages enabled
 - [x] Update `docs/sources.md` and `CLAUDE.md`
 
-Live Maize Pages run against the local db, 2026-10-09 05:02 UTC (3 requests in total to
-maizepages.umich.edu today: robots.txt, the ICS feed, and nothing else from the worker):
+Live Maize Pages run against the local db, 2026-10-09 05:02 UTC (the worker made two
+requests to maizepages.umich.edu: robots.txt and the ICS feed):
 
 | Measure                            | Result                                     |
 | ---------------------------------- | ------------------------------------------ |
@@ -75,12 +75,12 @@ review"). I then re-applied the saved feed from disk, with no second request.
 
 ### Part 3: phase 7 (`phase-7`)
 
-- [ ] `POST /api/submissions`
-- [ ] `POST /api/events/:id/reports`
-- [ ] Admin: review queue, override, submission review, metrics, audit log
-- [ ] Rate limits on submissions and reports
-- [ ] API tests (trust, thresholds, admin authorization, audit)
-- [ ] Web: Submit page, report buttons, gray-out, Admin page, tests
+- [x] `POST /api/submissions` (and `GET /api/buildings` for the form)
+- [x] `POST /api/events/:id/reports`
+- [x] Admin: review queue, override, submission review, metrics, audit log, building aliases
+- [x] Rate limits on submissions and reports (per user)
+- [x] API tests (trust, thresholds, admin authorization, audit)
+- [x] Web: Submit page, report buttons, gray-out, Admin page, tests
 
 ### Part 4: logging (`worker-pino`)
 
@@ -107,6 +107,7 @@ review"). I then re-applied the saved feed from disk, with no second request.
 | 0    | `audit-cleanup`       | `84855df` `bcfc224` `1104d17` `329a3a3` `b2812b9` `7677ed5`           | yes (ff)       |
 | 1    | `happening-diagnosis` | `ecee92a` `f8ee686`                                                   | yes            |
 | 2    | `sources`             | `c5cf497` `60787c1` `726495e` `872387d` `8b49d46` `fd360b5` `a4bb5fa` | yes            |
+| 3    | `phase-7`             | `7e96853` `1f44aee` `61c9eda` `c6b01a5` `cd5b84e` `1cd18cd`           | yes            |
 
 ## Decisions to review
 
@@ -149,6 +150,32 @@ review"). I then re-applied the saved feed from disk, with no second request.
 13. **The ingestion test file kept its assertions** but its setup helper changed (it now builds a
     Happening source), and one env test gained the two new flags. The Happening client,
     normalizer, and schema tests are byte-for-byte unchanged apart from import paths.
+
+### Part 3
+
+1. **Extra routes beyond your list.** `GET /api/buildings` (public; the tip form needs it),
+   `POST /api/admin/buildings/:id/aliases` (makes the location-misses panel actionable; the
+   query and schema already existed), and `GET /api/admin/audit-log`.
+2. **Rate limits:** 5 tips and 30 reports per user per hour, keyed on the user id, not the IP.
+3. **Tip time rules, checked on the server:** a tip can't already be over (no end time counts
+   as one hour long) and can't start more than 14 days ahead.
+4. **A repeat report answers 200, a new one 201**, both with fresh counts. Reports are only
+   accepted on published events (404 otherwise).
+5. **Reviewing a tip twice is a 400**, not a 409: the shared error codes have no "conflict".
+6. **Override keeps what the classifier extracted** for any field the admin leaves out, and
+   resolves the event's open review flags. Confidence is stored as 1.
+7. **Tips are published before the classifier reads them** (that was already the rule in
+   `listPublishedEvents`). The worker extracts food details on its next hourly pass, so a fresh
+   tip shows with no food items for up to an hour.
+8. **Admin page includes "override any event"** by pasting an event link or id, since the queue
+   only lists events that need review.
+9. **Two tests that asserted the 501 stubs** now assert a 401 for signed-out writes; the
+   `notImplemented` helper is gone. The admin test's "admins reach the stub" case was replaced
+   by tests of the real behaviour.
+10. **Making someone an admin is still manual**: `update users set is_admin = true where
+email = '...'`. There is no UI for it, on purpose.
+11. **Events reported gone** are faded and desaturated on cards, with a "Food may be gone"
+    badge in place of the audience badge; the title is struck through in details.
 
 ## Blocked / needs Zach
 
