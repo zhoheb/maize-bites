@@ -3,9 +3,11 @@
 Log of the autonomous pass through Parts 0 to 5, finished 2026-10-09. Everything is merged into
 `main` locally. Nothing has been pushed, deployed, or emailed.
 
-**Status:** Parts 0 to 5 are done. One step is yours (running the Happening check on campus
-networks), and Happening ingestion stays blocked until its owners allow our client.
-`pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:pg` pass on `main` (753 tests each run).
+**Status:** Parts 0 to 5 are done, and so is the follow-up "real events with no API key"
+(rules mode, below). The site is showing 31 real events. One step is yours (running the
+Happening check on campus networks), and Happening ingestion stays off until its owners allow
+our client. `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:pg` pass on `main`
+(829 tests each run).
 
 Note: the instructions refer to `docs/next-session.md`. That file is not in the repo; the ground
 rules I followed are the ones from the session prompt (no challenge bypass, no SSO, no
@@ -98,6 +100,78 @@ review"). I then re-applied the saved feed from disk, with no second request.
 - [x] `/api/health` per source
 - [x] `README.md`
 
+### Rules mode: real events with no API key (`classifier-rules-mode`)
+
+- [x] Step 0: state check (Part 2 done; prefilter only marks candidates; nothing publishes
+      without the LLM)
+- [x] Step 1: Maize Pages source already built. Checked for Engage's "Free Food" perk: the
+      feeds don't carry it (see Decisions)
+- [x] Step 2: `CLASSIFIER_MODE` (`llm` default, `rules`), validated and tested
+- [x] Step 3: strict rules-mode decider; vocabulary in `rules-config.ts`
+- [x] Step 4: 50 table-driven decider cases, PGlite integration tests, eval `--mode rules`;
+      the llm-mode test files are unchanged
+- [x] Step 5: `.env.example`, your `.env` (three keys only), `CLAUDE.md`, `docs/sources.md`,
+      About page
+- [x] Step 6: real run, tuned once, aliases and buildings added
+- [x] Step 7: site running, checked, screenshot at `docs/screenshots/first-real-events.png`
+
+Counts from the real run (2026-10-09, about 2:15 AM Ann Arbor time):
+
+| Measure                           | Result                                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Fetched this session              | 0. Maize Pages was last read at 05:02 UTC (27 events) and may next be read at 10:01 UTC; I did not fetch early |
+| Live events judged                | 381 (358 Happening rows from Sep 30, 23 Maize Pages)                                                           |
+| Rules positives, first run        | 33                                                                                                             |
+| Rules positives after tuning      | 31 (one false positive removed, one duplicate removed)                                                         |
+| Published and upcoming            | 31: 29 Happening, 2 Maize Pages                                                                                |
+| Rejected                          | 350, of which 89 mention food                                                                                  |
+| Published with a map pin          | 23 of 31                                                                                                       |
+| Live events matched to a building | 185 of 381 after new buildings and aliases (119 before)                                                        |
+| Today tab / This Week tab         | 9 / 31                                                                                                         |
+| Errors                            | 0                                                                                                              |
+
+Ten of the 31 published, with the evidence the rules quoted:
+
+| When (Ann Arbor) | Event                                       | Where                       | Evidence                                                 |
+| ---------------- | ------------------------------------------- | --------------------------- | -------------------------------------------------------- |
+| Fri 10:00 AM     | La Tertulia: Spanish Coffee Hour            | Modern Languages Building   | "Free coffee, tea, light snacks, & baked goods"          |
+| Fri 12:00 PM     | Master's Resume Lab                         | Student Activities Building | "Lunch will be provided."                                |
+| Fri 12:00 PM     | Fresh Check Day 2026                        | The Diag                    | "Free food (fall donuts, anyone?), swag"                 |
+| Fri 3:00 PM      | Sustainability Coffee Chats                 | Michigan League             | tag: Free Food                                           |
+| Fri 5:30 PM      | Rebuilding Democracy (Maize Pages)          | Ross School of Business     | "Doors open, light refreshments and Literati book sales" |
+| Sat 9:00 AM      | Dr. Sarah Bartolome: Singing and Breathwork | Earl V. Moore Building      | "Free registration. Lunch will be provided."             |
+| Sun 9:15 AM      | Cider Mill Long Run (Maize Pages)           | Dexter Cider Mill (no pin)  | "donuts & cider provided"                                |
+| Mon 12:00 PM     | Midterm Study Hall at the DSI               | Mason Hall                  | "Snacks and drinks will be provided!"                    |
+| Tue 1:00 PM      | ResNavs #SoYF Game Break                    | Michigan Union              | "(free sugar cookies)"                                   |
+| Tue 5:30 PM      | 2026 First-Gen Fall Community Dinner        | Michigan Union              | "Dinner will be served."                                 |
+
+Ten rejected events that mention food, with why:
+
+| Event                                       | Why                                                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 34th Annual Women in Leadership Conference  | "PURCHASE YOUR TICKETS HERE"                                                             |
+| Soju Night                                  | "Tickets $25"                                                                            |
+| Maize & Brew Oktoberfest                    | "your ticket is 50% off"                                                                 |
+| Lunchtime Yoga                              | "$120 for 12 classes"                                                                    |
+| Ross Soccer Club pick-up                    | "pay-per-game ($10) via Venmo"                                                           |
+| Breakfast, Luncheon, and Dinner: Dining Out | meal words only (an exhibit title)                                                       |
+| Three Martini Lunch                         | "lunch" only (a book talk)                                                               |
+| Bate-Papo: Portuguese Conversation Hour     | "Enjoy coffee, tea, and light snacks": no "free" or "provided". Probably a miss          |
+| WISE STEM Community Meetings                | "Join us ... for snacks": same. Probably a miss                                          |
+| Ginsberg Reads Book Club                    | "Bring your own lunch: light snacks & drinks will..." vetoed by "bring your own". A miss |
+
+Precision looked good: of the 33 first-run positives I read, one was clearly wrong (an event
+that only invited hosts to "offer light refreshments") and one was a duplicate. Recall is the
+cost: at least three of the rejected events above probably do have free food.
+
+Date check: Maize Pages times are right for America/Detroit (the 8:00 AM conference is stored
+as 12:00 UTC). 25 of its 27 events are upcoming; one "event" in the feed started in 2022 and is
+still running.
+
+Eval: `pnpm --filter worker eval --mode rules` works, but `eval/labeled.json` has 20 items and
+none are labelled yet, so it reports "Nothing to score". I did not label them: the labels are
+meant to be yours.
+
 ### Seeing the site
 
 - [x] Maize Pages ingest into the local db (27 events; see Part 2)
@@ -107,15 +181,16 @@ review"). I then re-applied the saved feed from disk, with no second request.
 
 ## Commits
 
-| Part | Branch                | Commits                                                               | Merged to main |
-| ---- | --------------------- | --------------------------------------------------------------------- | -------------- |
-| 0    | `audit-cleanup`       | `84855df` `bcfc224` `1104d17` `329a3a3` `b2812b9` `7677ed5`           | yes (ff)       |
-| 1    | `happening-diagnosis` | `ecee92a` `f8ee686`                                                   | yes            |
-| 2    | `sources`             | `c5cf497` `60787c1` `726495e` `872387d` `8b49d46` `fd360b5` `a4bb5fa` | yes            |
-| 3    | `phase-7`             | `7e96853` `1f44aee` `61c9eda` `c6b01a5` `cd5b84e` `1cd18cd`           | yes            |
-| 4    | `worker-pino`         | `7b0cfb4`                                                             | yes            |
-| 5    | `ci-deploy`           | `d65198d` `03f6b1a` `8f379f1` `0e45e40` `703f872` `9aba454`           | yes            |
-| fix  | `map-fallback`        | `d6e9004`                                                             | yes            |
+| Part       | Branch                  | Commits                                                                                             | Merged to main |
+| ---------- | ----------------------- | --------------------------------------------------------------------------------------------------- | -------------- |
+| 0          | `audit-cleanup`         | `84855df` `bcfc224` `1104d17` `329a3a3` `b2812b9` `7677ed5`                                         | yes (ff)       |
+| 1          | `happening-diagnosis`   | `ecee92a` `f8ee686`                                                                                 | yes            |
+| 2          | `sources`               | `c5cf497` `60787c1` `726495e` `872387d` `8b49d46` `fd360b5` `a4bb5fa`                               | yes            |
+| 3          | `phase-7`               | `7e96853` `1f44aee` `61c9eda` `c6b01a5` `cd5b84e` `1cd18cd`                                         | yes            |
+| 4          | `worker-pino`           | `7b0cfb4`                                                                                           | yes            |
+| 5          | `ci-deploy`             | `d65198d` `03f6b1a` `8f379f1` `0e45e40` `703f872` `9aba454`                                         | yes            |
+| fix        | `map-fallback`          | `d6e9004`                                                                                           | yes            |
+| rules mode | `classifier-rules-mode` | `222ba1a` `ad829d6` `1036e6b` `6bbeadf` `0102e60` `757366e` `c0a9c03` `738f332` `451ac79` `5eeaae4` | yes            |
 
 Each branch still exists locally. `docs/progress.md` commits are on the part branches too.
 
@@ -240,6 +315,63 @@ email = '...'`. There is no UI for it, on purpose.
    `MAIZEPAGES_ENABLED`, so the running worker ingests Happening only (and fails on the
    challenge). The Maize Pages run in Part 2 used a one-off environment override.
 
+### Rules mode
+
+1. **29 of the 31 published events are Happening listings last fetched on Sep 30.** They are
+   real events dated Oct 9 to 13, but nine days stale: a cancellation or change since then
+   would not show. I published them because they are what makes the site useful tonight, and
+   Maize Pages alone had two positives. If you'd rather show only the live source, run
+   `update events set status = 'removed' where source = 'happening'` in psql; they come back
+   if Happening is ever fetched again. They age out by Oct 13 either way.
+2. **A new column, `classifications.rules_mode`** (migration 0006), tells a rules-mode verdict
+   from an llm-mode prefilter row. Both are `method = 'rules'`, `model` null, as you asked.
+   Without the marker a rules-mode negative would have looked like "the prefilter said no" and
+   kept the event from the LLM for good.
+3. **How llm mode treats rules-mode rows:** it writes a fresh prefilter row over each one, which
+   hides the event until the model decides, exactly as llm mode has always worked. So turning
+   llm mode on without a key hides everything rules mode published. Rules mode, for its part,
+   leaves content the LLM already judged alone.
+4. **The "Free Food" perk is not in the Maize Pages feeds**, only behind `/api/`, which
+   robots.txt disallows, so there is no `perk_free_food` field. Rules mode does treat a
+   "Free Food" tag as a strong positive (0.85), and Happening turns out to use that tag: two of
+   the published events came from it.
+5. **Classification now runs on every pass**, including when no source is due. This reverses
+   Part 2 decision 2. Without it, nothing would have been classified until the next Maize Pages
+   fetch at 6 AM, and tips would wait up to five hours.
+6. **Stored events are matched to buildings again on every pass**, so a new alias (from the
+   seed file or the admin page) reaches events already ingested. Before, it only affected
+   events fetched later.
+7. **Hard negatives are blunt on purpose.** "tickets", "admission", "fee", "fundraiser",
+   "bring your own" veto an event even next to "free pizza". I exempted only wording that
+   plainly means no charge ("free admission", "no tickets required", "no cost").
+8. **Meal type:** a meal named in the text wins ("lunch provided" at 6 PM is lunch); otherwise
+   the local start hour decides, and outside meal hours it is null. You asked for time of day;
+   I put the named meal first because it is the more reliable signal.
+9. **Tips in rules mode** stay published whatever the rules find; the rules only add food
+   items, dietary tags, and audience.
+10. **Cross-posted duplicates.** "Rebuilding Democracy" was on both sites with no import
+    record, so it showed twice. Maize Pages ingest now links a Happening row with the same
+    start time and the same title (ignoring case and punctuation), and the existing rule picks
+    the copy. Happening's own double listings (two "Master's Resume Lab" entries, two
+    "First-Gen Dinner" entries with different titles) still show twice.
+11. **Ten buildings added** with coordinates from OpenStreetMap Nominatim, the same way the
+    original seed was built: East Hall, West Hall, Kelsey Museum, Power Center, Clements
+    Library, Student Activities Building, ISR, Alice Lloyd, Undergraduate Science Building,
+    Walgreen Drama Center. Plus aliases for the Natural History Museum, Mendelssohn Theatre,
+    and the Earl Lewis Room. I skipped the LSA Building (Nominatim's match was a restaurant)
+    and "The Connector" (not sure which building). Two tests that used East Hall as their
+    unmatched example now use the LSA Building.
+12. **`pnpm ingest:once --reclassify`** (rules mode only) drops stored rules-mode verdicts so
+    edited vocabulary applies to events already judged. Verdicts are otherwise once per content
+    version.
+13. **Screenshot taken with system Chrome, not Playwright.** The Playwright browsers are in
+    your cache but the `playwright` package isn't installed anywhere, and I didn't add it. The
+    cached Chromium would not finish a headless capture of the map; system Chrome did.
+14. **Two fixture replays.** To apply the dedupe changes without fetching early, I re-applied
+    the saved Maize Pages feed from disk (no network), then deleted the run rows those replays
+    wrote so the schedule and `/api/health` reflect only the real 05:02 UTC fetch.
+15. **The demo events are gone** (`pnpm db:seed:demo --clear`); what you see is real data.
+
 ## Blocked / needs Zach
 
 - **Happening is blocked by a Cloudflare challenge.** Ingestion from it stays failing until the
@@ -261,37 +393,38 @@ email = '...'`. There is no UI for it, on purpose.
 
 ## How to run the site
 
-It is running now: http://localhost:5173 (web), http://localhost:3001/api/health (API), with the
-worker and Postgres alongside. I started it with `pnpm dev` from the repo root; its output is in
-`/tmp/maize-bites-dev.log`. To stop it, end that `pnpm dev` process (or close the terminal
-session that owns it); `pnpm db:down` stops Postgres.
+It is running now: http://localhost:5173 (web) and http://localhost:3001/api/health (API), with
+the worker and Postgres. Started with `pnpm dev`; output is in `/tmp/maize-bites-dev.log`. To
+stop it, end that `pnpm dev` process; `pnpm db:down` stops Postgres.
 
 To start it again:
 
 ```sh
 cd ~/SideProjects/FoodTracker
-pnpm dev                 # Postgres (Docker), migrations, then web :5173, api :3001, worker
+pnpm dev                     # Postgres (Docker), migrations, then web :5173, api :3001, worker
 ```
 
-Docker Desktop must be running. The database keeps its data between runs. If the event list is
-empty (demo events are placed relative to when they were seeded, so they age out within a week):
+Docker Desktop must be running. Your `.env` now has `CLASSIFIER_MODE=rules`,
+`HAPPENING_ENABLED=false`, and `MAIZEPAGES_ENABLED=true`, so the worker reads Maize Pages every
+five hours (next at about 6:00 AM today), classifies with the rules each hour, and never calls
+Anthropic.
+
+Useful while tuning:
 
 ```sh
-pnpm db:seed:demo        # refresh the 15 "[demo]" events
-pnpm db:seed:demo --clear   # remove them
+pnpm ingest:once               # one pass now: fetch whatever is due, then classify
+pnpm ingest:once --reclassify  # after editing rules-config.ts: judge every live event again
+pnpm --filter worker eval --mode rules   # precision/recall, once eval/labeled.json has labels
+pnpm db:seed                   # after editing packages/db/src/seed/buildings.ts
+pnpm db:seed:demo              # demo events, if you ever want an obviously fake full list
 ```
 
-To see real events instead of demo data:
+The list will thin out through the week: most of what is published is Happening data that ends
+by Oct 13, and Maize Pages adds only a couple of positives per week under these rules. An
+Anthropic key (`CLASSIFIER_MODE=llm`) or Happening access is what brings the numbers back up.
 
-1. Put `ANTHROPIC_API_KEY=...` in `.env`. Without it nothing from a feed is ever published.
-2. Put `MAIZEPAGES_ENABLED=true` in `.env` (Happening is blocked for now).
-3. `pnpm dev`, or `pnpm ingest:once` for a single pass. Maize Pages was last read at 05:02 UTC
-   on Oct 9, so its next read is allowed five hours after that; the classifier still runs each
-   hour on what is already stored.
-
-To use the signed-in parts (Share, report buttons, Alerts): go to Sign in, enter your
-@umich.edu address, and click the link printed in the API's log (no email is sent without
-`RESEND_API_KEY`). For the Admin page:
+To use the signed-in parts (Share, report buttons, Alerts): Sign in with your @umich.edu
+address and click the link printed in the API's log. For the Admin page:
 
 ```sh
 docker compose exec postgres psql -U maize -d maize_bites \
@@ -300,19 +433,15 @@ docker compose exec postgres psql -U maize -d maize_bites \
 
 ### What I checked on the running site
 
-- `GET http://localhost:5173/` returns the app; in headless Chrome the home page renders the nav
-  (Free food, Alerts, Share, About, Sign in), the filters, and "15 events · This Week" with the
-  demo cards.
-- The map mounts and draws 15 markers, 8 on Central campus and 7 on North. In my headless
-  capture the street basemap behind them had not painted (software rendering, tiles from
-  OpenFreeMap), so I can't vouch for the tiles; they should appear in a normal browser.
-- `GET /api/health` answers 200 through the web proxy with `status: "degraded"`: Happening is
-  listed as stale (last success Sep 30, last attempt challenged), Maize Pages as fresh, and
-  `ingestionStale` is false.
-- `/api/events/now` returns the two live demo events; `/api/events` returns all 15, every one
-  with coordinates and `source: "submission"`.
-- The worker started, logged through pino, tried Happening once (HTTP 403, Cloudflare
-  challenge), and scheduled its jobs.
+- `GET /api/health` (through the web proxy): 200. Maize Pages fresh (last success 05:02 UTC),
+  Happening listed as stale, `ingestionStale` false, `status` "degraded" because of Happening.
+- `GET /api/events?from=<now>`: 31 events, 29 from Happening and 2 from Maize Pages, 23 with
+  coordinates. Today tab: 9. Now tab: 0 (it was 2 AM).
+- In headless Chrome the This Week tab lists the real events ("La Tertulia: Spanish Coffee
+  Hour", "Fresh Check Day 2026", ...) and the map shows their pins on Central and North campus.
+  Screenshot: `docs/screenshots/first-real-events.png`. As before, the street basemap did not
+  paint in the headless capture; check it in a normal browser.
+- The worker started in rules mode, logged "classifier: rules mode, LLM disabled, rules-only
+  verdicts are published", and made no request (Maize Pages not due).
 
-Not checked in a browser: signing in, the Submit, Admin, and Alerts pages, and the report
-buttons. Those are covered by the API and component tests, not by a manual click-through.
+Not checked in a browser: signing in, Share, Admin, Alerts, and the report buttons.
