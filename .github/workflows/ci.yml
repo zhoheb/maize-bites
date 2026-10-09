@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: maize
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: maize_bites
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U maize -d maize_bites"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    env:
+      # Throwaway credentials for the service container above. test:pg creates and drops a
+      # database per test on this server.
+      DATABASE_URL: postgres://maize:ci-only@localhost:5432/maize_bites
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the pnpm version from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - name: pnpm test (in-memory PGlite)
+        run: pnpm test
+      # `pnpm test:pg` starts Postgres with docker compose; here the service container is it.
+      - name: pnpm test:pg (real Postgres)
+        run: pnpm test:pg:ci
+      - run: pnpm build
