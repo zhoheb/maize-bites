@@ -263,6 +263,34 @@ export async function hasFreshHappeningTwin(
   return row !== undefined;
 }
 
+/** Title with everything but letters and digits removed, lowercased: how two listings compare. */
+const titleKey = (value: unknown) => sql`lower(regexp_replace(${value}, '[^[:alnum:]]+', '', 'g'))`;
+
+/**
+ * Links Happening events to a Maize Pages event they plainly duplicate but weren't imported
+ * from: the same start time and the same title once punctuation and case are ignored. The
+ * Happening rows get the Maize Pages id, and from then on the usual duplicate rules apply.
+ * Returns how many rows were linked.
+ */
+export async function linkHappeningTwinsByContent(
+  db: Database,
+  maizepages: { eventId: string; title: string; startsAt: Date },
+): Promise<number> {
+  const linked = await db
+    .update(events)
+    .set({ maizepagesEventId: maizepages.eventId })
+    .where(
+      and(
+        eq(events.source, 'happening'),
+        sql`${events.maizepagesEventId} is null`,
+        eq(events.startsAt, maizepages.startsAt),
+        sql`${titleKey(events.title)} = ${titleKey(sql`${maizepages.title}::text`)}`,
+      ),
+    )
+    .returning({ id: events.id });
+  return linked.length;
+}
+
 /**
  * Hides one source's copies of a Maize Pages event because `survivorId`, the other source's
  * copy, is now the event. Alert claims are copied to the survivor so nobody is told about the

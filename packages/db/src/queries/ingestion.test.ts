@@ -11,6 +11,7 @@ import {
   getLastIngestionRun,
   getLastSuccessfulIngestion,
   hasFreshHappeningTwin,
+  linkHappeningTwinsByContent,
   listSourceFreshness,
   markUnseenEventsRemoved,
   recordLocationMisses,
@@ -319,5 +320,34 @@ describe('Maize Pages / Happening duplicates', () => {
     ).toBe(0);
     const [row] = await db.select().from(events).where(eq(events.id, other.id));
     expect(row?.status).toBe('active');
+  });
+
+  it('linkHappeningTwinsByContent links a same-time, same-title Happening listing', async () => {
+    const startsAt = hours(5);
+    const post = (title: string, extra: Parameters<typeof eventInput>[0] = {}) =>
+      upsertEvent(db, eventInput({ source: 'happening', title, startsAt, ...extra }));
+    const { event: twin } = await post('Rebuilding Democracy: Osita Nwanevu in conversation');
+    const { event: otherTime } = await post('Rebuilding Democracy: Osita Nwanevu in conversation', {
+      startsAt: hours(6),
+    });
+    const { event: otherTitle } = await post('Rebuilding Democracy, part two');
+    const { event: alreadyLinked } = await post(
+      'REBUILDING DEMOCRACY osita nwanevu in conversation',
+      { maizepagesEventId: '111' },
+    );
+
+    const linked = await linkHappeningTwinsByContent(db, {
+      eventId: MP_ID,
+      title: 'Rebuilding Democracy Osita Nwanevu in conversation ',
+      startsAt,
+    });
+
+    expect(linked).toBe(1);
+    const idOf = async (id: string) =>
+      (await db.select().from(events).where(eq(events.id, id)))[0]?.maizepagesEventId;
+    expect(await idOf(twin.id)).toBe(MP_ID);
+    expect(await idOf(otherTime.id)).toBeNull();
+    expect(await idOf(otherTitle.id)).toBeNull();
+    expect(await idOf(alreadyLinked.id)).toBe('111');
   });
 });

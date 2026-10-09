@@ -1,4 +1,9 @@
-import { hasFreshHappeningTwin, retireDuplicateEvents, type HttpValidators } from '@maize-bites/db';
+import {
+  hasFreshHappeningTwin,
+  linkHappeningTwinsByContent,
+  retireDuplicateEvents,
+  type HttpValidators,
+} from '@maize-bites/db';
 import { z } from 'zod';
 import { httpGet, isRefusal, type HttpOptions, type HttpResult } from '../http/client.js';
 import { DUPLICATE_FRESHNESS_MS, type FetchResult, type Source } from '../types.js';
@@ -105,6 +110,13 @@ export function createMaizepagesSource(options: {
     // Happening imports some Maize Pages events. While its feed keeps listing a copy, that copy
     // is the event and ours is skipped.
     beforeUpsert: async ({ db, startedAt }, item) => {
+      // Some events are posted to both sites by hand, with no import record to tie them
+      // together. Tie those by start time and title first.
+      await linkHappeningTwinsByContent(db, {
+        eventId: item.event.sourceEventId,
+        title: item.event.title,
+        startsAt: item.event.startsAt,
+      });
       const since = new Date(startedAt.getTime() - DUPLICATE_FRESHNESS_MS);
       return (await hasFreshHappeningTwin(db, item.event.sourceEventId, since)) ? 'skip' : 'upsert';
     },

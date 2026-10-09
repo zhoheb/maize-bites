@@ -254,6 +254,27 @@ describe('duplicates between Happening and Maize Pages', () => {
     ]);
     expect(await rowsFor(MP_ID)).toHaveLength(2);
   });
+  it('ties a cross-posted event (no import record) to its Happening listing by time and title', async () => {
+    // The same event entered by hand on Happening: same start, the title punctuated differently.
+    const crossPosted = {
+      ...happeningCopy(),
+      id: '900002-1',
+      combined_title: '34th Annual Women in Leadership Conference!',
+      website: null,
+      links: [],
+      maizepages_import: undefined,
+    };
+    await runIngestion(deps([happening([crossPosted])]));
+    expect(await rowsFor(MP_ID)).toEqual([]);
+
+    const [result] = await runIngestion(deps([maizepages(ics()).source], { now: at(60) }));
+
+    // Linked, and since Happening listed it within the day, its copy stays the event.
+    expect(result).toMatchObject({ skippedDuplicates: 1, created: 26 });
+    expect(await rowsFor(MP_ID)).toEqual([
+      expect.objectContaining({ source: 'happening', status: 'active' }),
+    ]);
+  });
 });
 
 describe('failure isolation', () => {
