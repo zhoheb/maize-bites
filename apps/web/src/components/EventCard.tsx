@@ -1,7 +1,7 @@
 import type { FoodEvent } from '@maize-bites/shared';
 import { Link } from 'react-router';
 import { formatLocation, formatTimeRange } from '../lib/format';
-import { AudienceBadge } from './Badge';
+import { AudienceBadge, Badge } from './Badge';
 import { Countdown } from './Countdown';
 
 export interface EventCardProps {
@@ -37,6 +37,8 @@ export function EventCard({
       data-highlighted={highlighted || undefined}
       className={[
         'relative rounded-xl border bg-white p-4 shadow-sm transition-shadow',
+        // Three people said the food is gone: still listed, but visibly faded.
+        event.likelyGone ? 'opacity-60 grayscale' : '',
         'focus-within:ring-2 focus-within:ring-michigan-blue focus-within:ring-offset-2',
         selected ? 'border-michigan-blue ring-2 ring-michigan-blue' : 'border-slate-200',
         highlighted && !selected ? 'border-michigan-blue/60 shadow-md' : 'hover:shadow-md',
@@ -54,7 +56,11 @@ export function EventCard({
             {event.title}
           </Link>
         </h3>
-        <AudienceBadge audience={event.audience} />
+        {event.likelyGone ? (
+          <Badge tone="warn">Food may be gone</Badge>
+        ) : (
+          <AudienceBadge audience={event.audience} />
+        )}
       </div>
 
       {event.foodItems.length > 0 && (

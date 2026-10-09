@@ -7,6 +7,7 @@ import { directionsUrl, formatLocation, formatTimeRange } from '../lib/format';
 import { DIETARY_LABELS, MEAL_LABELS } from '../lib/labels';
 import { AudienceBadge, Badge } from './Badge';
 import { Countdown } from './Countdown';
+import { ReportButtons } from './ReportButtons';
 import { EmptyState, ErrorState } from './States';
 
 const METHOD_LABELS: Record<ClassificationMethod, string> = {
@@ -71,13 +72,18 @@ export function EventDetails({
   const directions = directionsUrl(event);
 
   return (
-    <article className={event.likelyGone ? 'opacity-90' : undefined}>
+    <article>
       <div className="flex flex-wrap items-center gap-2">
         <AudienceBadge audience={event.audience} />
         {event.mealType && <Badge tone="blue">{MEAL_LABELS[event.mealType]}</Badge>}
         {event.likelyGone && <Badge tone="warn">Food may be gone</Badge>}
       </div>
-      <Heading id={titleId} className="mt-2 text-2xl font-bold leading-tight text-michigan-blue">
+      <Heading
+        id={titleId}
+        className={`mt-2 text-2xl font-bold leading-tight ${
+          event.likelyGone ? 'text-slate-500 line-through decoration-1' : 'text-michigan-blue'
+        }`}
+      >
         {event.title}
       </Heading>
 
@@ -169,6 +175,8 @@ export function EventDetails({
           </p>
         </div>
       )}
+
+      <ReportButtons event={event} />
 
       <p className="mt-6 text-xs text-slate-500">
         Dietary details come from the listing and our classifier and may be incomplete. Confirm with
