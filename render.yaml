@@ -1,0 +1,78 @@
+# Render blueprint: the API (web service) and the worker (background service), each built from
+# its Dockerfile. Postgres lives on Neon; paste its connection string into DATABASE_URL.
+# Nothing here deploys by itself: create the blueprint in Render when you are ready.
+# Values marked `sync: false` are secrets or per-environment settings you enter in the dashboard.
+services:
+  - type: web
+    name: maize-bites-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    autoDeploy: false
+    healthCheckPath: /api/health
+    # Apply pending migrations before each new version takes traffic.
+    preDeployCommand: node node_modules/@maize-bites/db/dist/migrate.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render routes traffic to this port.
+      - key: API_PORT
+        value: 10000
+      - key: LOG_LEVEL
+        value: info
+      # Vercel's rewrite and Render's load balancer both sit in front of the API.
+      - key: TRUST_PROXY
+        value: 2
+      - key: DATABASE_URL
+        sync: false
+      # The web app's origin, e.g. https://maizebites.vercel.app (no trailing slash).
+      - key: WEB_ORIGIN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+
+  - type: worker
+    name: maize-bites-worker
+    runtime: docker
+    dockerfilePath: ./apps/worker/Dockerfile
+    dockerContext: .
+    plan: starter
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: HAPPENING_ENABLED
+        value: true
+      - key: MAIZEPAGES_ENABLED
+        value: false
+      - key: LLM_MAX_CALLS_PER_RUN
+        value: 100
+      - key: EVENT_RETENTION_DAYS
+        value: 30
+      - key: PRUNE_INTERVAL_MINUTES
+        value: 60
+      - key: DATABASE_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: INGEST_CONTACT_EMAIL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
