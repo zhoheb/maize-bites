@@ -84,7 +84,7 @@ review"). I then re-applied the saved feed from disk, with no second request.
 
 ### Part 4: logging (`worker-pino`)
 
-- [ ] Worker logs through pino with the API's config
+- [x] Worker logs through pino with the API's config
 
 ### Part 5: CI and deploy (`ci-deploy`)
 
@@ -108,6 +108,7 @@ review"). I then re-applied the saved feed from disk, with no second request.
 | 1    | `happening-diagnosis` | `ecee92a` `f8ee686`                                                   | yes            |
 | 2    | `sources`             | `c5cf497` `60787c1` `726495e` `872387d` `8b49d46` `fd360b5` `a4bb5fa` | yes            |
 | 3    | `phase-7`             | `7e96853` `1f44aee` `61c9eda` `c6b01a5` `cd5b84e` `1cd18cd`           | yes            |
+| 4    | `worker-pino`         | `7b0cfb4`                                                             | yes            |
 
 ## Decisions to review
 
@@ -176,6 +177,18 @@ review"). I then re-applied the saved feed from disk, with no second request.
 email = '...'`. There is no UI for it, on purpose.
 11. **Events reported gone** are faded and desaturated on cards, with a "Food may be gone"
     badge in place of the audience badge; the title is struck through in details.
+
+### Part 4
+
+1. **The pino options are copied, not shared** (your choice). `apps/worker/src/logger.ts` says
+   to keep it in step with `apps/api/src/logger.ts`.
+2. **Job code still calls `logger.info('[ingest] ...')`.** An adapter maps that onto pino: the
+   tag becomes a `component` field, an `Error` argument becomes `err`. This kept every job and
+   test untouched. Worker lines also carry `app: "worker"`.
+3. **The worker now reads `NODE_ENV` and `LOG_LEVEL`**, with the API's defaults.
+4. **Library defaults still fall back to `console`** when no logger is passed (the scheduler and
+   the HTTP client, which tests call directly). The worker entrypoint passes pino everywhere.
+5. **`ingest:once` logs job output with `console`**, as allowed for CLIs.
 
 ## Blocked / needs Zach
 
