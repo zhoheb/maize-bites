@@ -1,4 +1,4 @@
-import { decodeHtmlEntities } from '../sources/happening/html.js';
+import { decodeHtmlEntities } from '../sources/html.js';
 
 export interface MatchableBuilding {
   id: string;

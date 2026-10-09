@@ -29,7 +29,15 @@ export const happeningItemSchema = z.looseObject({
   room: text,
   tags: z.array(z.string()).default([]),
   sponsors: z.array(z.looseObject({ group_name: text })).default([]),
-  maizepages_import: z.looseObject({ maizepages_group_name: text }).optional(),
+  /** Present when Happening imported the event from Maize Pages. */
+  maizepages_import: z
+    .looseObject({
+      maizepages_group_name: text,
+      maizepages_event_id: z.union([z.number().int(), z.string()]).nullish(),
+    })
+    .optional(),
+  /** Extra links; only read to spot a Maize Pages event URL. Any other shape is ignored. */
+  links: z.array(z.unknown()).optional().catch(undefined),
 });
 export type HappeningItem = z.infer<typeof happeningItemSchema>;
 

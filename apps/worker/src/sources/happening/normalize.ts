@@ -1,5 +1,5 @@
 import { computeContentHash, type UpsertEventInput } from '@maize-bites/db';
-import { decodeHtmlEntities } from './html.js';
+import { decodeHtmlEntities } from '../html.js';
 import type { HappeningItem } from './schema.js';
 import { parseFeedDateTime } from './time.js';
 
@@ -17,6 +17,29 @@ function clean(value: string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
   const decoded = decodeHtmlEntities(value).trim();
   return decoded === '' ? null : decoded;
+}
+
+const MAIZEPAGES_EVENT_URL = /maizepages\.umich\.edu\/event\/(\d+)/i;
+
+/**
+ * The Maize Pages event this listing was imported from, if any: the import record's id, or
+ * failing that a Maize Pages event URL in the website or links fields.
+ */
+export function maizepagesEventIdOf(item: HappeningItem): string | null {
+  const imported = item.maizepages_import?.maizepages_event_id;
+  if (imported !== null && imported !== undefined && /^\d+$/.test(String(imported)))
+    return String(imported);
+  const urls = [
+    item.website,
+    ...(item.links ?? []).map((link) =>
+      typeof link === 'object' && link !== null && 'url' in link ? link.url : null,
+    ),
+  ];
+  for (const url of urls) {
+    const match = typeof url === 'string' ? MAIZEPAGES_EVENT_URL.exec(url) : null;
+    if (match?.[1]) return match[1];
+  }
+  return null;
 }
 
 function toHttps(url: string | null): string | null {
@@ -67,6 +90,7 @@ export function normalizeHappeningItem(item: HappeningItem): NormalizedFeedEvent
     tags: item.tags.map((t) => decodeHtmlEntities(t).trim()).filter((t) => t !== ''),
     raw: item,
     status: 'active',
+    maizepagesEventId: maizepagesEventIdOf(item),
   };
 
   const locationCandidates = [buildingName, clean(item.location_name)].filter(

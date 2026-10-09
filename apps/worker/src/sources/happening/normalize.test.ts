@@ -1,7 +1,7 @@
 import { computeContentHash } from '@maize-bites/db';
 import { describe, expect, it } from 'vitest';
 import { sampleFeed, sampleItem, sampleItemWhere } from '../../test/fixture.js';
-import { normalizeHappeningItem } from './normalize.js';
+import { maizepagesEventIdOf, normalizeHappeningItem } from './normalize.js';
 import { happeningItemSchema } from './schema.js';
 
 describe('happeningItemSchema against the captured feed', () => {
@@ -117,5 +117,40 @@ describe('normalizeHappeningItem', () => {
       return `${event.sourceEventId}/${event.occurrenceId}`;
     });
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe('maizepagesEventIdOf', () => {
+  const imported = sampleItem('151277-21911302');
+  const plain = sampleItem('150244-21908461');
+
+  it('reads the id from the Maize Pages import record', () => {
+    expect(imported.maizepages_import?.maizepages_event_id).toBe(12668714);
+    expect(maizepagesEventIdOf(imported)).toBe('12668714');
+    expect(normalizeHappeningItem(imported).event.maizepagesEventId).toBe('12668714');
+  });
+
+  it('falls back to a Maize Pages event URL in website or links', () => {
+    const { maizepages_import: _import, ...rest } = imported;
+    expect(maizepagesEventIdOf(rest)).toBe('12668714');
+    expect(maizepagesEventIdOf({ ...rest, website: null })).toBe('12668714');
+    expect(
+      maizepagesEventIdOf({ ...plain, website: 'https://maizepages.umich.edu/event/42' }),
+    ).toBe('42');
+  });
+
+  it('is null for an event with no Maize Pages origin', () => {
+    expect(maizepagesEventIdOf(plain)).toBeNull();
+    expect(normalizeHappeningItem(plain).event.maizepagesEventId).toBeNull();
+    expect(
+      maizepagesEventIdOf({ ...plain, website: 'https://maizepages.umich.edu/organization/x' }),
+    ).toBeNull();
+  });
+
+  it('counts 12 imported events in the captured feed', () => {
+    const ids = sampleFeed
+      .map((raw) => maizepagesEventIdOf(happeningItemSchema.parse(raw)))
+      .filter((id) => id !== null);
+    expect(ids).toHaveLength(12);
   });
 });
