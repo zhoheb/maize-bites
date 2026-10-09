@@ -90,13 +90,38 @@ open the page in a browser before anyone relies on them.
   the institution's approval, which we don't have.
 - **Login:** none for public events. Members-only events don't appear in the feeds, which is
   what we want.
-- **Overlap:** Happening already imports some Maize Pages events. In our captured sample, 12
-  of 200 items carry `maizepages_import.maizepages_event_id`. A second source must dedupe on
-  that id against the Maize Pages event number in the feed's URL.
-- **Difficulty:** low. ICS parsing, HTML-entity cleanup, no pagination.
-- **Verdict:** usable. Before building, ask Student Life (Center for Campus Involvement, which
-  runs Maize Pages) to confirm they're fine with a third-party reader of the public feed.
-  Adding it means a new `event_source` enum value and a migration, so it is a feature decision.
+- **Overlap:** Happening imports some Maize Pages events. In the captured Happening sample, 12
+  of 200 items carry `maizepages_import.maizepages_event_id`. Measured the other way on
+  2026-10-09, 18 of the 27 events in the Maize Pages feed already had a Happening copy in our
+  database, so most public Maize Pages events reach Happening.
+- **Difficulty:** low. ICS parsing, no pagination.
+- **Verdict:** in use, off by default (`MAIZEPAGES_ENABLED=true` turns it on). Still worth
+  asking Student Life (Center for Campus Involvement, which runs Maize Pages) to confirm they're
+  fine with a third-party reader of the public feed.
+
+### How we read it
+
+- `apps/worker/src/sources/maizepages/`. One GET of `/events.ics` per run, with
+  `If-None-Match` / `If-Modified-Since` from the previous response; a 304 ends the run.
+- At most every 5 hours (the RSS `<ttl>`), and never more than hourly whatever a feed says.
+- `/events.rss` is read only when the ICS request fails for an ordinary reason (5xx, timeout,
+  unreadable body). A bot challenge or a robots.txt refusal stops the run; the other feed is
+  not tried.
+- robots.txt is fetched once a day and checked before every request. If it can't be read, we
+  don't fetch.
+- The organizer email in the RSS `<author>` element is never read or stored.
+- Coordinates from the feed are kept only inside Ann Arbor (the feed geocodes away games too).
+
+### Duplicates with Happening
+
+Both rows carry `events.maizepages_event_id`. Only one is ever active:
+
+- While the Happening feed has listed its copy in the last 24 hours, that copy is the event.
+  The Maize Pages item is skipped, and an existing Maize Pages row is marked `removed`.
+- If Happening hasn't listed its copy for 24 hours (the feed is unreachable, or it dropped the
+  event), the Maize Pages listing takes over and the stale Happening row is marked `removed`.
+- Whichever row is hidden, its alert claims are copied to the survivor, so nobody is alerted
+  twice. Admin overrides and reports on a hidden row are not carried over.
 
 ## Sessions @ Michigan (sessions.studentlife.umich.edu)
 

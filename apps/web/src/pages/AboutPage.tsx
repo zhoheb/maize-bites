@@ -23,7 +23,10 @@ export function AboutPage() {
 
       <Section title="How it works">
         <ol className="list-decimal space-y-2 pl-5">
-          <li>Every hour we read the public Happening @ Michigan event feed.</li>
+          <li>
+            Every hour we read the public Happening @ Michigan event feed, and a few times a day the
+            public Maize Pages feed.
+          </li>
           <li>
             Keyword rules pick out events that might have food: pizza, refreshments, lunch provided,
             and so on.

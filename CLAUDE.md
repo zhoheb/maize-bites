@@ -22,10 +22,12 @@ apps/web        React + Vite + Tailwind v4, TanStack Query, React Router, MapLib
                 src/{api,components,hooks,lib,pages,sw}; scripts/generate-icons.js writes public/icons
 apps/api        Express 5. createApp({ db, logger, webOrigin }) in app.ts; routes/ per resource (index.ts mounts
                 /api); errors.ts (HttpError + error format); serializers.ts; ics.ts; test/seed.ts (API fixtures)
-apps/worker     node-cron scheduler.ts, jobs/ (ingest-happening, housekeeping, index.ts wires them),
-                happening/ (feed client, schema, normalizer), locations/ (building matcher),
-                classifier/ (rules + LLM), notify/ (alert matching, notifier, delivery),
-                eval/ (harness + labeled.json), cli/, fixtures/ (captured feed response)
+apps/worker     node-cron scheduler.ts, jobs/ (ingest, housekeeping, index.ts wires them),
+                sources/ (types.ts Source interface; http/ shared client, robots.txt, rate limit;
+                happening/ and maizepages/ each with fetch + schema + normalizer),
+                locations/ (building matcher), classifier/ (rules + LLM), notify/ (alert matching,
+                notifier, delivery), eval/ (harness + labeled.json), cli/,
+                fixtures/ (captured feed responses)
 packages/db     schema.ts, queries/, client.ts (createDb), testing.ts (createTestDb + fixtures), seed/ (buildings), drizzle/ migrations
 packages/email  mailer.ts (createMailer), templates.ts (sign-in link, instant alert, digest)
 packages/shared enums.ts (all enumerated values), events.ts (wire schemas + domain helpers)
@@ -45,7 +47,7 @@ pnpm test              # vitest in every package; db tests use in-memory PGlite,
 pnpm test:pg           # same suite against real Postgres (a throwaway db per test); run before merging db changes
 pnpm build
 pnpm db:generate       # after editing packages/db/src/schema.ts; commit the generated drizzle/ files
-pnpm ingest:once        # one Happening @ Michigan ingestion pass (needs INGEST_CONTACT_EMAIL; obeys the hourly guard)
+pnpm ingest:once        # one ingestion pass over the enabled sources (needs INGEST_CONTACT_EMAIL; obeys the per-source guard)
 pnpm --filter worker eval  # score rules vs rules+LLM on eval/labeled.json (LLM part costs money; --rules-only, --max-llm-calls N)
 pnpm db:seed           # upsert ~50 UMich buildings (idempotent); run after a fresh migrate
 pnpm db:migrate | db:studio | db:up | db:down
@@ -60,10 +62,17 @@ pnpm --filter @maize-bites/api test   # target a single package
 - Database access goes through `packages/db/src/queries/`. Apps don't build ad-hoc SQL. `schema.ts` must not import workspace packages, because drizzle-kit loads it directly.
 - Enumerated values live in `shared/src/enums.ts`. Each pg enum in `schema.ts` repeats its values, and `schema.test.ts` fails if they drift. To add a value, change both, then run `pnpm db:generate`.
 - PGlite accepts some things postgres-js rejects (for example, raw `Date` params in `sql` expressions; bind them with `sql.param(value, column)`). Run `pnpm test:pg` when you touch queries.
-- **Ingestion** (`apps/worker/src/jobs/ingest-happening.ts`) runs hourly at :23 and once on startup. `ingestIfDue` skips any run within 59 min of the previous start, whatever triggered it. Each run fetches 14 local days from `events.umich.edu/list/json?v=2`, paged 200 at a time with a 1s pause. It sends a User-Agent carrying `INGEST_CONTACT_EMAIL`, uses a 10s timeout, and backs off exponentially on 429/5xx while honoring Retry-After. Events missing for 24h are marked `removed`, but only after a complete fetch, and only if they haven't ended and start inside the fetched window. Don't loosen these limits.
-- A Cloudflare challenge on the feed (`cf-mitigated: challenge`) fails the run without retrying. Don't add headers or clients meant to get past it.
+- **Ingestion** (`apps/worker/src/jobs/ingest.ts`) runs hourly at :23 and once on startup, over the sources enabled by `HAPPENING_ENABLED` and `MAIZEPAGES_ENABLED`. Each source implements `Source` (`sources/types.ts`) and gets its own `ingestion_runs` row; a source that fails, or is challenged, never stops the next one. Classification and alerts run once per pass, after all sources. `docs/sources.md` records what we may fetch and why.
+  - `ingestIfDue` skips a source within 59 min of its previous start, whatever triggered it, and longer if the source or its feed asks (Maize Pages: 5 hours). Don't loosen these limits.
+  - Every request goes through `sources/http/client.ts`: a User-Agent carrying `INGEST_CONTACT_EMAIL`, robots.txt checked first (cached per host; unreadable means don't fetch), at least 1s between requests to a host, a 10s timeout, exponential backoff on 429/5xx honoring Retry-After.
+  - **Happening**: 14 local days from `events.umich.edu/list/json?v=2`, paged 200 at a time with a 1s pause.
+  - **Maize Pages**: one GET of `maizepages.umich.edu/events.ics` with conditional headers (a 304 is a complete run); `/events.rss` only as a fallback for ordinary failures. Never call `/api/` there; robots.txt disallows it.
+  - Events missing for 24h are marked `removed`, but only after a complete fetch, and only if they haven't ended and start inside the fetched window.
+  - To add a source: a new `event_source` value (shared enum, pg enum, migration), a module under `sources/<name>/`, an env flag, and an entry in `docs/sources.md` first.
+- A Cloudflare challenge (`cf-mitigated: challenge`) or a robots.txt refusal fails the run without retrying, and the source must not try another URL on that site. Don't add headers or clients meant to get past it.
+- **Duplicates across sources**: Happening imports some Maize Pages events. Both rows carry `events.maizepages_event_id` and only one is active: the Happening copy while its feed has listed it in the last 24h, otherwise the Maize Pages one (`hasFreshHappeningTwin`, `retireDuplicateEvents`). The hidden row is marked `removed` and its alert claims move to the survivor.
 - **Housekeeping** (`apps/worker/src/jobs/housekeeping.ts`): `auth-cleanup` runs daily at 4:17 AM; `prune-events` deletes events that ended more than `EVENT_RETENTION_DAYS` ago, every `PRUNE_INTERVAL_MINUTES`.
-- The feed has no coordinates. Locations resolve by matching `building_name` then `location_name` against building names and aliases (`locations/matcher.ts`). Unmatched names accumulate in `location_misses`; add aliases to `packages/db/src/seed/buildings.ts` from there.
+- The Happening feed has no coordinates; Maize Pages gives some. Locations resolve by matching each source's location names against building names and aliases (`locations/matcher.ts`). Unmatched names accumulate in `location_misses`; add aliases to `packages/db/src/seed/buildings.ts` from there.
 - **Classifier** (`apps/worker/src/classifier/`) runs after each ingestion, once per content version:
   - **Rules** (`rules-config.ts` is the editable vocabulary) store a `rules` row for every live event. A candidate is stored as free food at confidence 0.3, which keeps it hidden and out of the review queue.
   - **LLM:** candidates without an llm or manual row for their current `content_hash` go to `claude-haiku-4-5` with structured output. The response is validated with Zod, and `evidence` must be verbatim text from the listing. On an invalid response it retries once with the problem spelled out; after that it writes a `review_flags` row and never re-sends that content version.

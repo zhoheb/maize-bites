@@ -13,7 +13,7 @@ const isoDateTime = z.iso.datetime({ offset: true });
 
 export const foodEventSchema = z.object({
   id: z.uuid(),
-  /** "happening" (the campus feed) or "submission" (a community tip). */
+  /** "happening" or "maizepages" (campus feeds), or "submission" (a community tip). */
   source: eventSourceSchema,
   title: z.string().min(1),
   description: z.string().nullable(),
