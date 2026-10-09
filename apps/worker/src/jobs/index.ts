@@ -3,7 +3,7 @@ import { createMailer } from '@maize-bites/email';
 import { anthropicCreateMessage } from '../classifier/anthropic.js';
 import { classifyPendingEvents, type LlmDeps } from '../classifier/classify-events.js';
 import type { WorkerEnv } from '../env.js';
-import { buildUserAgent, fetchHappeningWindow } from '../happening/client.js';
+import { buildUserAgent, fetchHappeningWindow } from '../sources/happening/client.js';
 import { createDelivery, type Delivery } from '../notify/delivery.js';
 import { runDigest, runInstantAlerts } from '../notify/notifier.js';
 import type { Job, Logger } from '../scheduler.js';

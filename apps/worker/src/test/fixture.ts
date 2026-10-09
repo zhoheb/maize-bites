@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { happeningItemSchema, type HappeningItem } from '../happening/schema.js';
+import { happeningItemSchema, type HappeningItem } from '../sources/happening/schema.js';
 
 /** The raw captured response from events.umich.edu/list/json?v=2 (2026-09-30). */
 export const sampleFeed: unknown[] = JSON.parse(

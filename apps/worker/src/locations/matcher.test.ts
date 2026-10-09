@@ -1,7 +1,7 @@
 import { BUILDINGS } from '@maize-bites/db';
 import { describe, expect, it } from 'vitest';
-import { normalizeHappeningItem } from '../happening/normalize.js';
-import { happeningItemSchema } from '../happening/schema.js';
+import { normalizeHappeningItem } from '../sources/happening/normalize.js';
+import { happeningItemSchema } from '../sources/happening/schema.js';
 import { sampleFeed } from '../test/fixture.js';
 import { createLocationMatcher, normalizeLocationName, resolveLocation } from './matcher.js';
 

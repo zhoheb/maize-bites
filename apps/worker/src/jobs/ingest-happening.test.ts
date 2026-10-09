@@ -12,7 +12,7 @@ import {
 import { createTestDb, eventInput } from '@maize-bites/db/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { classifyPendingEvents } from '../classifier/classify-events.js';
-import type { FeedWindow } from '../happening/client.js';
+import type { FeedWindow } from '../sources/happening/client.js';
 import { fakeMessage, mockAnthropic, verdictJson } from '../test/anthropic-mock.js';
 import { sampleFeed } from '../test/fixture.js';
 import {

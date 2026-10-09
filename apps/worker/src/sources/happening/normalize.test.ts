@@ -1,6 +1,6 @@
 import { computeContentHash } from '@maize-bites/db';
 import { describe, expect, it } from 'vitest';
-import { sampleFeed, sampleItem, sampleItemWhere } from '../test/fixture.js';
+import { sampleFeed, sampleItem, sampleItemWhere } from '../../test/fixture.js';
 import { normalizeHappeningItem } from './normalize.js';
 import { happeningItemSchema } from './schema.js';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeHappeningItem } from '../happening/normalize.js';
-import { happeningItemSchema } from '../happening/schema.js';
+import { normalizeHappeningItem } from '../sources/happening/normalize.js';
+import { happeningItemSchema } from '../sources/happening/schema.js';
 import { sampleFeed, sampleItem } from '../test/fixture.js';
 import { DEFAULT_RULES } from './rules-config.js';
 import { compileRules, prefilter } from './rules.js';

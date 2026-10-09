@@ -13,9 +13,9 @@ import {
 import { z } from 'zod';
 import type { ClassifyStats } from '../classifier/classify-events.js';
 import type { NotifyStats } from '../notify/notifier.js';
-import type { FeedWindow } from '../happening/client.js';
-import { normalizeHappeningItem } from '../happening/normalize.js';
-import { happeningItemSchema } from '../happening/schema.js';
+import type { FeedWindow } from '../sources/happening/client.js';
+import { normalizeHappeningItem } from '../sources/happening/normalize.js';
+import { happeningItemSchema } from '../sources/happening/schema.js';
 import { createLocationMatcher, resolveLocation } from '../locations/matcher.js';
 import type { Logger } from '../scheduler.js';
 
