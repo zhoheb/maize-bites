@@ -1,7 +1,7 @@
-import { hasActiveHappeningTwin, type HttpValidators } from '@maize-bites/db';
+import { hasFreshHappeningTwin, retireDuplicateEvents, type HttpValidators } from '@maize-bites/db';
 import { z } from 'zod';
 import { httpGet, isRefusal, type HttpOptions, type HttpResult } from '../http/client.js';
-import type { FetchResult, Source } from '../types.js';
+import { DUPLICATE_FRESHNESS_MS, type FetchResult, type Source } from '../types.js';
 import { normalizeMaizepagesItem } from './normalize.js';
 import { readIcsFeed } from './read-ics.js';
 import { readRssFeed } from './read-rss.js';
@@ -102,8 +102,22 @@ export function createMaizepagesSource(options: {
       return { ok: true, label: parsed.data.id, item: normalizeMaizepagesItem(parsed.data) };
     },
 
-    // Happening imports some Maize Pages events. While its copy is listed, that one is the event.
-    beforeUpsert: async (db, item) =>
-      (await hasActiveHappeningTwin(db, item.event.sourceEventId)) ? 'skip' : 'upsert',
+    // Happening imports some Maize Pages events. While its feed keeps listing a copy, that copy
+    // is the event and ours is skipped.
+    beforeUpsert: async ({ db, startedAt }, item) => {
+      const since = new Date(startedAt.getTime() - DUPLICATE_FRESHNESS_MS);
+      return (await hasFreshHappeningTwin(db, item.event.sourceEventId, since)) ? 'skip' : 'upsert';
+    },
+
+    // We got here because Happening has no fresh copy. Any copy it left behind is out of date
+    // (Happening unreachable, or it dropped the event), so the Maize Pages listing replaces it.
+    afterUpsert: async ({ db, startedAt }, event) => {
+      await retireDuplicateEvents(db, {
+        maizepagesEventId: event.sourceEventId,
+        source: 'happening',
+        survivorId: event.id,
+        seenBefore: new Date(startedAt.getTime() - DUPLICATE_FRESHNESS_MS),
+      });
+    },
   };
 }

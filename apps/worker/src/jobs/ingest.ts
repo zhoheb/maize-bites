@@ -114,7 +114,7 @@ async function ingestSource(
     }
     const { label, item } = normalized;
     try {
-      if ((await source.beforeUpsert?.(db, item)) === 'skip') {
+      if ((await source.beforeUpsert?.({ db, startedAt }, item)) === 'skip') {
         result.skippedDuplicates += 1;
         continue;
       }
@@ -134,7 +134,7 @@ async function ingestSource(
       if (change === 'created') result.created += 1;
       else if (change === 'updated') result.updated += 1;
       else result.unchanged += 1;
-      await source.afterUpsert?.(db, event);
+      await source.afterUpsert?.({ db, startedAt }, event);
     } catch (error) {
       fail(`${label}: ${describeError(error)}`);
     }

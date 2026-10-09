@@ -232,6 +232,26 @@ describe('duplicates between Happening and Maize Pages', () => {
       expect.objectContaining({ source: 'maizepages' }),
     ]);
   });
+  it('lets Maize Pages take over a copy Happening has not listed for a day, and hands it back later', async () => {
+    // Happening lists the event, then becomes unreachable.
+    await runIngestion(deps([happening([happeningCopy()])]));
+    const twoDays = 2 * 24 * 60;
+
+    const [takeover] = await runIngestion(deps([maizepages(ics()).source], { now: at(twoDays) }));
+
+    expect(takeover).toMatchObject({ skippedDuplicates: 0, created: 27 });
+    expect((await rowsFor(MP_ID)).filter((r) => r.status === 'active')).toEqual([
+      expect.objectContaining({ source: 'maizepages' }),
+    ]);
+
+    // Happening comes back and lists it again: its copy is the event once more.
+    await runIngestion(deps([happening([happeningCopy()])], { now: at(twoDays + 60) }));
+
+    expect((await rowsFor(MP_ID)).filter((r) => r.status === 'active')).toEqual([
+      expect.objectContaining({ source: 'happening' }),
+    ]);
+    expect(await rowsFor(MP_ID)).toHaveLength(2);
+  });
 });
 
 describe('failure isolation', () => {

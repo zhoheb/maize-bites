@@ -10,10 +10,10 @@ import {
   getHttpValidators,
   getLastIngestionRun,
   getLastSuccessfulIngestion,
-  hasActiveHappeningTwin,
+  hasFreshHappeningTwin,
   markUnseenEventsRemoved,
   recordLocationMisses,
-  retireMaizepagesTwin,
+  retireDuplicateEvents,
   saveHttpValidators,
   startIngestionRun,
 } from './ingestion.js';
@@ -216,28 +216,40 @@ describe('Maize Pages / Happening duplicates', () => {
       startsAt: hours(5),
     });
 
-  it('hasActiveHappeningTwin sees only active Happening rows with that id', async () => {
-    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(false);
+  it('hasFreshHappeningTwin sees only active, recently seen Happening rows with that id', async () => {
+    const since = hours(-24);
+    expect(await hasFreshHappeningTwin(db, MP_ID, since)).toBe(false);
 
-    await upsertEvent(db, maizepagesOriginal());
-    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(false);
+    await upsertEvent(db, maizepagesOriginal(), NOW);
+    expect(await hasFreshHappeningTwin(db, MP_ID, since)).toBe(false);
 
-    await upsertEvent(db, happeningCopy({ status: 'removed' }));
-    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(false);
+    const copy = happeningCopy();
+    await upsertEvent(db, { ...copy, status: 'removed' }, NOW);
+    expect(await hasFreshHappeningTwin(db, MP_ID, since)).toBe(false);
 
-    await upsertEvent(db, happeningCopy());
-    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(true);
-    expect(await hasActiveHappeningTwin(db, '999')).toBe(false);
+    // Active, but the Happening feed last listed it two days ago.
+    await upsertEvent(db, copy, hours(-48));
+    expect(await hasFreshHappeningTwin(db, MP_ID, since)).toBe(false);
+
+    await upsertEvent(db, copy, hours(-1));
+    expect(await hasFreshHappeningTwin(db, MP_ID, since)).toBe(true);
+    expect(await hasFreshHappeningTwin(db, '999', since)).toBe(false);
   });
 
-  it('retireMaizepagesTwin hides the Maize Pages row and carries its alert claims over', async () => {
+  it('retireDuplicateEvents hides the Maize Pages row and carries its alert claims over', async () => {
     const { event: original } = await upsertEvent(db, maizepagesOriginal());
     const { event: copy } = await upsertEvent(db, happeningCopy());
     const user = await upsertUserByEmail(db, 'reader@umich.edu');
     const claim = { userId: user.id, channel: 'email', kind: 'instant', sentAt: NOW } as const;
     await claimNotification(db, { ...claim, eventId: original.id });
+    const retire = () =>
+      retireDuplicateEvents(db, {
+        maizepagesEventId: MP_ID,
+        source: 'maizepages',
+        survivorId: copy.id,
+      });
 
-    expect(await retireMaizepagesTwin(db, MP_ID, copy.id)).toBe(1);
+    expect(await retire()).toBe(1);
 
     const [row] = await db.select().from(events).where(eq(events.id, original.id));
     expect(row?.status).toBe('removed');
@@ -246,17 +258,48 @@ describe('Maize Pages / Happening duplicates', () => {
     expect(await db.$count(notificationLog)).toBe(2);
 
     // Nothing left to retire the second time.
-    expect(await retireMaizepagesTwin(db, MP_ID, copy.id)).toBe(0);
+    expect(await retire()).toBe(0);
   });
 
-  it('retireMaizepagesTwin leaves other events alone', async () => {
+  it('retireDuplicateEvents hides only stale Happening copies when given seenBefore', async () => {
+    const { event: original } = await upsertEvent(db, maizepagesOriginal(), NOW);
+    const { event: stale } = await upsertEvent(db, happeningCopy(), hours(-48));
+    const { event: fresh } = await upsertEvent(db, happeningCopy(), hours(-1));
+
+    const hidden = await retireDuplicateEvents(db, {
+      maizepagesEventId: MP_ID,
+      source: 'happening',
+      survivorId: original.id,
+      seenBefore: hours(-24),
+    });
+
+    expect(hidden).toBe(1);
+    const status = async (id: string) =>
+      (await db.select().from(events).where(eq(events.id, id)))[0]?.status;
+    expect(await status(stale.id)).toBe('removed');
+    expect(await status(fresh.id)).toBe('active');
+    expect(await status(original.id)).toBe('active');
+  });
+
+  it('retireDuplicateEvents leaves other events alone', async () => {
     const { event: other } = await upsertEvent(
       db,
-      eventInput({ source: 'maizepages', sourceEventId: '555', startsAt: hours(5) }),
+      eventInput({
+        source: 'maizepages',
+        sourceEventId: '555',
+        maizepagesEventId: '555',
+        startsAt: hours(5),
+      }),
     );
     const { event: copy } = await upsertEvent(db, happeningCopy());
 
-    expect(await retireMaizepagesTwin(db, MP_ID, copy.id)).toBe(0);
+    expect(
+      await retireDuplicateEvents(db, {
+        maizepagesEventId: MP_ID,
+        source: 'maizepages',
+        survivorId: copy.id,
+      }),
+    ).toBe(0);
     const [row] = await db.select().from(events).where(eq(events.id, other.id));
     expect(row?.status).toBe('active');
   });

@@ -45,6 +45,19 @@ export interface Source {
   /** Validates and maps one raw item. Problems come back as a message, never a throw. */
   normalize: (raw: unknown, index: number) => NormalizeResult;
   /** Return 'skip' when another source already carries this event. */
-  beforeUpsert?: (db: Database, item: NormalizedItem) => Promise<'upsert' | 'skip'>;
-  afterUpsert?: (db: Database, event: EventRow) => Promise<void>;
+  beforeUpsert?: (ctx: SourceContext, item: NormalizedItem) => Promise<'upsert' | 'skip'>;
+  afterUpsert?: (ctx: SourceContext, event: EventRow) => Promise<void>;
 }
+
+export interface SourceContext {
+  db: Database;
+  /** When this ingestion pass started; events upserted in it get this as last_seen_at. */
+  startedAt: Date;
+}
+
+/**
+ * How recently Happening must have listed its copy of a Maize Pages event for that copy to be
+ * the one we show. Older than this (Happening unreachable, or it dropped the event) and the
+ * Maize Pages listing takes over. Matches the removal grace period.
+ */
+export const DUPLICATE_FRESHNESS_MS = 24 * 3_600_000;

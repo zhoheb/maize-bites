@@ -182,10 +182,15 @@ export async function saveHttpValidators(
 
 // ── Maize Pages / Happening duplicates ────────────────────────────────────
 
-/** True when an active Happening event was imported from this Maize Pages event. */
-export async function hasActiveHappeningTwin(
+/**
+ * True when an active Happening event imported from this Maize Pages event was listed by the
+ * Happening feed at or after `seenSince`. A copy the feed hasn't shown lately doesn't count: it
+ * may be out of date (Happening unreachable), so it shouldn't shadow the live Maize Pages listing.
+ */
+export async function hasFreshHappeningTwin(
   db: Database,
   maizepagesEventId: string,
+  seenSince: Date,
 ): Promise<boolean> {
   const [row] = await db
     .select({ id: events.id })
@@ -195,6 +200,7 @@ export async function hasActiveHappeningTwin(
         eq(events.source, 'happening'),
         eq(events.status, 'active'),
         eq(events.maizepagesEventId, maizepagesEventId),
+        gte(events.lastSeenAt, seenSince),
       ),
     )
     .limit(1);
@@ -202,14 +208,21 @@ export async function hasActiveHappeningTwin(
 }
 
 /**
- * Hides the Maize Pages copy of an event now that Happening carries it, and copies its alert
- * claims to the Happening event so nobody is told about the same event twice.
- * Returns how many rows were retired (0 or 1).
+ * Hides one source's copies of a Maize Pages event because `survivorId`, the other source's
+ * copy, is now the event. Alert claims are copied to the survivor so nobody is told about the
+ * same event twice. The hidden rows are marked removed; their source's next upsert of them
+ * makes them active again. Returns how many rows were hidden.
  */
-export function retireMaizepagesTwin(
+export function retireDuplicateEvents(
   db: Database,
-  maizepagesEventId: string,
-  happeningEventId: string,
+  options: {
+    maizepagesEventId: string;
+    /** Whose copies to hide. */
+    source: 'happening' | 'maizepages';
+    survivorId: string;
+    /** Only hide copies last seen before this (used to hide stale Happening copies). */
+    seenBefore?: Date;
+  },
 ): Promise<number> {
   return db.transaction(async (tx) => {
     const retired = await tx
@@ -217,16 +230,17 @@ export function retireMaizepagesTwin(
       .set({ status: 'removed' })
       .where(
         and(
-          eq(events.source, 'maizepages'),
-          eq(events.sourceEventId, maizepagesEventId),
+          eq(events.source, options.source),
+          eq(events.maizepagesEventId, options.maizepagesEventId),
           eq(events.status, 'active'),
+          options.seenBefore && lt(events.lastSeenAt, options.seenBefore),
         ),
       )
       .returning({ id: events.id });
     for (const { id } of retired) {
       await tx.execute(sql`
         insert into ${notificationLog} (user_id, event_id, channel, sent_at, kind, error)
-        select user_id, ${happeningEventId}::uuid, channel, sent_at, kind, error
+        select user_id, ${options.survivorId}::uuid, channel, sent_at, kind, error
         from ${notificationLog} where event_id = ${id}::uuid
         on conflict do nothing`);
     }

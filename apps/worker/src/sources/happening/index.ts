@@ -1,4 +1,4 @@
-import { retireMaizepagesTwin } from '@maize-bites/db';
+import { retireDuplicateEvents } from '@maize-bites/db';
 import { z } from 'zod';
 import type { Source } from '../types.js';
 import type { FeedWindow } from './client.js';
@@ -52,9 +52,13 @@ export function createHappeningSource(options: {
     },
 
     // Happening imports some Maize Pages events. Once its copy exists, ours from Maize Pages goes.
-    afterUpsert: async (db, event) => {
+    afterUpsert: async ({ db }, event) => {
       if (event.maizepagesEventId !== null)
-        await retireMaizepagesTwin(db, event.maizepagesEventId, event.id);
+        await retireDuplicateEvents(db, {
+          maizepagesEventId: event.maizepagesEventId,
+          source: 'maizepages',
+          survivorId: event.id,
+        });
     },
   };
 }
