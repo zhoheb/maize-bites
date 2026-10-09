@@ -9,57 +9,59 @@ import {
   llmDepsFromEnv,
   sourcesFromEnv,
 } from './jobs/index.js';
+import { createPinoLogger, toJobLogger } from './logger.js';
 import { startScheduler, type Job } from './scheduler.js';
 
 loadRootEnvFile();
 const env = parseEnv(process.env);
+const logger = toJobLogger(createPinoLogger(env));
 
 const { db, close } = createDb(env.DATABASE_URL, { maxConnections: 2 });
 await db.execute(sql`select 1`);
-console.info('[worker] connected to postgres');
+logger.info('[worker] connected to postgres');
 
-const delivery = deliveryFromEnv(db, env, console);
+const delivery = deliveryFromEnv(db, env, logger);
 if (!env.RESEND_API_KEY)
-  console.warn('[worker] RESEND_API_KEY is not set; alert emails are printed to this log');
-if (!env.VAPID_PRIVATE_KEY) console.warn('[worker] VAPID keys are not set; push alerts will fail');
+  logger.warn('[worker] RESEND_API_KEY is not set; alert emails are printed to this log');
+if (!env.VAPID_PRIVATE_KEY) logger.warn('[worker] VAPID keys are not set; push alerts will fail');
 
 const jobs: Job[] = [
-  digestJob(db, console, delivery, env.WEB_ORIGIN),
-  authCleanupJob(db, console),
-  pruneEventsJob(db, console, {
+  digestJob(db, logger, delivery, env.WEB_ORIGIN),
+  authCleanupJob(db, logger),
+  pruneEventsJob(db, logger, {
     retentionDays: env.EVENT_RETENTION_DAYS,
     intervalMinutes: env.PRUNE_INTERVAL_MINUTES,
   }),
 ];
-const sources = sourcesFromEnv(db, env, console);
+const sources = sourcesFromEnv(db, env, logger);
 if (sources.length > 0) {
   const llm = llmDepsFromEnv(env);
   if (!llm)
-    console.warn('[worker] ANTHROPIC_API_KEY is not set; the classifier will run rules only');
-  console.info(`[worker] ingesting from: ${sources.map((s) => s.id).join(', ')}`);
+    logger.warn('[worker] ANTHROPIC_API_KEY is not set; the classifier will run rules only');
+  logger.info(`[worker] ingesting from: ${sources.map((s) => s.id).join(', ')}`);
   jobs.push(
-    ingestJob(ingestDeps(db, sources, console, llm, { delivery, webOrigin: env.WEB_ORIGIN })),
+    ingestJob(ingestDeps(db, sources, logger, llm, { delivery, webOrigin: env.WEB_ORIGIN })),
   );
 } else {
-  console.warn(
+  logger.warn(
     env.INGEST_CONTACT_EMAIL
       ? '[worker] every source is disabled (HAPPENING_ENABLED, MAIZEPAGES_ENABLED); ingestion is off'
       : '[worker] INGEST_CONTACT_EMAIL is not set; ingestion is disabled',
   );
 }
 
-const scheduler = startScheduler(jobs);
-console.info(
+const scheduler = startScheduler(jobs, { logger });
+logger.info(
   `[worker] scheduler started: ${jobs.map((j) => `${j.name} (${j.schedule})`).join(', ') || 'no jobs'}`,
 );
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
-  console.info(`[worker] ${signal} received, shutting down`);
+  logger.info(`[worker] ${signal} received, shutting down`);
   try {
     await scheduler.stop();
     await close();
   } catch (error) {
-    console.error('[worker] shutdown failed', error);
+    logger.error('[worker] shutdown failed', error);
     process.exit(1);
   }
   process.exit(0);

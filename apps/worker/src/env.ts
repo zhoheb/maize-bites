@@ -15,6 +15,9 @@ const flag = (defaultValue: boolean) =>
   );
 
 export const workerEnvSchema = databaseEnvSchema.extend({
+  /** development prints readable logs; anything else prints JSON lines. */
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   /** Sent in the feed User-Agent so a site's admins can reach us. Ingestion is off without it. */
   INGEST_CONTACT_EMAIL: z.preprocess(emptyAsUndefined, z.email().optional()),
   /** Happening @ Michigan (events.umich.edu JSON feed). */

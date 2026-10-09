@@ -7,6 +7,8 @@ describe('parseEnv', () => {
   it('accepts a postgres DATABASE_URL and optional contact email', () => {
     expect(parseEnv({ DATABASE_URL })).toEqual({
       DATABASE_URL,
+      NODE_ENV: 'development',
+      LOG_LEVEL: 'info',
       HAPPENING_ENABLED: true,
       MAIZEPAGES_ENABLED: false,
       LLM_MAX_CALLS_PER_RUN: 100,
