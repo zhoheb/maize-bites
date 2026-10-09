@@ -4,7 +4,7 @@ import type { ApiEnv } from './env.js';
 export type { Logger };
 
 /** Never log credentials, even once auth lands. */
-export const REDACT = [
+const REDACT = [
   'req.headers.authorization',
   'req.headers.cookie',
   'res.headers["set-cookie"]',

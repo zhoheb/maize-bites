@@ -14,7 +14,7 @@ declare global {
   }
 }
 
-export const SESSION_COOKIE = 'mb_session';
+const SESSION_COOKIE = 'mb_session';
 
 /** Minimal Cookie header parser (we only read one cookie). */
 export function readCookie(header: string | undefined, name: string): string | null {
@@ -33,7 +33,7 @@ export function readCookie(header: string | undefined, name: string): string | n
   return null;
 }
 
-export function sessionCookieOptions(secure: boolean, maxAgeMs?: number): CookieOptions {
+function sessionCookieOptions(secure: boolean, maxAgeMs?: number): CookieOptions {
   return {
     httpOnly: true,
     secure,

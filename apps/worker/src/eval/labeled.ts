@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import type { ClassifierInput } from '../classifier/input.js';
 
-export const LABELED_FILE = new URL('../../eval/labeled.json', import.meta.url);
+const LABELED_FILE = new URL('../../eval/labeled.json', import.meta.url);
 
 const isoDateTime = z.iso.datetime({ offset: true });
 
@@ -29,7 +29,7 @@ export const labeledItemSchema = z.object({
 });
 export type LabeledItem = z.infer<typeof labeledItemSchema>;
 
-export const labeledFileSchema = z.object({
+const labeledFileSchema = z.object({
   version: z.literal(1),
   instructions: z.string(),
   items: z.array(labeledItemSchema),

@@ -49,7 +49,7 @@ async function buildingId(db: Database, name: string): Promise<string> {
   return row.id;
 }
 
-export async function seedApiFixtures(db: Database): Promise<Seeded> {
+async function seedApiFixtures(db: Database): Promise<Seeded> {
   await seedBuildings(db);
   const union = await buildingId(db, 'Michigan Union');
   const bbb = await buildingId(db, 'Bob and Betty Beyster Building');
@@ -173,7 +173,7 @@ export interface TestApi {
 }
 
 /** Rate limits high enough that only the rate-limit tests hit them. */
-export const TEST_RATE_LIMITS: RateLimits = {
+const TEST_RATE_LIMITS: RateLimits = {
   magicLinkPerIp: { windowMs: 60_000, limit: 1000 },
   magicLinkPerEmail: { windowMs: 60_000, limit: 1000 },
 };

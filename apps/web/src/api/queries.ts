@@ -5,7 +5,7 @@ import { fetchEventDetail, fetchEventPage, fetchHealth } from './events';
 
 const FIVE_MINUTES = 5 * 60_000;
 
-export const queryKeys = {
+const queryKeys = {
   events: (tab: Tab, filters: Filters) => ['events', tab, filters] as const,
   event: (id: string) => ['event', id] as const,
   health: ['health'] as const,

@@ -16,7 +16,7 @@ export const accountKeys = {
 };
 
 /** The signed-in user, or null. */
-export async function fetchMe(): Promise<CurrentUser | null> {
+async function fetchMe(): Promise<CurrentUser | null> {
   try {
     return (await getJson('/api/me', meResponseSchema)).user;
   } catch (error) {

@@ -11,7 +11,7 @@ import { toApiParams, type Filters, type Tab } from '../lib/filters';
 import { getJson, type RequestOptions } from './client';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-export const PAGE_SIZE = 30;
+const PAGE_SIZE = 30;
 
 /** Endpoint and time window for each Home tab. The server treats `from` as "now" by default. */
 export function tabRequest(tab: Tab, now: Date): { path: string; params: Record<string, string> } {

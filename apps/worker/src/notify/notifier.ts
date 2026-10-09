@@ -41,7 +41,7 @@ export interface NotifyStats {
   deferredQuiet: number;
 }
 
-export function links(webOrigin: string): LinkBuilder {
+function links(webOrigin: string): LinkBuilder {
   return { event: (id) => `${webOrigin}/events/${id}`, manage: `${webOrigin}/alerts` };
 }
 

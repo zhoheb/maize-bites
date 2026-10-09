@@ -12,7 +12,7 @@ export interface BinaryMetrics extends Confusion {
   f1: number | null;
 }
 
-export function confusion(pairs: readonly { predicted: boolean; actual: boolean }[]): Confusion {
+function confusion(pairs: readonly { predicted: boolean; actual: boolean }[]): Confusion {
   const c: Confusion = { tp: 0, fp: 0, fn: 0, tn: 0 };
   for (const { predicted, actual } of pairs) {
     if (predicted && actual) c.tp += 1;

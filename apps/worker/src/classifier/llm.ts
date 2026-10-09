@@ -8,7 +8,7 @@ import type { ClassifierInput } from './input.js';
 export const LLM_MODEL = 'claude-haiku-4-5';
 
 /** Anthropic list price for claude-haiku-4-5, USD per million tokens (checked 2026-09). */
-export const LLM_PRICE_PER_MTOK = { input: 1, output: 5 } as const;
+const LLM_PRICE_PER_MTOK = { input: 1, output: 5 } as const;
 
 /** Stage 2 output contract. Enforced twice: as the structured-output schema, then by Zod. */
 export const llmVerdictSchema = z.object({
@@ -117,7 +117,7 @@ function normalizeForMatch(s: string): string {
 }
 
 /** Parses and checks one response. Returns the verdict or a description of what's wrong. */
-export function parseVerdict(
+function parseVerdict(
   message: Anthropic.Message,
   input: ClassifierInput,
 ): { verdict: LlmVerdict } | { problem: string; text: string } {

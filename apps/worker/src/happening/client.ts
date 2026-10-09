@@ -1,7 +1,7 @@
 import { happeningPageSchema } from './schema.js';
 import { localDate, parseFeedDateTime } from './time.js';
 
-export const HAPPENING_LIST_URL = 'https://events.umich.edu/list/json';
+const HAPPENING_LIST_URL = 'https://events.umich.edu/list/json';
 const FEED_TIME_ZONE = 'America/Detroit';
 
 export function buildUserAgent(contactEmail: string): string {
