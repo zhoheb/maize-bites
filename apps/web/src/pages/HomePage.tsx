@@ -7,6 +7,7 @@ import { EmptyState, ErrorState } from '../components/States';
 import { Tabs } from '../components/Tabs';
 import { PANEL_ID, TAB_LABELS, tabId } from '../lib/tabs';
 import { UpdatedStamp } from '../components/UpdatedStamp';
+import { MapBoundary } from '../components/MapBoundary';
 import { eventHref, tabHref, useHomeParams, type View } from '../hooks/useHomeParams';
 import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery';
 import { useNow } from '../hooks/useNow';
@@ -156,22 +157,24 @@ export function HomePage() {
             ].join(' ')}
           >
             {showMap && (
-              <Suspense
-                fallback={
-                  <div
-                    className="h-full animate-pulse rounded-xl bg-slate-200"
-                    aria-hidden="true"
+              <MapBoundary>
+                <Suspense
+                  fallback={
+                    <div
+                      className="h-full animate-pulse rounded-xl bg-slate-200"
+                      aria-hidden="true"
+                    />
+                  }
+                >
+                  <EventMap
+                    events={events}
+                    hoveredId={hoveredId}
+                    selectedId={selectedId}
+                    onHover={setHoveredId}
+                    onSelect={select}
                   />
-                }
-              >
-                <EventMap
-                  events={events}
-                  hoveredId={hoveredId}
-                  selectedId={selectedId}
-                  onHover={setHoveredId}
-                  onSelect={select}
-                />
-              </Suspense>
+                </Suspense>
+              </MapBoundary>
             )}
           </div>
         </div>
