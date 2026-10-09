@@ -71,9 +71,14 @@ export async function getJson(url: URL, options: HttpOptions): Promise<unknown> 
         const body: unknown = await res.json();
         return body;
       }
-      const retryable = res.status === 429 || res.status >= 500;
+      // A Cloudflare bot challenge can't be answered by this client and retrying won't clear it.
+      const challenged = res.headers.get('cf-mitigated') === 'challenge';
+      const retryable = !challenged && (res.status === 429 || res.status >= 500);
       waitHint = retryable ? retryAfterMs(res) : null;
-      error = new FeedHttpError(`GET ${url.pathname}${url.search} → HTTP ${res.status}`, retryable);
+      error = new FeedHttpError(
+        `GET ${url.pathname}${url.search} → HTTP ${res.status}${challenged ? ' (blocked by a Cloudflare challenge)' : ''}`,
+        retryable,
+      );
     } catch (cause) {
       // Network failure, timeout (AbortSignal), or invalid JSON body: all worth retrying.
       error = new FeedHttpError(

@@ -103,6 +103,20 @@ describe('getJson', () => {
     expect(sleep).toHaveBeenCalledTimes(3);
   });
 
+  it('names a Cloudflare challenge and does not retry it, even on a 5xx status', async () => {
+    for (const status of [403, 503]) {
+      const fetchFn = sequence(
+        new Response('', { status, headers: { 'cf-mitigated': 'challenge' } }),
+      );
+      const { options, sleep } = http(fetchFn);
+      await expect(getJson(URL_, options)).rejects.toThrow(
+        `HTTP ${status} (blocked by a Cloudflare challenge)`,
+      );
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(sleep).not.toHaveBeenCalled();
+    }
+  });
+
   it('does not retry other 4xx responses', async () => {
     const fetchFn = sequence(new Response('', { status: 404 }));
     await expect(getJson(URL_, http(fetchFn).options)).rejects.toThrow('HTTP 404');
