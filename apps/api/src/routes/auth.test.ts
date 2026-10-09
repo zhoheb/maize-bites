@@ -5,6 +5,7 @@ import { apiErrorSchema, meResponseSchema } from '@maize-bites/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { hashToken } from '../auth/tokens.js';
+import { DEFAULT_RATE_LIMITS } from '../rate-limit.js';
 import { NOW, WEB_ORIGIN, createTestApi, type TestApi } from '../test/seed.js';
 
 let api: TestApi;
@@ -201,6 +202,7 @@ describe('rate limits', () => {
   it('limits sign-in emails per address', async () => {
     const limited = await createTestApi({
       rateLimits: {
+        ...DEFAULT_RATE_LIMITS,
         magicLinkPerIp: { windowMs: 60_000, limit: 100 },
         magicLinkPerEmail: { windowMs: 60_000, limit: 2 },
       },
@@ -223,6 +225,7 @@ describe('rate limits', () => {
   it('limits sign-in requests per IP across addresses', async () => {
     const limited = await createTestApi({
       rateLimits: {
+        ...DEFAULT_RATE_LIMITS,
         magicLinkPerIp: { windowMs: 60_000, limit: 2 },
         magicLinkPerEmail: { windowMs: 60_000, limit: 100 },
       },

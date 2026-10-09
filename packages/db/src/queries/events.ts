@@ -114,6 +114,12 @@ export function upsertEvent(
   });
 }
 
+/** Any event by id, published or not. */
+export async function getEvent(db: Database, id: string): Promise<EventRow | null> {
+  const [row] = await db.select().from(events).where(eq(events.id, id));
+  return row ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Active classification
 // ---------------------------------------------------------------------------

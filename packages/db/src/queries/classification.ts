@@ -104,6 +104,16 @@ export async function flagForReview(
     });
 }
 
+/** Marks every open flag on an event as handled. Returns how many were open. */
+export async function resolveReviewFlags(db: Database, eventId: string, at: Date): Promise<number> {
+  const rows = await db
+    .update(reviewFlags)
+    .set({ resolvedAt: at })
+    .where(and(eq(reviewFlags.eventId, eventId), isNull(reviewFlags.resolvedAt)))
+    .returning({ id: reviewFlags.id });
+  return rows.length;
+}
+
 export interface ReviewQueueItem {
   event: EventRow;
   /** The active classification, if any. */

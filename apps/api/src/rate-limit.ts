@@ -34,9 +34,18 @@ export function limiter(
 export interface RateLimits {
   magicLinkPerIp: LimitRule;
   magicLinkPerEmail: LimitRule;
+  /** Tips per signed-in user. */
+  submissionsPerUser: LimitRule;
+  /** Reports per signed-in user, across all events. */
+  reportsPerUser: LimitRule;
 }
 
 export const DEFAULT_RATE_LIMITS: RateLimits = {
   magicLinkPerIp: { windowMs: 15 * 60_000, limit: 10 },
   magicLinkPerEmail: { windowMs: 15 * 60_000, limit: 3 },
+  submissionsPerUser: { windowMs: 60 * 60_000, limit: 5 },
+  reportsPerUser: { windowMs: 60 * 60_000, limit: 30 },
 };
+
+/** Keys a limiter on the signed-in user. Put it after requireUser. */
+export const byUser = (req: Request): string | null => req.user?.id ?? null;

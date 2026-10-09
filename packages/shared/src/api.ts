@@ -33,6 +33,13 @@ export const reportCountsSchema = z.object({
 } satisfies Record<ReportKind, typeof count>);
 export type ReportCounts = z.infer<typeof reportCountsSchema>;
 
+/** Answer to POST /api/events/:id/reports: the event's counts after this report. */
+export const reportResponseSchema = z.object({
+  reportCounts: reportCountsSchema,
+  likelyGone: z.boolean(),
+});
+export type ReportResponse = z.infer<typeof reportResponseSchema>;
+
 export const eventDetailSchema = foodEventSchema.extend({
   /** Null for a community tip the classifier hasn't read yet. */
   classification: z

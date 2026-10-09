@@ -11,6 +11,7 @@ import {
 } from '@maize-bites/db';
 import { createTestDb, eventInput, insertClassification } from '@maize-bites/db/testing';
 import { pino } from 'pino';
+import request from 'supertest';
 import type { EmailMessage } from '@maize-bites/email';
 import { createApp, type AppDeps } from '../app.js';
 import type { RateLimits } from '../rate-limit.js';
@@ -173,9 +174,11 @@ export interface TestApi {
 }
 
 /** Rate limits high enough that only the rate-limit tests hit them. */
-const TEST_RATE_LIMITS: RateLimits = {
+export const TEST_RATE_LIMITS: RateLimits = {
   magicLinkPerIp: { windowMs: 60_000, limit: 1000 },
   magicLinkPerEmail: { windowMs: 60_000, limit: 1000 },
+  submissionsPerUser: { windowMs: 60_000, limit: 1000 },
+  reportsPerUser: { windowMs: 60_000, limit: 1000 },
 };
 
 export async function createTestApi(overrides: Partial<AppDeps> = {}): Promise<TestApi> {
@@ -199,4 +202,18 @@ export async function createTestApi(overrides: Partial<AppDeps> = {}): Promise<T
     ...overrides,
   });
   return { handle, app, seeded, outbox };
+}
+
+/** Signs in through the real magic-link flow and returns the session cookie header value. */
+export async function signIn(api: TestApi, email: string): Promise<string> {
+  await request(api.app).post('/api/auth/magic-link').send({ email });
+  const token = /token=([A-Za-z0-9_-]{43})/.exec(api.outbox.at(-1)?.text ?? '')?.[1] ?? '';
+  const res = await request(api.app).get('/api/auth/verify').query({ token });
+  return ((res.headers['set-cookie'] as unknown as string[])[0] ?? '').split(';')[0] ?? '';
+}
+
+/** Creates an admin account and signs it in. */
+export async function signInAdmin(api: TestApi, email = 'admin@umich.edu'): Promise<string> {
+  await api.handle.db.insert(users).values({ email, isAdmin: true });
+  return signIn(api, email);
 }

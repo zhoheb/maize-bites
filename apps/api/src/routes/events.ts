@@ -17,6 +17,7 @@ import {
   type NowEventsQuery,
 } from '@maize-bites/shared';
 import { Router, type Response } from 'express';
+import type { ApiContext } from '../context.js';
 import { decodeCursor, encodeCursor } from '../cursor.js';
 import { HttpError } from '../errors.js';
 import { buildIcs } from '../ics.js';
@@ -59,7 +60,8 @@ async function findPublished(db: Database, params: unknown, now: Date) {
   return published;
 }
 
-export function eventsRouter(db: Database, now: () => Date): Router {
+export function eventsRouter(ctx: ApiContext): Router {
+  const { db, now } = ctx;
   const router = Router();
 
   /** Free-food events. Defaults to everything that hasn't ended yet. */
@@ -102,7 +104,7 @@ export function eventsRouter(db: Database, now: () => Date): Router {
       .send(buildIcs(toFoodEvent(published), { now: now() }));
   });
 
-  router.use('/:id/reports', reportsRouter());
+  router.use('/:id/reports', reportsRouter(ctx));
 
   return router;
 }

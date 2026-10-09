@@ -87,6 +87,19 @@ export const reviewSubmissionRequestSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
+export const reviewSubmissionResponseSchema = z.object({
+  status: z.enum(['approved', 'rejected']),
+  /** The published event, when approved. */
+  eventId: z.uuid().nullable(),
+});
+export type ReviewSubmissionResponse = z.infer<typeof reviewSubmissionResponseSchema>;
+
+export const overrideResponseSchema = z.object({
+  eventId: z.uuid(),
+  action: z.enum(['show', 'hide']),
+});
+export type OverrideResponse = z.infer<typeof overrideResponseSchema>;
+
 export const addAliasRequestSchema = z.object({ alias: z.string().trim().min(2).max(120) });
 
 const adminClassificationSchema = z.object({
@@ -138,10 +151,16 @@ export const reviewQueueResponseSchema = z.object({
 });
 export type ReviewQueueResponse = z.infer<typeof reviewQueueResponseSchema>;
 
+/** Feed sources: everything except community tips. */
+const feedSourceSchema = eventSourceSchema.exclude(['submission']);
+
 export const ingestionRunsResponseSchema = z.object({
   runs: z.array(
     z.object({
       id: z.uuid(),
+      source: eventSourceSchema,
+      notModified: z.boolean(),
+      skippedDuplicates: z.number(),
       startedAt: isoDateTime,
       finishedAt: isoDateTime.nullable(),
       fetched: z.number(),
@@ -193,6 +212,29 @@ export const locationMissesResponseSchema = z.object({
   ),
 });
 
+/** One feed source's recent record, for the admin page. */
+export const sourceHealthSchema = z.object({
+  source: feedSourceSchema,
+  lastRunAt: isoDateTime.nullable(),
+  /** Finish time of the newest complete run. */
+  lastSuccessAt: isoDateTime.nullable(),
+  /** First error of the newest run, when it had any. */
+  lastError: z.string().nullable(),
+  /** Runs among the recent ones listed, and how many of them completed. */
+  recentRuns: z.number(),
+  recentComplete: z.number(),
+});
+export type SourceHealth = z.infer<typeof sourceHealthSchema>;
+
+/** GET /api/admin/metrics. */
+export const adminMetricsResponseSchema = z.object({
+  sources: z.array(sourceHealthSchema),
+  runs: ingestionRunsResponseSchema.shape.runs,
+  classifier: classifierStatsResponseSchema,
+  locationMisses: locationMissesResponseSchema.shape.misses,
+});
+export type AdminMetricsResponse = z.infer<typeof adminMetricsResponseSchema>;
+
 export const auditLogResponseSchema = z.object({
   entries: z.array(
     z.object({
@@ -206,3 +248,4 @@ export const auditLogResponseSchema = z.object({
     }),
   ),
 });
+export type AuditLogResponse = z.infer<typeof auditLogResponseSchema>;
