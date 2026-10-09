@@ -1,0 +1,14 @@
+# Keep the build context small and secrets out of images.
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+**/dev-dist
+**/coverage
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+docs
+*.md

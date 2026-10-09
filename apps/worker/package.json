@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx watch --conditions=@maize-bites/source src/index.ts",
     "ingest:once": "tsx --conditions=@maize-bites/source src/cli/ingest-once.ts",
