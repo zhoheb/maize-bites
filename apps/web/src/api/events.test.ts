@@ -66,6 +66,7 @@ describe('fetchHealth', () => {
       database: 'ok',
       lastSuccessfulIngestionAt: null,
       ingestionStale: true,
+      sources: [],
     };
     vi.stubGlobal('fetch', fakeFetch(body, 503));
     try {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { classificationMethodSchema, type ReportKind } from './enums.js';
+import { classificationMethodSchema, eventSourceSchema, type ReportKind } from './enums.js';
 import { foodEventSchema, listEventsQuerySchema } from './events.js';
 
 // Request/response contracts for apps/api beyond the event list (see events.ts).
@@ -17,6 +17,16 @@ export function shouldAutoPublish(trustLevel: number): boolean {
 }
 /** /api/health reports degraded when the last complete ingestion is older than this. */
 export const INGESTION_STALE_MS = 3 * 60 * 60 * 1000;
+/**
+ * The same limit per feed source. Maize Pages is read every five hours, so it gets two missed
+ * reads of slack before it counts as stale.
+ */
+export const SOURCE_STALE_MS = {
+  happening: INGESTION_STALE_MS,
+  maizepages: 11 * 60 * 60 * 1000,
+} as const;
+/** A source with no run started in this long is treated as switched off and left out of /api/health. */
+export const SOURCE_ACTIVE_MS = 48 * 60 * 60 * 1000;
 
 export const nowEventsQuerySchema = listEventsQuerySchema.omit({ from: true, to: true });
 export type NowEventsQuery = z.output<typeof nowEventsQuerySchema>;
@@ -55,11 +65,25 @@ export const eventDetailSchema = foodEventSchema.extend({
 });
 export type EventDetail = z.infer<typeof eventDetailSchema>;
 
+export const sourceFreshnessSchema = z.object({
+  source: eventSourceSchema.exclude(['submission']),
+  /** When the source's newest run started, complete or not. */
+  lastRunAt: z.iso.datetime({ offset: true }),
+  lastSuccessfulIngestionAt: z.iso.datetime({ offset: true }).nullable(),
+  /** No complete run within the source's limit (SOURCE_STALE_MS). */
+  stale: z.boolean(),
+});
+
 export const healthResponseSchema = z.object({
+  /** "degraded" when any source below is stale, or nothing has ingested lately. */
   status: z.enum(['ok', 'degraded']),
   database: z.literal('ok'),
+  /** The newest complete ingestion from any source. */
   lastSuccessfulIngestionAt: z.iso.datetime({ offset: true }).nullable(),
+  /** True when no source is fresh, so what the site shows may be out of date. */
   ingestionStale: z.boolean(),
+  /** Each feed source that has run in the last SOURCE_ACTIVE_MS. */
+  sources: z.array(sourceFreshnessSchema),
 });
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 

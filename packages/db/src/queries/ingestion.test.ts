@@ -11,6 +11,7 @@ import {
   getLastIngestionRun,
   getLastSuccessfulIngestion,
   hasFreshHappeningTwin,
+  listSourceFreshness,
   markUnseenEventsRemoved,
   recordLocationMisses,
   retireDuplicateEvents,
@@ -162,6 +163,22 @@ describe('getLastSuccessfulIngestion', () => {
     await startIngestionRun(db, 'happening', hours(-1)); // still running / crashed
 
     expect(await getLastSuccessfulIngestion(db)).toEqual(hours(-2.9));
+  });
+
+  it('listSourceFreshness reports the newest run and newest success per source', async () => {
+    expect(await listSourceFreshness(db)).toEqual([]);
+
+    const ok = await startIngestionRun(db, 'happening', hours(-30));
+    await finishIngestionRun(db, ok, hours(-29.9), { ...stats, complete: true });
+    const failed = await startIngestionRun(db, 'happening', hours(-1));
+    await finishIngestionRun(db, failed, hours(-0.9), { ...stats, complete: false });
+    const never = await startIngestionRun(db, 'maizepages', hours(-2));
+    await finishIngestionRun(db, never, hours(-1.9), { ...stats, complete: false });
+
+    expect(await listSourceFreshness(db)).toEqual([
+      { source: 'happening', lastRunAt: hours(-1), lastSuccessAt: hours(-29.9) },
+      { source: 'maizepages', lastRunAt: hours(-2), lastSuccessAt: null },
+    ]);
   });
 
   it('keeps sources apart', async () => {

@@ -153,6 +153,32 @@ export async function getLastSuccessfulIngestion(
   return row?.finishedAt ?? null;
 }
 
+export interface SourceFreshness {
+  source: EventSource;
+  /** Start of the source's newest run, complete or not. */
+  lastRunAt: Date;
+  /** Finish time of its newest complete run. */
+  lastSuccessAt: Date | null;
+}
+
+/** One row per source that has ever run, for health reporting. */
+export async function listSourceFreshness(db: Database): Promise<SourceFreshness[]> {
+  const rows = await db
+    .select({
+      source: ingestionRuns.source,
+      lastRunAt: sql<Date>`max(${ingestionRuns.startedAt})`.mapWith(ingestionRuns.startedAt),
+      lastSuccessAt: sql<Date | null>`max(${ingestionRuns.finishedAt}) filter (where ${ingestionRuns.complete})`,
+    })
+    .from(ingestionRuns)
+    .groupBy(ingestionRuns.source)
+    .orderBy(ingestionRuns.source);
+  return rows.map((r) => ({
+    ...r,
+    // The aggregate comes back as text from one driver and as a Date from the other.
+    lastSuccessAt: r.lastSuccessAt === null ? null : new Date(r.lastSuccessAt),
+  }));
+}
+
 // ── Conditional requests ──────────────────────────────────────────────────
 
 export interface HttpValidators {
