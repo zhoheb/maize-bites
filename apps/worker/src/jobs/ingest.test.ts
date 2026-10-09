@@ -15,14 +15,16 @@ import { classifyPendingEvents } from '../classifier/classify-events.js';
 import type { FeedWindow } from '../sources/happening/client.js';
 import { fakeMessage, mockAnthropic, verdictJson } from '../test/anthropic-mock.js';
 import { sampleFeed } from '../test/fixture.js';
+import { createHappeningSource } from '../sources/happening/index.js';
 import {
   MIN_INGEST_INTERVAL_MS,
   REMOVAL_GRACE_MS,
-  ingestIfDue,
+  ingestIfDue as ingestSourcesIfDue,
   isIngestionDue,
-  runIngestion,
-  type IngestDeps,
-} from './ingest-happening.js';
+  runIngestion as runSources,
+  type IngestDeps as SourcesDeps,
+  type IngestResult,
+} from './ingest.js';
 
 // Fixture items start 2026-09-23 through 2026-10-01; "now" sits inside that span.
 const NOW = new Date('2026-09-30T16:00:00Z');
@@ -53,6 +55,11 @@ function windowOf(items: unknown[], complete = true): FeedWindow {
   };
 }
 
+// These tests drive the ingest job with Happening as its only source.
+type IngestDeps = Omit<SourcesDeps, 'sources'> & {
+  fetchWindow: (from: Date) => Promise<FeedWindow>;
+};
+
 function deps(overrides: Partial<IngestDeps> = {}): IngestDeps {
   return {
     db,
@@ -62,6 +69,19 @@ function deps(overrides: Partial<IngestDeps> = {}): IngestDeps {
     ...overrides,
   };
 }
+
+const withSource = ({ fetchWindow, ...rest }: IngestDeps): SourcesDeps => ({
+  ...rest,
+  sources: [createHappeningSource({ fetchWindow })],
+});
+
+async function runIngestion(d: IngestDeps): Promise<IngestResult> {
+  const [result] = await runSources(withSource(d));
+  if (!result) throw new Error('no run');
+  return result;
+}
+
+const ingestIfDue = (d: IngestDeps) => ingestSourcesIfDue(withSource(d));
 
 const at = (ms: number) => () => new Date(NOW.getTime() + ms);
 

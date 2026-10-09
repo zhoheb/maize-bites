@@ -1,13 +1,19 @@
-import type { Database } from '@maize-bites/db';
+import { getHttpValidators, saveHttpValidators, type Database } from '@maize-bites/db';
 import { createMailer } from '@maize-bites/email';
 import { anthropicCreateMessage } from '../classifier/anthropic.js';
 import { classifyPendingEvents, type LlmDeps } from '../classifier/classify-events.js';
 import type { WorkerEnv } from '../env.js';
-import { buildUserAgent, fetchHappeningWindow } from '../sources/happening/client.js';
 import { createDelivery, type Delivery } from '../notify/delivery.js';
 import { runDigest, runInstantAlerts } from '../notify/notifier.js';
 import type { Job, Logger } from '../scheduler.js';
-import { ingestIfDue, type IngestDeps } from './ingest-happening.js';
+import { fetchHappeningWindow } from '../sources/happening/client.js';
+import { createHappeningSource } from '../sources/happening/index.js';
+import { buildUserAgent, type HttpOptions } from '../sources/http/client.js';
+import { createHostRateLimiter } from '../sources/http/rate-limit.js';
+import { createRobotsChecker } from '../sources/http/robots.js';
+import { createMaizepagesSource } from '../sources/maizepages/index.js';
+import type { Source } from '../sources/types.js';
+import { ingestIfDue, type IngestDeps } from './ingest.js';
 
 export function llmDepsFromEnv(env: WorkerEnv): LlmDeps | null {
   if (!env.ANTHROPIC_API_KEY) return null;
@@ -30,18 +36,50 @@ export function deliveryFromEnv(db: Database, env: WorkerEnv, logger: Logger): D
   return createDelivery({ db, mailer, vapid, logger });
 }
 
-export function happeningIngestDeps(
+/**
+ * The sources switched on in the environment, sharing one HTTP client so robots.txt lookups and
+ * per-host pacing apply across them. Empty without INGEST_CONTACT_EMAIL: we don't fetch
+ * anything unless the User-Agent says how to reach us.
+ */
+export function sourcesFromEnv(db: Database, env: WorkerEnv, logger: Logger): Source[] {
+  if (!env.INGEST_CONTACT_EMAIL) return [];
+  const userAgent = buildUserAgent(env.INGEST_CONTACT_EMAIL);
+  const http: HttpOptions = {
+    userAgent,
+    logger,
+    robots: createRobotsChecker({ userAgent }),
+    rateLimiter: createHostRateLimiter(),
+  };
+  const sources: Source[] = [];
+  if (env.HAPPENING_ENABLED)
+    sources.push(
+      createHappeningSource({ fetchWindow: (from) => fetchHappeningWindow(http, { from }) }),
+    );
+  if (env.MAIZEPAGES_ENABLED)
+    sources.push(
+      createMaizepagesSource({
+        http,
+        logger,
+        validators: {
+          get: (url) => getHttpValidators(db, url),
+          save: (url, validators) => saveHttpValidators(db, url, validators, new Date()),
+        },
+      }),
+    );
+  return sources;
+}
+
+export function ingestDeps(
   db: Database,
-  contactEmail: string,
+  sources: readonly Source[],
   logger: Logger,
   llm: LlmDeps | null,
   notify?: { delivery: Delivery; webOrigin: string },
 ): IngestDeps {
-  const http = { userAgent: buildUserAgent(contactEmail), logger };
   return {
     db,
+    sources,
     logger,
-    fetchWindow: (from) => fetchHappeningWindow(http, { from }),
     classify: (now) => classifyPendingEvents({ db, logger, now, llm }),
     ...(notify && {
       notify: (now: Date) => runInstantAlerts({ db, logger, now, ...notify }),
@@ -49,10 +87,10 @@ export function happeningIngestDeps(
   };
 }
 
-/** Hourly at :23 (off the top of the hour). ingestIfDue enforces the at-most-hourly rule. */
-export function happeningIngestJob(deps: IngestDeps): Job {
+/** Hourly at :23 (off the top of the hour). ingestIfDue decides which sources are due. */
+export function ingestJob(deps: IngestDeps): Job {
   return {
-    name: 'ingest-happening',
+    name: 'ingest',
     schedule: '23 * * * *',
     runOnStart: true,
     run: () => ingestIfDue(deps),

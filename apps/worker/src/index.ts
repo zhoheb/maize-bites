@@ -4,9 +4,10 @@ import { authCleanupJob, pruneEventsJob } from './jobs/housekeeping.js';
 import {
   deliveryFromEnv,
   digestJob,
-  happeningIngestDeps,
-  happeningIngestJob,
+  ingestDeps,
+  ingestJob,
   llmDepsFromEnv,
+  sourcesFromEnv,
 } from './jobs/index.js';
 import { startScheduler, type Job } from './scheduler.js';
 
@@ -30,21 +31,20 @@ const jobs: Job[] = [
     intervalMinutes: env.PRUNE_INTERVAL_MINUTES,
   }),
 ];
-if (env.INGEST_CONTACT_EMAIL) {
+const sources = sourcesFromEnv(db, env, console);
+if (sources.length > 0) {
   const llm = llmDepsFromEnv(env);
   if (!llm)
     console.warn('[worker] ANTHROPIC_API_KEY is not set; the classifier will run rules only');
+  console.info(`[worker] ingesting from: ${sources.map((s) => s.id).join(', ')}`);
   jobs.push(
-    happeningIngestJob(
-      happeningIngestDeps(db, env.INGEST_CONTACT_EMAIL, console, llm, {
-        delivery,
-        webOrigin: env.WEB_ORIGIN,
-      }),
-    ),
+    ingestJob(ingestDeps(db, sources, console, llm, { delivery, webOrigin: env.WEB_ORIGIN })),
   );
 } else {
   console.warn(
-    '[worker] INGEST_CONTACT_EMAIL is not set; Happening @ Michigan ingestion is disabled',
+    env.INGEST_CONTACT_EMAIL
+      ? '[worker] every source is disabled (HAPPENING_ENABLED, MAIZEPAGES_ENABLED); ingestion is off'
+      : '[worker] INGEST_CONTACT_EMAIL is not set; ingestion is disabled',
   );
 }
 

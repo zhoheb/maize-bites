@@ -4,9 +4,23 @@ import { isSupportedInterval } from './scheduler.js';
 
 const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
 
+/** "true"/"false" (or 1/0). Blank means the default. */
+const flag = (defaultValue: boolean) =>
+  z.preprocess(
+    emptyAsUndefined,
+    z
+      .enum(['true', 'false', '1', '0'])
+      .default(defaultValue ? 'true' : 'false')
+      .transform((value) => value === 'true' || value === '1'),
+  );
+
 export const workerEnvSchema = databaseEnvSchema.extend({
-  /** Sent in the feed User-Agent so the events.umich.edu admins can reach us. Ingestion is off without it. */
+  /** Sent in the feed User-Agent so a site's admins can reach us. Ingestion is off without it. */
   INGEST_CONTACT_EMAIL: z.preprocess(emptyAsUndefined, z.email().optional()),
+  /** Happening @ Michigan (events.umich.edu JSON feed). */
+  HAPPENING_ENABLED: flag(true),
+  /** Maize Pages public events (maizepages.umich.edu ICS/RSS feeds). */
+  MAIZEPAGES_ENABLED: flag(false),
   /** Enables the LLM classifier stage. Without it, rules still run and candidates wait. */
   ANTHROPIC_API_KEY: z.preprocess(emptyAsUndefined, z.string().min(1).optional()),
   /** Hard cap on Anthropic API requests per ingestion run (retries included). */

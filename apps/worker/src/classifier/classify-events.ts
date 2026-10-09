@@ -6,6 +6,7 @@ import {
   recordClassification,
   type Database,
 } from '@maize-bites/db';
+import type { EventSource } from '@maize-bites/shared';
 import type { Logger } from '../scheduler.js';
 import { classifierInputFromEvent } from './input.js';
 import { callBudget, classifyWithLlm, estimateCostUsd, type CreateMessage } from './llm.js';
@@ -36,6 +37,8 @@ export interface ClassifyDeps {
 }
 
 export interface ClassifyStats {
+  /** Verdicts stored (rules + LLM), by the event's source. */
+  bySource: Partial<Record<EventSource, number>>;
   rulesClassified: number;
   rulesCandidates: number;
   llmPending: number;
@@ -57,6 +60,7 @@ export async function classifyPendingEvents({
   llm,
 }: ClassifyDeps): Promise<ClassifyStats> {
   const stats: ClassifyStats = {
+    bySource: {},
     rulesClassified: 0,
     rulesCandidates: 0,
     llmPending: 0,
@@ -86,6 +90,7 @@ export async function classifyPendingEvents({
       evidence: (verdict.excludedBy ?? verdict.matches.join(', ')) || null,
     });
     stats.rulesClassified += 1;
+    stats.bySource[event.source] = (stats.bySource[event.source] ?? 0) + 1;
     if (verdict.candidate) stats.rulesCandidates += 1;
   }
 
@@ -118,6 +123,7 @@ export async function classifyPendingEvents({
           contentHash: event.contentHash,
         });
         stats.llmClassified += 1;
+        stats.bySource[event.source] = (stats.bySource[event.source] ?? 0) + 1;
       } else if (outcome.status === 'invalid') {
         await flagForReview(db, {
           eventId: event.id,

@@ -7,6 +7,8 @@ describe('parseEnv', () => {
   it('accepts a postgres DATABASE_URL and optional contact email', () => {
     expect(parseEnv({ DATABASE_URL })).toEqual({
       DATABASE_URL,
+      HAPPENING_ENABLED: true,
+      MAIZEPAGES_ENABLED: false,
       LLM_MAX_CALLS_PER_RUN: 100,
       EVENT_RETENTION_DAYS: 30,
       PRUNE_INTERVAL_MINUTES: 60,
@@ -56,6 +58,23 @@ describe('parseEnv', () => {
     );
     expect(() => parseEnv({ DATABASE_URL, PRUNE_INTERVAL_MINUTES: '45' })).toThrow(
       /PRUNE_INTERVAL_MINUTES/,
+    );
+  });
+
+  it('reads the per-source flags, treating blank as the default', () => {
+    const flags = (source: Record<string, string>) => {
+      const env = parseEnv({ DATABASE_URL, ...source });
+      return [env.HAPPENING_ENABLED, env.MAIZEPAGES_ENABLED];
+    };
+    expect(flags({})).toEqual([true, false]);
+    expect(flags({ HAPPENING_ENABLED: '', MAIZEPAGES_ENABLED: '' })).toEqual([true, false]);
+    expect(flags({ HAPPENING_ENABLED: 'false', MAIZEPAGES_ENABLED: 'true' })).toEqual([
+      false,
+      true,
+    ]);
+    expect(flags({ HAPPENING_ENABLED: '0', MAIZEPAGES_ENABLED: '1' })).toEqual([false, true]);
+    expect(() => parseEnv({ DATABASE_URL, MAIZEPAGES_ENABLED: 'yes' })).toThrow(
+      /MAIZEPAGES_ENABLED/,
     );
   });
 });
