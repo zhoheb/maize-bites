@@ -1,100 +1,28 @@
+import {
+  FeedHttpError,
+  buildUserAgent,
+  defaultSleep,
+  httpGet,
+  type HttpOptions,
+} from '../http/client.js';
 import { happeningPageSchema } from './schema.js';
 import { localDate, parseFeedDateTime } from './time.js';
 
 const HAPPENING_LIST_URL = 'https://events.umich.edu/list/json';
 const FEED_TIME_ZONE = 'America/Detroit';
 
-export function buildUserAgent(contactEmail: string): string {
-  return `MaizeBites/0.1 (UMich free-food tracker; contact: ${contactEmail})`;
-}
+export { FeedHttpError, buildUserAgent, type HttpOptions };
 
-export interface HttpOptions {
-  userAgent: string;
-  fetchFn?: typeof fetch;
-  /** Per request. Default 10s. */
-  timeoutMs?: number;
-  /** Total tries per request, including the first. Default 4. */
-  maxAttempts?: number;
-  /** Backoff is baseDelayMs * 2^(attempt-1) plus up to 50% jitter. Default 2s. */
-  baseDelayMs?: number;
-  /** Cap for any single wait, including Retry-After. Default 60s. */
-  maxDelayMs?: number;
-  sleep?: (ms: number) => Promise<void>;
-  random?: () => number;
-  logger?: Pick<Console, 'warn'>;
-}
-
-export class FeedHttpError extends Error {
-  constructor(
-    message: string,
-    readonly retryable: boolean,
-  ) {
-    super(message);
-    this.name = 'FeedHttpError';
-  }
-}
-
-const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-function retryAfterMs(res: Response): number | null {
-  const header = res.headers.get('retry-after');
-  if (header === null) return null;
-  const seconds = Number(header);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
-  const date = Date.parse(header);
-  return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
-}
-
-/** GET a JSON URL politely: fixed User-Agent, timeout, exponential backoff on 429/5xx/network errors. */
+/** GET a JSON URL through the shared feed client. */
 export async function getJson(url: URL, options: HttpOptions): Promise<unknown> {
-  const {
-    userAgent,
-    fetchFn = (...args) => fetch(...args),
-    timeoutMs = 10_000,
-    maxAttempts = 4,
-    baseDelayMs = 2_000,
-    maxDelayMs = 60_000,
-    sleep = defaultSleep,
-    random = Math.random,
-    logger = console,
-  } = options;
-
-  for (let attempt = 1; ; attempt++) {
-    let error: FeedHttpError;
-    let waitHint: number | null = null;
-    try {
-      const res = await fetchFn(url, {
-        headers: { 'User-Agent': userAgent, Accept: 'application/json' },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (res.ok) {
-        const body: unknown = await res.json();
-        return body;
-      }
-      // A Cloudflare bot challenge can't be answered by this client and retrying won't clear it.
-      const challenged = res.headers.get('cf-mitigated') === 'challenge';
-      const retryable = !challenged && (res.status === 429 || res.status >= 500);
-      waitHint = retryable ? retryAfterMs(res) : null;
-      error = new FeedHttpError(
-        `GET ${url.pathname}${url.search} → HTTP ${res.status}${challenged ? ' (blocked by a Cloudflare challenge)' : ''}`,
-        retryable,
-      );
-    } catch (cause) {
-      // Network failure, timeout (AbortSignal), or invalid JSON body: all worth retrying.
-      error = new FeedHttpError(
-        `GET ${url.pathname}${url.search} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
-        true,
-      );
-    }
-
-    if (!error.retryable || attempt >= maxAttempts) throw error;
-    const backoff = baseDelayMs * 2 ** (attempt - 1);
-    const delay = Math.min(maxDelayMs, waitHint ?? backoff + random() * backoff * 0.5);
-    logger.warn(
-      `[ingest] ${error.message}; retry ${attempt}/${maxAttempts - 1} in ${Math.round(delay)}ms`,
-    );
-    await sleep(delay);
-  }
+  const result = await httpGet<unknown>(url, options, {
+    accept: 'application/json',
+    parse: (res) => res.json(),
+  });
+  // No validators are sent, so a 304 can't come back.
+  if (result.status !== 'ok')
+    throw new FeedHttpError(`GET ${url.pathname} → unexpected 304`, false);
+  return result.body;
 }
 
 /** Calendar arithmetic on a `YYYY-MM-DD` string. */
