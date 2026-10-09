@@ -2,8 +2,9 @@
 # Checks whether events.umich.edu serves its official feeds to our identified client.
 #
 # Makes exactly three GET requests, 2 seconds apart, with the same User-Agent the worker sends.
-# It only observes: no retries, no cookies, no extra headers, nothing that tries to get past a
-# bot challenge. Run it from different networks (home, campus wifi, UMich VPN) and compare.
+# It only observes: no retries, no cookies, and no headers beyond the User-Agent and, when it is
+# configured, the integration header the site's owners issued. Nothing tries to get past a bot
+# challenge. curl does not follow redirects here, so the header cannot travel to another host. Run it from different networks (home, campus wifi, UMich VPN) and compare.
 #
 # Usage: scripts/check-happening.sh
 #   INGEST_CONTACT_EMAIL comes from the environment, or from the repo-root .env.
@@ -17,6 +18,22 @@ fi
 if [[ -z "${INGEST_CONTACT_EMAIL:-}" ]]; then
   echo "INGEST_CONTACT_EMAIL is not set. Add it to .env or export it, then rerun." >&2
   exit 2
+fi
+
+# Optional: the integration header Student Life Technology Solutions issued. Read from the
+# environment or .env like the contact address. Its value is never printed.
+read_env() {
+  local value="${!1:-}"
+  if [[ -z "$value" && -f "$ROOT/.env" ]]; then
+    value="$(grep -E "^$1=" "$ROOT/.env" | tail -n 1 | cut -d= -f2- | tr -d '"'"'" || true)"
+  fi
+  printf '%s' "$value"
+}
+INTEGRATION_TOKEN="$(read_env UMICH_INTEGRATION_TOKEN)"
+SITE_URL="$(read_env PUBLIC_SITE_URL)"
+INTEGRATION_ARGS=()
+if [[ -n "$INTEGRATION_TOKEN" && -n "$SITE_URL" ]]; then
+  INTEGRATION_ARGS=(--header "x-umich-integration: ${INTEGRATION_TOKEN} ${SITE_URL}")
 fi
 
 # Must match buildUserAgent in the worker's Happening client.
@@ -38,6 +55,7 @@ check() {
   local status
   status="$(curl --silent --show-error --max-time 15 \
     --user-agent "$USER_AGENT" --header "Accept: $accept" \
+    ${INTEGRATION_ARGS[@]+"${INTEGRATION_ARGS[@]}"} \
     --dump-header "$HEADERS" --output "$BODY" --write-out '%{http_code}' "$url" || true)"
 
   local challenge="no"
@@ -62,6 +80,11 @@ check() {
 
 echo "Happening @ Michigan access check, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "User-Agent: MaizeBites/0.1 (UMich free-food tracker; contact: <INGEST_CONTACT_EMAIL>)"
+if [[ ${#INTEGRATION_ARGS[@]} -gt 0 ]]; then
+  echo "x-umich-integration: <UMICH_INTEGRATION_TOKEN> <PUBLIC_SITE_URL> (sent)"
+else
+  echo "x-umich-integration: not sent (UMICH_INTEGRATION_TOKEN or PUBLIC_SITE_URL is not set)"
+fi
 echo
 
 check "JSON list feed" "https://events.umich.edu/list/json?v=2&max-results=1" "application/json"

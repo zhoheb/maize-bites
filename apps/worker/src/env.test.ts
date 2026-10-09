@@ -100,4 +100,42 @@ describe('parseEnv', () => {
         .CLASSIFIER_MODE,
     ).toBe('rules');
   });
+
+  it('reads the Happening integration settings, both optional at parse time', () => {
+    const env = parseEnv({
+      DATABASE_URL,
+      UMICH_INTEGRATION_TOKEN: 'test-token-not-real-123',
+      PUBLIC_SITE_URL: 'https://maizebites.example',
+    });
+    expect(env.UMICH_INTEGRATION_TOKEN).toBe('test-token-not-real-123');
+    expect(env.PUBLIC_SITE_URL).toBe('https://maizebites.example');
+
+    // Missing or blank is not an error here: the worker starts and disables Happening instead.
+    const blank = parseEnv({ DATABASE_URL, UMICH_INTEGRATION_TOKEN: '', PUBLIC_SITE_URL: '' });
+    expect(blank.UMICH_INTEGRATION_TOKEN).toBeUndefined();
+    expect(blank.PUBLIC_SITE_URL).toBeUndefined();
+    expect(blank.HAPPENING_ENABLED).toBe(true);
+  });
+
+  it('rejects a malformed site URL or token', () => {
+    const bad = (extra: Record<string, string>) => () => parseEnv({ DATABASE_URL, ...extra });
+    expect(bad({ PUBLIC_SITE_URL: 'http://maizebites.example' })).toThrow(/PUBLIC_SITE_URL/);
+    expect(bad({ PUBLIC_SITE_URL: 'https://maizebites.example/' })).toThrow(
+      /must not end with a slash/,
+    );
+    expect(bad({ PUBLIC_SITE_URL: 'maizebites.example' })).toThrow(/PUBLIC_SITE_URL/);
+    expect(bad({ UMICH_INTEGRATION_TOKEN: 'two words' })).toThrow(/UMICH_INTEGRATION_TOKEN/);
+    expect(bad({ UMICH_INTEGRATION_TOKEN: 'short' })).toThrow(/UMICH_INTEGRATION_TOKEN/);
+  });
+
+  it('never repeats the token in a validation error', () => {
+    const attempt = () =>
+      parseEnv({ DATABASE_URL, UMICH_INTEGRATION_TOKEN: 'secret value with spaces 123' });
+    expect(attempt).toThrow(/UMICH_INTEGRATION_TOKEN/);
+    try {
+      attempt();
+    } catch (error) {
+      expect(String(error)).not.toContain('secret value');
+    }
+  });
 });

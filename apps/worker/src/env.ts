@@ -20,8 +20,27 @@ export const workerEnvSchema = databaseEnvSchema.extend({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   /** Sent in the feed User-Agent so a site's admins can reach us. Ingestion is off without it. */
   INGEST_CONTACT_EMAIL: z.preprocess(emptyAsUndefined, z.email().optional()),
-  /** Happening @ Michigan (events.umich.edu JSON feed). */
+  /** Happening @ Michigan (events.umich.edu JSON feed). Needs the two values below. */
   HAPPENING_ENABLED: flag(true),
+  /**
+   * Secret. Issued by Student Life Technology Solutions for the events.umich.edu integration
+   * header. Without it (or PUBLIC_SITE_URL) the Happening source is switched off at startup.
+   */
+  UMICH_INTEGRATION_TOKEN: z.preprocess(
+    emptyAsUndefined,
+    z
+      .string()
+      .regex(/^\S{8,200}$/, 'must be 8+ characters with no spaces')
+      .optional(),
+  ),
+  /** The site's public https origin, sent with the token. No trailing slash. */
+  PUBLIC_SITE_URL: z.preprocess(
+    emptyAsUndefined,
+    z
+      .url({ protocol: /^https$/ })
+      .refine((url) => !url.endsWith('/'), 'must not end with a slash')
+      .optional(),
+  ),
   /** Maize Pages public events (maizepages.umich.edu ICS/RSS feeds). */
   MAIZEPAGES_ENABLED: flag(false),
   /**

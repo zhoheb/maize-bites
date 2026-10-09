@@ -12,7 +12,11 @@ import { createDelivery, type Delivery } from '../notify/delivery.js';
 import { runDigest, runInstantAlerts } from '../notify/notifier.js';
 import type { Job, Logger } from '../scheduler.js';
 import { fetchHappeningWindow } from '../sources/happening/client.js';
-import { createHappeningSource } from '../sources/happening/index.js';
+import {
+  HAPPENING_HOST,
+  createHappeningSource,
+  happeningIntegrationHeader,
+} from '../sources/happening/index.js';
 import { buildUserAgent, type HttpOptions } from '../sources/http/client.js';
 import { createHostRateLimiter } from '../sources/http/rate-limit.js';
 import { createRobotsChecker } from '../sources/http/robots.js';
@@ -45,22 +49,38 @@ export function deliveryFromEnv(db: Database, env: WorkerEnv, logger: Logger): D
 /**
  * The sources switched on in the environment, sharing one HTTP client so robots.txt lookups and
  * per-host pacing apply across them. Empty without INGEST_CONTACT_EMAIL: we don't fetch
- * anything unless the User-Agent says how to reach us.
+ * anything unless the User-Agent says how to reach us. Happening also needs its integration
+ * header (UMICH_INTEGRATION_TOKEN and PUBLIC_SITE_URL); without both it is left out with one
+ * log line and the other sources carry on.
  */
 export function sourcesFromEnv(db: Database, env: WorkerEnv, logger: Logger): Source[] {
   if (!env.INGEST_CONTACT_EMAIL) return [];
   const userAgent = buildUserAgent(env.INGEST_CONTACT_EMAIL);
+  const happeningHeader =
+    env.UMICH_INTEGRATION_TOKEN && env.PUBLIC_SITE_URL
+      ? happeningIntegrationHeader(env.UMICH_INTEGRATION_TOKEN, env.PUBLIC_SITE_URL)
+      : null;
+  // The header is tied to the one hostname here; the client never sends it anywhere else.
+  const hostHeaders = happeningHeader ? { [HAPPENING_HOST]: happeningHeader } : {};
   const http: HttpOptions = {
     userAgent,
     logger,
-    robots: createRobotsChecker({ userAgent }),
+    robots: createRobotsChecker({ userAgent, hostHeaders }),
     rateLimiter: createHostRateLimiter(),
+    hostHeaders,
   };
   const sources: Source[] = [];
-  if (env.HAPPENING_ENABLED)
-    sources.push(
-      createHappeningSource({ fetchWindow: (from) => fetchHappeningWindow(http, { from }) }),
-    );
+  if (env.HAPPENING_ENABLED) {
+    if (happeningHeader)
+      sources.push(
+        createHappeningSource({ fetchWindow: (from) => fetchHappeningWindow(http, { from }) }),
+      );
+    else
+      logger.warn(
+        '[worker] Happening is enabled but UMICH_INTEGRATION_TOKEN or PUBLIC_SITE_URL is not set; ' +
+          'the Happening source is disabled',
+      );
+  }
   if (env.MAIZEPAGES_ENABLED)
     sources.push(
       createMaizepagesSource({
