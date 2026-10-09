@@ -137,7 +137,7 @@ describe('runIngestion with the captured feed', () => {
     const result = await runIngestion(deps());
 
     const matched = await db.$count(events, sql`${events.buildingId} is not null`);
-    expect(matched).toBe(84);
+    expect(matched).toBe(107);
 
     const misses = await db.select().from(locationMisses);
     expect(result.locationMisses).toBe(misses.length);

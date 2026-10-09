@@ -42,13 +42,17 @@ describe('createLocationMatcher (seeded buildings)', () => {
     ['Vandenberg Room, Michigan League', 'Michigan League'],
     ['Diag - Central Campus', 'The Diag'],
     ['Room 1180 (Duderstadt Center)', 'Duderstadt Center'],
+    ['202 S. Thayer', '202 South Thayer Building'],
+    ['Lurie Ann & Robert H. Tower', 'Lurie Tower'],
+    ['2nd Floor | Pendleton Room', 'Michigan Union'],
+    ['WISE Office, 3236 Undergraduate Science Building', 'Undergraduate Science Building'],
   ])('%j → %s', (input, expected) => {
     expect(matchName(input)).toBe(expected);
   });
 
   it.each([
     'Off Campus Location',
-    '202 S. Thayer',
+    '305 W Liberty',
     'LSA Building',
     'Union Street Cafe',
     'Dude Ranch',
