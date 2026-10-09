@@ -88,16 +88,16 @@ review"). I then re-applied the saved feed from disk, with no second request.
 
 ### Part 5: CI and deploy (`ci-deploy`)
 
-- [ ] `.github/workflows/ci.yml`
-- [ ] Dockerfiles for api and worker
-- [ ] `render.yaml`, `apps/web/vercel.json`
-- [ ] `/api/health` per source
-- [ ] `README.md`
+- [x] `.github/workflows/ci.yml` (not run: nothing has been pushed)
+- [x] Dockerfiles for api and worker (both built and run locally)
+- [x] `render.yaml`, `apps/web/vercel.json` (config only; not validated against real accounts)
+- [x] `/api/health` per source
+- [x] `README.md`
 
 ### Seeing the site
 
 - [x] Maize Pages ingest into the local db (27 events; see Part 2)
-- [ ] `pnpm db:seed:demo` (needed: `ANTHROPIC_API_KEY` is not set)
+- [x] `pnpm db:seed:demo` (needed: `ANTHROPIC_API_KEY` is not set)
 - [ ] `pnpm dev` running; list, map, and `/api/health` confirmed
 
 ## Commits
@@ -109,6 +109,7 @@ review"). I then re-applied the saved feed from disk, with no second request.
 | 2    | `sources`             | `c5cf497` `60787c1` `726495e` `872387d` `8b49d46` `fd360b5` `a4bb5fa` | yes            |
 | 3    | `phase-7`             | `7e96853` `1f44aee` `61c9eda` `c6b01a5` `cd5b84e` `1cd18cd`           | yes            |
 | 4    | `worker-pino`         | `7b0cfb4`                                                             | yes            |
+| 5    | `ci-deploy`           | `d65198d` `03f6b1a` `8f379f1` `0e45e40` `703f872` `9aba454`           | yes            |
 
 ## Decisions to review
 
@@ -190,6 +191,34 @@ email = '...'`. There is no UI for it, on purpose.
    the HTTP client, which tests call directly). The worker entrypoint passes pino everywhere.
 5. **`ingest:once` logs job output with `console`**, as allowed for CLIs.
 
+### Part 5
+
+1. **`/api/health` meanings.** `sources` lists each feed source that has started a run in the
+   last 48 hours (older means "switched off" and is left out). A source is stale after 3 hours
+   (Happening) or 11 hours (Maize Pages, which is read every 5). `status` is `degraded` if any
+   listed source is stale. `ingestionStale`, which drives the site's "Data may be out of date"
+   banner, is true only when no source is fresh. So with Happening blocked and Maize Pages
+   working, monitoring says degraded but visitors aren't told the data is old.
+2. **Production migrations** run from a new `packages/db/dist/migrate.js` (drizzle-orm's
+   migrator, same files and bookkeeping table as `pnpm db:migrate`), because drizzle-kit is a
+   dev dependency and isn't in the image. Render runs it as the API's pre-deploy command.
+3. **`"files"` added to five package.json files** (`dist`, plus `drizzle` for the db package) so
+   `pnpm deploy` copies compiled output into the image; `dist` is gitignored and would otherwise
+   be left out.
+4. **Images use Node 22** (`node:22-slim`), run as the `node` user, and are about 60 MB of app.
+   `pnpm deploy --legacy` is used because the workspace doesn't inject workspace packages.
+5. **CI uses `pnpm/action-setup`** rather than corepack so `actions/setup-node` can cache the
+   pnpm store. It runs `pnpm test:pg:ci` (new script: the Postgres suite without
+   `docker compose up`) against a service container, then `pnpm build`.
+6. **Render:** `autoDeploy: false`, plan `starter`, `API_PORT=10000`, `TRUST_PROXY=2`
+   (Vercel's rewrite plus Render's load balancer). Check the proxy count once it is live;
+   it decides which IP the sign-in rate limit sees.
+7. **Vercel:** the API host in `apps/web/vercel.json` is a placeholder you must replace.
+8. **Demo seed also refuses a non-local database**, not only `NODE_ENV=production`. Demo events
+   get a `manual` classification (so the classifier never spends LLM calls on them) with
+   evidence "Demo data", and their descriptions end with "This is demo data, not a real event."
+   `pnpm db:seed:demo --clear` removes them.
+
 ## Blocked / needs Zach
 
 - **Happening is blocked by a Cloudflare challenge.** Ingestion from it stays failing until the
@@ -206,6 +235,8 @@ email = '...'`. There is no UI for it, on purpose.
   mostly old Happening events). Until then the site shows demo data only (`pnpm db:seed:demo`).
 - **Ask Student Life** whether a third-party reader of the public Maize Pages feed is fine.
   `MAIZEPAGES_ENABLED` defaults to false; your local `.env` does not set it either.
+- **CI has never run.** Push a branch or open a PR to see `.github/workflows/ci.yml` execute.
+- **Deploying** needs your accounts: Neon, Render, Vercel. Steps are in `README.md`.
 
 ## How to run the site
 
