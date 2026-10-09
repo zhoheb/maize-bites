@@ -35,7 +35,13 @@ const server = app.listen(env.API_PORT, () => {
 function shutdown(signal: NodeJS.Signals): void {
   logger.info({ signal }, 'shutting down');
   server.close(() => {
-    void close().then(() => process.exit(0));
+    void close().then(
+      () => process.exit(0),
+      (error: unknown) => {
+        logger.error({ err: error }, 'shutdown failed');
+        process.exit(1);
+      },
+    );
   });
 }
 

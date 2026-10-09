@@ -55,8 +55,13 @@ console.info(
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   console.info(`[worker] ${signal} received, shutting down`);
-  await scheduler.stop();
-  await close();
+  try {
+    await scheduler.stop();
+    await close();
+  } catch (error) {
+    console.error('[worker] shutdown failed', error);
+    process.exit(1);
+  }
   process.exit(0);
 }
 
