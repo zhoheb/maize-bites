@@ -1,10 +1,14 @@
 # Progress
 
-Running log for the autonomous pass through Parts 0 to 5. Updated and committed after each part.
-Nothing here has been pushed, deployed, or emailed.
+Log of the autonomous pass through Parts 0 to 5, finished 2026-10-09. Everything is merged into
+`main` locally. Nothing has been pushed, deployed, or emailed.
+
+**Status:** Parts 0 to 5 are done. One step is yours (running the Happening check on campus
+networks), and Happening ingestion stays blocked until its owners allow our client.
+`pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:pg` pass on `main` (751 tests each run).
 
 Note: the instructions refer to `docs/next-session.md`. That file is not in the repo; the ground
-rules I am following are the ones from the session prompt (no challenge bypass, no SSO, no
+rules I followed are the ones from the session prompt (no challenge bypass, no SSO, no
 robots-disallowed paths, no push/deploy/email/accounts, no unlisted dependencies).
 
 ## Checklist
@@ -98,7 +102,8 @@ review"). I then re-applied the saved feed from disk, with no second request.
 
 - [x] Maize Pages ingest into the local db (27 events; see Part 2)
 - [x] `pnpm db:seed:demo` (needed: `ANTHROPIC_API_KEY` is not set)
-- [ ] `pnpm dev` running; list, map, and `/api/health` confirmed
+- [x] `pnpm dev` running; list, map, and `/api/health` confirmed (details under "How to run
+      the site")
 
 ## Commits
 
@@ -110,6 +115,9 @@ review"). I then re-applied the saved feed from disk, with no second request.
 | 3    | `phase-7`             | `7e96853` `1f44aee` `61c9eda` `c6b01a5` `cd5b84e` `1cd18cd`           | yes            |
 | 4    | `worker-pino`         | `7b0cfb4`                                                             | yes            |
 | 5    | `ci-deploy`           | `d65198d` `03f6b1a` `8f379f1` `0e45e40` `703f872` `9aba454`           | yes            |
+| fix  | `map-fallback`        | `d6e9004`                                                             | yes            |
+
+Each branch still exists locally. `docs/progress.md` commits are on the part branches too.
 
 ## Decisions to review
 
@@ -128,8 +136,9 @@ review"). I then re-applied the saved feed from disk, with no second request.
    tick regardless. I held back because a restart loop could then spend LLM calls each start.
 3. **robots.txt that can't be read means we don't fetch.** RFC 9309 lets a crawler proceed on
    most 4xx; I allow only 404/410 and treat a challenge, other 4xx, 5xx, or a network error as
-   "no". Side effect: while events.umich.edu challenges us, a Happening run costs one request
-   (robots.txt) instead of one feed request, and the run error says robots.txt was challenged.
+   "no". Today events.umich.edu answers `/robots.txt` with a plain 404 (so nothing is
+   disallowed) and then challenges the feed itself, so a blocked Happening run costs two
+   requests an hour: robots.txt (cached for a day after the first) and one feed request.
 4. **No conditional requests for Happening.** Its URL changes daily (date range) and is paged,
    so ETags would rarely match. Maize Pages uses them.
 5. **Hand-written RSS reader is deliberately narrow.** It handles the flat elements Engage
@@ -219,6 +228,18 @@ email = '...'`. There is no UI for it, on purpose.
    evidence "Demo data", and their descriptions end with "This is demo data, not a real event."
    `pnpm db:seed:demo --clear` removes them.
 
+### After Part 5
+
+1. **Map error boundary (`map-fallback`), not on your list.** While checking the site in a
+   headless browser with no WebGL, MapLibre threw and the whole page went blank, because nothing
+   caught the error. A visitor on a browser without WebGL2 would have seen the same. The map now
+   sits in a boundary that shows "The map can't be shown in this browser" and leaves the list
+   working. This was already broken before this session; I fixed it because it blocked verifying
+   the site and is a one-file change with a test.
+2. **I left your `.env` alone.** It has no `ANTHROPIC_API_KEY` and does not set
+   `MAIZEPAGES_ENABLED`, so the running worker ingests Happening only (and fails on the
+   challenge). The Maize Pages run in Part 2 used a one-off environment override.
+
 ## Blocked / needs Zach
 
 - **Happening is blocked by a Cloudflare challenge.** Ingestion from it stays failing until the
@@ -240,4 +261,58 @@ email = '...'`. There is no UI for it, on purpose.
 
 ## How to run the site
 
-Filled in at the end.
+It is running now: http://localhost:5173 (web), http://localhost:3001/api/health (API), with the
+worker and Postgres alongside. I started it with `pnpm dev` from the repo root; its output is in
+`/tmp/maize-bites-dev.log`. To stop it, end that `pnpm dev` process (or close the terminal
+session that owns it); `pnpm db:down` stops Postgres.
+
+To start it again:
+
+```sh
+cd ~/SideProjects/FoodTracker
+pnpm dev                 # Postgres (Docker), migrations, then web :5173, api :3001, worker
+```
+
+Docker Desktop must be running. The database keeps its data between runs. If the event list is
+empty (demo events are placed relative to when they were seeded, so they age out within a week):
+
+```sh
+pnpm db:seed:demo        # refresh the 15 "[demo]" events
+pnpm db:seed:demo --clear   # remove them
+```
+
+To see real events instead of demo data:
+
+1. Put `ANTHROPIC_API_KEY=...` in `.env`. Without it nothing from a feed is ever published.
+2. Put `MAIZEPAGES_ENABLED=true` in `.env` (Happening is blocked for now).
+3. `pnpm dev`, or `pnpm ingest:once` for a single pass. Maize Pages was last read at 05:02 UTC
+   on Oct 9, so its next read is allowed five hours after that; the classifier still runs each
+   hour on what is already stored.
+
+To use the signed-in parts (Share, report buttons, Alerts): go to Sign in, enter your
+@umich.edu address, and click the link printed in the API's log (no email is sent without
+`RESEND_API_KEY`). For the Admin page:
+
+```sh
+docker compose exec postgres psql -U maize -d maize_bites \
+  -c "update users set is_admin = true where email = 'zhoheb@umich.edu'"
+```
+
+### What I checked on the running site
+
+- `GET http://localhost:5173/` returns the app; in headless Chrome the home page renders the nav
+  (Free food, Alerts, Share, About, Sign in), the filters, and "15 events · This Week" with the
+  demo cards.
+- The map mounts and draws 15 markers, 8 on Central campus and 7 on North. In my headless
+  capture the street basemap behind them had not painted (software rendering, tiles from
+  OpenFreeMap), so I can't vouch for the tiles; they should appear in a normal browser.
+- `GET /api/health` answers 200 through the web proxy with `status: "degraded"`: Happening is
+  listed as stale (last success Sep 30, last attempt challenged), Maize Pages as fresh, and
+  `ingestionStale` is false.
+- `/api/events/now` returns the two live demo events; `/api/events` returns all 15, every one
+  with coordinates and `source: "submission"`.
+- The worker started, logged through pino, tried Happening once (HTTP 403, Cloudflare
+  challenge), and scheduled its jobs.
+
+Not checked in a browser: signing in, the Submit, Admin, and Alerts pages, and the report
+buttons. Those are covered by the API and component tests, not by a manual click-through.
