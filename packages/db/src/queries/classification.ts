@@ -119,6 +119,19 @@ export async function recordClassification(
   return inserted;
 }
 
+/**
+ * Forgets every rules-mode verdict, so the next rules-mode pass judges all live events again.
+ * For after editing the rules-mode vocabulary: verdicts are otherwise made once per content
+ * version. LLM and manual verdicts are untouched. Returns how many rows were removed.
+ */
+export async function clearRulesModeVerdicts(db: Database): Promise<number> {
+  const deleted = await db
+    .delete(classifications)
+    .where(and(eq(classifications.method, 'rules'), eq(classifications.rulesMode, true)))
+    .returning({ id: classifications.id });
+  return deleted.length;
+}
+
 /** Flags an event version for a human. Re-flagging the same version updates the reason. */
 export async function flagForReview(
   db: Database,

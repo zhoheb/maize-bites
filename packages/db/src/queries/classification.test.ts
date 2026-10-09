@@ -3,6 +3,7 @@ import type { Database, DbHandle } from '../client.js';
 import { reviewFlags } from '../schema.js';
 import { createTestDb, eventInput, insertClassification } from '../testing.js';
 import {
+  clearRulesModeVerdicts,
   flagForReview,
   listEventsNeedingRules,
   listLlmCandidates,
@@ -115,6 +116,21 @@ describe('classifier modes', () => {
     await insertClassification(db, e, { ...rulesVerdict, createdAt: hours(-1) });
     expect(await listEventsNeedingRules(db, NOW, 'rules')).toEqual([]);
     expect(titles(await listEventsNeedingRules(db, NOW, 'llm'))).toEqual([e.title]);
+  });
+});
+
+describe('clearRulesModeVerdicts', () => {
+  it('drops rules-mode verdicts only, so rules mode judges those events again', async () => {
+    const e = await event('judged');
+    await insertClassification(db, e, { method: 'rules', rulesMode: true, createdAt: hours(-3) });
+    await insertClassification(db, e, { method: 'rules', confidence: 0.3, createdAt: hours(-4) });
+    await insertClassification(db, e, { method: 'manual', model: null, createdAt: hours(-5) });
+    expect(await listEventsNeedingRules(db, NOW, 'rules')).toEqual([]);
+
+    expect(await clearRulesModeVerdicts(db)).toBe(1);
+
+    expect(titles(await listEventsNeedingRules(db, NOW, 'rules'))).toEqual([e.title]);
+    expect(await clearRulesModeVerdicts(db)).toBe(0);
   });
 });
 

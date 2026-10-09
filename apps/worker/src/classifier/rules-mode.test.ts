@@ -100,6 +100,12 @@ describe('decideRulesMode: what does not', () => {
       'weak',
     ],
     [
+      'asking hosts to offer refreshments is not having them',
+      'CommuniTEA',
+      'Organizations and units are encouraged to collaborate and offer light refreshments.',
+      'weak',
+    ],
+    [
       'gluten-free is not free',
       'Baking club',
       'We are trying gluten-free cookies this week.',

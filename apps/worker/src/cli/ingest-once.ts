@@ -1,7 +1,9 @@
 // pnpm --filter worker ingest:once
 // One ingestion pass over the enabled sources, subject to the same per-source guard as the
 // scheduled job. To run a single source: HAPPENING_ENABLED=false MAIZEPAGES_ENABLED=true pnpm ingest:once
-import { createDb, loadRootEnvFile } from '@maize-bites/db';
+// After editing the rules-mode vocabulary: `pnpm ingest:once --reclassify` (rules mode only)
+// drops the stored rules-mode verdicts first, so every live event is judged with the new lists.
+import { clearRulesModeVerdicts, createDb, loadRootEnvFile } from '@maize-bites/db';
 import { parseEnv } from '../env.js';
 import { ingestIfDue } from '../jobs/ingest.js';
 import { deliveryFromEnv, ingestDeps, llmDepsFromEnv, sourcesFromEnv } from '../jobs/index.js';
@@ -16,6 +18,11 @@ if (!env.INGEST_CONTACT_EMAIL) {
 const { db, close } = createDb(env.DATABASE_URL, { maxConnections: 2 });
 try {
   const sources = sourcesFromEnv(db, env, console);
+  if (process.argv.includes('--reclassify')) {
+    if (env.CLASSIFIER_MODE !== 'rules')
+      throw new Error('--reclassify only applies with CLASSIFIER_MODE=rules');
+    console.info(`Dropped ${await clearRulesModeVerdicts(db)} rules-mode verdicts.`);
+  }
   if (sources.length === 0) {
     console.error('Every source is disabled. Set HAPPENING_ENABLED or MAIZEPAGES_ENABLED to true.');
     process.exitCode = 2;

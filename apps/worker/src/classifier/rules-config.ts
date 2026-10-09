@@ -259,6 +259,9 @@ export const RULES_MODE: RulesModeConfig = {
   givingWordsBeforeFoodOnly: ['free', 'complimentary'],
 
   notGivingPhrases: [
+    // An invitation to hosts to supply food, not a statement that there is some.
+    'offer light refreshments',
+    'offer refreshments',
     'feel free',
     'free to',
     'free time',
