@@ -94,9 +94,9 @@ describe('resolveLocation', () => {
   });
 
   it('reports the most specific real name as a miss', () => {
-    expect(resolveLocation(['East Hall', 'East Hall 1360'], match)).toEqual({
+    expect(resolveLocation(['LSA Building', 'LSA Building 2001'], match)).toEqual({
       buildingId: null,
-      miss: { normalizedName: 'east hall 1360', locationName: 'East Hall 1360' },
+      miss: { normalizedName: 'lsa building 2001', locationName: 'LSA Building 2001' },
     });
   });
 

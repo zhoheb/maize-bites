@@ -137,15 +137,15 @@ describe('runIngestion with the captured feed', () => {
     const result = await runIngestion(deps());
 
     const matched = await db.$count(events, sql`${events.buildingId} is not null`);
-    expect(matched).toBe(70);
+    expect(matched).toBe(84);
 
     const misses = await db.select().from(locationMisses);
     expect(result.locationMisses).toBe(misses.length);
     expect(misses).toContainEqual(
       expect.objectContaining({
-        normalizedName: 'east hall',
-        locationName: 'East Hall',
-        seenCount: 7,
+        normalizedName: 'lsa building',
+        locationName: 'LSA Building',
+        seenCount: 5,
       }),
     );
     expect(misses.map((m) => m.normalizedName)).not.toContain('off campus location');
