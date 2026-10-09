@@ -91,23 +91,24 @@ docker compose exec postgres psql -U maize -d maize_bites \
 All configuration comes from the root `.env` locally, or the host's environment in production.
 `.env.example` documents every variable with a safe placeholder.
 
-| Variable                                                 | Used by     | Required               | Purpose                                                    |
-| -------------------------------------------------------- | ----------- | ---------------------- | ---------------------------------------------------------- |
-| `DATABASE_URL`                                           | api, worker | yes                    | Postgres connection string                                 |
-| `WEB_ORIGIN`                                             | api, worker | yes                    | The web app's origin: CORS, CSRF checks, links in email    |
-| `NODE_ENV`                                               | api, worker | no (`development`)     | `production` switches logs to JSON and requires email keys |
-| `LOG_LEVEL`                                              | api, worker | no (`info`)            | pino level                                                 |
-| `API_PORT`                                               | api         | no (`3001`)            | Port the API listens on                                    |
-| `TRUST_PROXY`                                            | api         | no (`0`)               | Proxy hops in front of the API, for client IPs             |
-| `INGEST_CONTACT_EMAIL`                                   | worker      | to ingest              | Sent in the User-Agent of every feed request               |
-| `HAPPENING_ENABLED`                                      | worker      | no (`true`)            | Ingest Happening @ Michigan                                |
-| `MAIZEPAGES_ENABLED`                                     | worker      | no (`false`)           | Ingest Maize Pages public events                           |
-| `ANTHROPIC_API_KEY`                                      | worker      | to publish feed events | LLM classifier; without it only keyword rules run          |
-| `LLM_MAX_CALLS_PER_RUN`                                  | worker      | no (`100`)             | Cap on LLM requests per hourly run                         |
-| `RESEND_API_KEY`, `EMAIL_FROM`                           | api, worker | in production          | Sign-in links and alert emails                             |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | api, worker | for push               | Web Push; generate with `pnpm --filter worker vapid:keys`  |
-| `EVENT_RETENTION_DAYS`                                   | worker      | no (`30`)              | Ended events older than this are deleted                   |
-| `PRUNE_INTERVAL_MINUTES`                                 | worker      | no (`60`)              | How often the prune job runs                               |
+| Variable                                                 | Used by     | Required               | Purpose                                                                         |
+| -------------------------------------------------------- | ----------- | ---------------------- | ------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                           | api, worker | yes                    | Postgres connection string                                                      |
+| `WEB_ORIGIN`                                             | api, worker | yes                    | The web app's origin: CORS, CSRF checks, links in email                         |
+| `NODE_ENV`                                               | api, worker | no (`development`)     | `production` switches logs to JSON and requires email keys                      |
+| `LOG_LEVEL`                                              | api, worker | no (`info`)            | pino level                                                                      |
+| `API_PORT`                                               | api         | no (`3001`)            | Port the API listens on                                                         |
+| `TRUST_PROXY`                                            | api         | no (`0`)               | Proxy hops in front of the API, for client IPs                                  |
+| `INGEST_CONTACT_EMAIL`                                   | worker      | to ingest              | Sent in the User-Agent of every feed request                                    |
+| `HAPPENING_ENABLED`                                      | worker      | no (`true`)            | Ingest Happening @ Michigan                                                     |
+| `UMICH_INTEGRATION_TOKEN`, `PUBLIC_SITE_URL`             | worker      | for Happening          | Secret token and public site origin for the events.umich.edu integration header |
+| `MAIZEPAGES_ENABLED`                                     | worker      | no (`false`)           | Ingest Maize Pages public events                                                |
+| `ANTHROPIC_API_KEY`                                      | worker      | to publish feed events | LLM classifier; without it only keyword rules run                               |
+| `LLM_MAX_CALLS_PER_RUN`                                  | worker      | no (`100`)             | Cap on LLM requests per hourly run                                              |
+| `RESEND_API_KEY`, `EMAIL_FROM`                           | api, worker | in production          | Sign-in links and alert emails                                                  |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | api, worker | for push               | Web Push; generate with `pnpm --filter worker vapid:keys`                       |
+| `EVENT_RETENTION_DAYS`                                   | worker      | no (`30`)              | Ended events older than this are deleted                                        |
+| `PRUNE_INTERVAL_MINUTES`                                 | worker      | no (`60`)              | How often the prune job runs                                                    |
 
 ## Scripts
 
@@ -140,8 +141,9 @@ terms say, and why we do or don't use it. The rules, in short:
 - If a site answers with a bot challenge or a block, we stop and ask its owner. There is no code
   to get past one, and none should be added.
 
-As of October 2026 events.umich.edu answers our client with a Cloudflare challenge, so Happening
-ingestion fails until its owners allow us. See `docs/happening-access-email.md`.
+events.umich.edu admits our client with an integration header issued by Student Life Technology
+Solutions (see `docs/sources.md`). The token is a secret: it lives in `.env` and the host's
+secret store, never in the repository.
 
 ## Continuous integration
 
@@ -157,7 +159,7 @@ The repo carries configuration for three hosts. Nothing deploys until you connec
 2. **API and worker: Render.** Create a Blueprint from `render.yaml`. It defines two Docker
    services built from `apps/api/Dockerfile` and `apps/worker/Dockerfile`. Enter the values marked
    `sync: false` in the dashboard: `DATABASE_URL`, `WEB_ORIGIN`, the email and push keys,
-   `INGEST_CONTACT_EMAIL`, and `ANTHROPIC_API_KEY`. The API applies migrations before each deploy
+   `INGEST_CONTACT_EMAIL`, `UMICH_INTEGRATION_TOKEN`, `PUBLIC_SITE_URL`, and `ANTHROPIC_API_KEY`. The API applies migrations before each deploy
    (`node node_modules/@maize-bites/db/dist/migrate.js`). Seed buildings once from your machine:
    `DATABASE_URL=<neon url> pnpm db:seed`.
 3. **Web: Vercel.** Import the repo with the root directory set to `apps/web`. In

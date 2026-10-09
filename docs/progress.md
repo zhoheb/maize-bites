@@ -3,11 +3,10 @@
 Log of the autonomous pass through Parts 0 to 5, finished 2026-10-09. Everything is merged into
 `main` locally. Nothing has been pushed, deployed, or emailed.
 
-**Status:** Parts 0 to 5 are done, and so is the follow-up "real events with no API key"
-(rules mode, below). The site is showing 31 real events. One step is yours (running the
-Happening check on campus networks), and Happening ingestion stays off until its owners allow
-our client. `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:pg` pass on `main`
-(829 tests each run).
+**Status:** Parts 0 to 5, rules mode, and the Happening integration header are all done.
+Happening is ingesting again with the header its owners issued, and the site is showing real
+events from both sources. `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm test:pg` pass on
+`main` (854 tests each run).
 
 Note: the instructions refer to `docs/next-session.md`. That file is not in the repo; the ground
 rules I followed are the ones from the session prompt (no challenge bypass, no SSO, no
@@ -24,7 +23,7 @@ robots-disallowed paths, no push/deploy/email/accounts, no unlisted dependencies
 
 - [x] `scripts/check-happening.sh`
 - [x] Run it here and record the result (all three endpoints challenged; see below)
-- [ ] Run it on campus wifi and the UMich VPN (Zach; see "Blocked / needs Zach")
+- [x] Run it on campus wifi and the UMich VPN: no longer needed; the owners issued an integration header
 - [x] Report any official endpoint that returns real data: none does from this network
 - [x] Draft `docs/happening-access-email.md` (not sent)
 
@@ -172,6 +171,59 @@ Eval: `pnpm --filter worker eval --mode rules` works, but `eval/labeled.json` ha
 none are labelled yet, so it reports "Nothing to score". I did not label them: the labels are
 meant to be yours.
 
+### Happening integration header (`happening-integration`)
+
+- [x] Step 0: state check (Part 2 and `CLASSIFIER_MODE` merged; headers are built in
+      `sources/http/client.ts`)
+- [x] Step 1: `UMICH_INTEGRATION_TOKEN`, `PUBLIC_SITE_URL` in the env schema, `.env.example`,
+      and your `.env`; token confirmed absent from tracked files and from every commit
+- [x] Step 2: header sent to `events.umich.edu` only; redacted; rejection reported, not retried
+- [x] Step 3: tests for format, host scoping, redirects, log hygiene, missing token, rejection
+- [x] Step 4: real run with both sources enabled
+- [x] Step 5: site running; `docs/screenshots/both-sources.png`
+- [x] Step 6: `docs/sources.md`, `CLAUDE.md`, `README.md`, `render.yaml`, this file
+
+Real run, 2026-10-09 3:58 PM Ann Arbor time, `CLASSIFIER_MODE=rules` (no Anthropic key, so no
+LLM calls and no cost):
+
+| Measure                       | Happening                                   | Maize Pages                                                  |
+| ----------------------------- | ------------------------------------------- | ------------------------------------------------------------ |
+| Fetched                       | 1,097                                       | not due: last read 1:23 PM (29 events), next allowed 6:22 PM |
+| Created / updated / unchanged | 740 / 30 / 327                              | (1:23 PM run: 2 created, 4 updated)                          |
+| Removed (no longer listed)    | 2                                           | 0                                                            |
+| Errors                        | 0                                           | 0                                                            |
+| Live events now               | 1,052                                       | 2 shown, 23 hidden as duplicates                             |
+| Matched to a building         | 573 of 1,052 (457 before the new buildings) | 0 of the 2 shown                                             |
+| Published and upcoming        | 68 (10 from the "Free Food" tag)            | 0 of its own; see below                                      |
+| Published with a map pin      | 51 of 68 (38 before)                        |                                                              |
+
+Duplicates: 23 Maize Pages events also have a fresh Happening listing, so the Maize Pages copy
+is hidden and the Happening copy shown. No Maize Pages id is active in both sources. Five of
+them:
+
+| Event                     | When        | Maize Pages copy | Happening copy |
+| ------------------------- | ----------- | ---------------- | -------------- |
+| ISBA Education Session #4 | Fri 4:00 PM | 12868342 hidden  | 153460 shown   |
+| Soju Night                | Fri 5:00 PM | 12820964 hidden  | 152918 shown   |
+| Rebuilding Democracy      | Fri 5:30 PM | 12720408 hidden  | 151776 shown   |
+| 15s Match @ Notre Dame    | Fri 6:00 PM | 12458848 hidden  | 148061 shown   |
+| SAS Public Open House     | Fri 9:00 PM | 12528481 hidden  | 149611 shown   |
+
+Ten published events (all `source: happening`):
+
+| When         | Event                                         | Building                          | Evidence                                     |
+| ------------ | --------------------------------------------- | --------------------------------- | -------------------------------------------- |
+| Fri 4:30 PM  | 2026 Faculty Mixer                            | Kelsey Museum of Archaeology      | "Snacks and drinks will be served"           |
+| Fri 5:30 PM  | Rebuilding Democracy (the Maize Pages import) | Ross School of Business           | "light refreshments and Literati book sales" |
+| Fri 5:30 PM  | Rebuilding Democracy (Happening's own entry)  | Ross School of Business           | "light refreshments in the lobby"            |
+| Sat 9:00 AM  | Dr. Sarah Bartolome: Singing and Breathwork   | Earl V. Moore Building            | "Free registration. Lunch will be provided." |
+| Sun 9:15 AM  | Cider Mill Long Run                           | no pin (Dexter Cider Mill)        | "donuts & cider provided"                    |
+| Sun 11:15 AM | optiMize Social Innovation Challenge workshop | Central Campus Classroom Building | "Lunch will be provided"                     |
+| Sun 4:25 PM  | Lions Football Watch Party at Alice Lloyd     | Alice Lloyd Hall                  | "Light snacks will be provided"              |
+| Sun 6:00 PM  | Worship & Dinner at the Wesley Foundation     | no pin (602 E Huron St)           | "Free dinner follows worship"                |
+| Mon 12:00 PM | Midterm Study Hall at the DSI                 | Mason Hall                        | "Snacks and drinks will be provided!"        |
+| Mon 3:00 PM  | LSA@Play: Mystery Book Match                  | no pin (LSA Building)             | "there's free food and LSA swag, too"        |
+
 ### Seeing the site
 
 - [x] Maize Pages ingest into the local db (27 events; see Part 2)
@@ -191,6 +243,7 @@ meant to be yours.
 | 5          | `ci-deploy`             | `d65198d` `03f6b1a` `8f379f1` `0e45e40` `703f872` `9aba454`                                         | yes            |
 | fix        | `map-fallback`          | `d6e9004`                                                                                           | yes            |
 | rules mode | `classifier-rules-mode` | `222ba1a` `ad829d6` `1036e6b` `6bbeadf` `0102e60` `757366e` `c0a9c03` `738f332` `451ac79` `5eeaae4` | yes            |
+| header     | `happening-integration` | `0780571` `b45cdb6` `f4c15c8`                                                                       | yes            |
 
 Each branch still exists locally. `docs/progress.md` commits are on the part branches too.
 
@@ -372,24 +425,63 @@ email = '...'`. There is no UI for it, on purpose.
     wrote so the schedule and `/api/health` reflect only the real 05:02 UTC fetch.
 15. **The demo events are gone** (`pnpm db:seed:demo --clear`); what you see is real data.
 
+### Happening integration header
+
+1. **No event with `source: maizepages` is published right now.** Every Maize Pages event the
+   rules like is also on Happening, so its Happening copy is the one shown, as the rule says.
+   Two Maize Pages-only events are live; neither mentions free food. Maize Pages' value at the
+   moment is as a fallback if Happening goes away again.
+2. **Maize Pages was not fetched in this run.** The dev worker had read it at 1:23 PM, so it
+   was not due until 6:22 PM and I did not fetch early. The duplicate counts come from stored
+   Maize Pages rows meeting the fresh Happening data.
+3. **The header is a host-scoped setting in the shared client** (`hostHeaders`, exact hostname
+   match), which you allowed as an alternative to attaching it inside the Happening source. I
+   chose it because robots.txt for `events.umich.edu` is fetched by the shared robots checker,
+   and "every request to that host" should include that one.
+4. **Redirects are followed by hand when a host header is in play.** Node's fetch would carry a
+   custom header across a redirect to another host. With the header set, a redirect within
+   `events.umich.edu` (https only) is followed with it, up to three hops; a redirect anywhere
+   else fails the run and no second request is made.
+5. **Happening now needs the header to run at all.** With `HAPPENING_ENABLED=true` and either
+   value missing, the worker logs one line and leaves Happening off. A malformed value (http
+   site URL, trailing slash, a token with spaces) is a startup error, since that is a typo to
+   fix rather than a state to run in.
+6. **A 401 or a plain 403 gets the same "rejected the integration header" message** as a
+   challenge. None is retried.
+7. **`scripts/check-happening.sh` sends the header too** when both values are set, and prints
+   only that it was sent.
+8. **24 more buildings and aliases** (14 new buildings in this pass, on top of the 10 from
+   rules mode), all with Nominatim coordinates. Still unmatched and worth a look: the LSA
+   Building (Nominatim has no clean match), "The Connector", Betsy Barbour (the Maize and Blue
+   Cupboard), and the soccer stadium.
+9. **Happening lists some events twice itself**, for example "Rebuilding Democracy" once as its
+   Maize Pages import and once as its own entry, with different titles. Both show. Our dedupe
+   only works across sources.
+10. **Screenshot again with system Chrome**, not Playwright (the package is not installed).
+
+## Before deploying
+
+- Set `UMICH_INTEGRATION_TOKEN` and `PUBLIC_SITE_URL` in the Render environment for the worker
+  (both are `sync: false` in `render.yaml`, so Render will ask for them). The token is a
+  secret: enter it in the dashboard, never in a file that is committed.
+- If the final domain is not `maizebites.zachhoheb.dev`, update `PUBLIC_SITE_URL` and tell
+  Student Life Technology Solutions, since the site URL is part of what they approved.
+- Set `HAPPENING_ENABLED=true` and decide on `MAIZEPAGES_ENABLED` (`render.yaml` has it false).
+- Decide the classifier mode for production: `CLASSIFIER_MODE=llm` with `ANTHROPIC_API_KEY`, or
+  `rules`.
+- Replace the placeholder API host in `apps/web/vercel.json`.
+
 ## Blocked / needs Zach
 
-- **Happening is blocked by a Cloudflare challenge.** Ingestion from it stays failing until the
-  owners allow our client. Nothing in the code tries to get past it.
-  1. On campus wifi, then again on the UMich VPN, run `scripts/check-happening.sh` from the repo
-     root. It makes three requests and prints status, `cf-mitigated`, and whether the body is a
-     challenge page.
-  2. If any endpoint shows `status: 200` and `challenge page: no`, the block is network-specific.
-     Tell me which network and endpoint; do not switch ingestion yourself.
-  3. Either way, review and send `docs/happening-access-email.md` (find the team's current
-     contact address on events.umich.edu first; I could not load the site to look it up).
-- **No `ANTHROPIC_API_KEY` in `.env`.** Only the keyword rules run, so no feed event is ever
-  published. Add the key and the next ingest pass classifies the waiting candidates (121 locally,
-  mostly old Happening events). Until then the site shows demo data only (`pnpm db:seed:demo`).
-- **Ask Student Life** whether a third-party reader of the public Maize Pages feed is fine.
-  `MAIZEPAGES_ENABLED` defaults to false; your local `.env` does not set it either.
+- **No `ANTHROPIC_API_KEY`.** The site runs in rules mode. With a key and `CLASSIFIER_MODE=llm`
+  the model re-checks everything rules mode decided.
+- **Ask Student Life** whether a third-party reader of the public Maize Pages feed is fine. It
+  is on locally.
 - **CI has never run.** Push a branch or open a PR to see `.github/workflows/ci.yml` execute.
-- **Deploying** needs your accounts: Neon, Render, Vercel. Steps are in `README.md`.
+- **Deploying** needs your accounts: Neon, Render, Vercel. See "Before deploying" and
+  `README.md`.
+- The campus wifi/VPN check from Part 1 and the access email are no longer needed: the owners
+  answered with the integration header.
 
 ## How to run the site
 
@@ -404,24 +496,19 @@ cd ~/SideProjects/FoodTracker
 pnpm dev                     # Postgres (Docker), migrations, then web :5173, api :3001, worker
 ```
 
-Docker Desktop must be running. Your `.env` now has `CLASSIFIER_MODE=rules`,
-`HAPPENING_ENABLED=false`, and `MAIZEPAGES_ENABLED=true`, so the worker reads Maize Pages every
-five hours (next at about 6:00 AM today), classifies with the rules each hour, and never calls
-Anthropic.
+Docker Desktop must be running. Your `.env` has Happening and Maize Pages on, the integration
+token and site URL set, and `CLASSIFIER_MODE=rules`. The worker reads Happening hourly and Maize
+Pages every five hours, classifies with the rules each hour, and never calls Anthropic.
 
-Useful while tuning:
+Useful commands:
 
 ```sh
 pnpm ingest:once               # one pass now: fetch whatever is due, then classify
 pnpm ingest:once --reclassify  # after editing rules-config.ts: judge every live event again
+scripts/check-happening.sh     # how events.umich.edu answers us (sends the header, prints no secret)
 pnpm --filter worker eval --mode rules   # precision/recall, once eval/labeled.json has labels
 pnpm db:seed                   # after editing packages/db/src/seed/buildings.ts
-pnpm db:seed:demo              # demo events, if you ever want an obviously fake full list
 ```
-
-The list will thin out through the week: most of what is published is Happening data that ends
-by Oct 13, and Maize Pages adds only a couple of positives per week under these rules. An
-Anthropic key (`CLASSIFIER_MODE=llm`) or Happening access is what brings the numbers back up.
 
 To use the signed-in parts (Share, report buttons, Alerts): Sign in with your @umich.edu
 address and click the link printed in the API's log. For the Admin page:
@@ -431,17 +518,16 @@ docker compose exec postgres psql -U maize -d maize_bites \
   -c "update users set is_admin = true where email = 'zhoheb@umich.edu'"
 ```
 
-### What I checked on the running site
+### What I checked on the running site (2026-10-09, 4:05 PM)
 
-- `GET /api/health` (through the web proxy): 200. Maize Pages fresh (last success 05:02 UTC),
-  Happening listed as stale, `ingestionStale` false, `status` "degraded" because of Happening.
-- `GET /api/events?from=<now>`: 31 events, 29 from Happening and 2 from Maize Pages, 23 with
-  coordinates. Today tab: 9. Now tab: 0 (it was 2 AM).
-- In headless Chrome the This Week tab lists the real events ("La Tertulia: Spanish Coffee
-  Hour", "Fresh Check Day 2026", ...) and the map shows their pins on Central and North campus.
-  Screenshot: `docs/screenshots/first-real-events.png`. As before, the street basemap did not
-  paint in the headless capture; check it in a normal browser.
-- The worker started in rules mode, logged "classifier: rules mode, LLM disabled, rules-only
-  verdicts are published", and made no request (Maize Pages not due).
+- `GET /api/health`: `status: "ok"`. Happening last succeeded at 3:58 PM, Maize Pages at
+  1:23 PM; neither is stale.
+- Through the web proxy: Now tab 3 events, Today tab 3, This Week tab 52 (42 with pins), all
+  `source: happening`.
+- In headless Chrome the This Week tab lists the events and the map shows pins on Central and
+  North campus. Screenshot: `docs/screenshots/both-sources.png`. The street basemap still does
+  not paint in the headless capture; check it in a normal browser.
+- The worker started with both sources, in rules mode, and made no request (neither was due).
+- The token does not appear in the dev log, in any tracked file, or in any commit.
 
 Not checked in a browser: signing in, Share, Admin, Alerts, and the report buttons.

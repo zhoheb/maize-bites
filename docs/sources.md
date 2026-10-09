@@ -2,20 +2,19 @@
 
 Checked 2026-10-09. Recheck robots.txt and terms before building against any source; they change.
 
-## Current status (2026-10-09)
+## Current status (2026-10-09, afternoon)
 
-- **Happening @ Michigan: off.** Its feed answers non-browser clients with a Cloudflare
-  challenge (it loads in a browser; `curl` gets 403). `HAPPENING_ENABLED=false` locally until
-  the owners allow our client. We do not work around it.
-- **Maize Pages: on.** `/events.ics` is the live source (`MAIZEPAGES_ENABLED=true` locally).
+- **Happening @ Michigan: on, allowed.** Official integration header issued by Student Life
+  Technology Solutions, 2026-10-09. Contact via the SL Happening TeamDynamix
+  service. First run with it: 1,097 events, no errors.
+- **Maize Pages: on.** `/events.ics` every five hours.
 - **Classifier: rules mode** locally (`CLASSIFIER_MODE=rules`), because there is no Anthropic
   key. Strict keyword rules decide what is published; see `CLAUDE.md`. Expect fewer events than
   the LLM would find, and the occasional wrong one.
-- **No "Free Food" perk in the feeds.** Engage lets organizers tick a free-food perk, but
-  neither `/events.ics` nor `/events.rss` carries it (checked both captured feeds: no perk
-  field, and `CATEGORIES` holds themes like "Social" and "Athletics"). It is only served by
-  `/api/discovery`, which robots.txt disallows, so we don't read it. If a feed ever lists it as
-  a category, rules mode already treats a "Free Food" tag as a strong positive.
+- **No "Free Food" perk in the Maize Pages feeds.** Engage lets organizers tick a free-food
+  perk, but neither `/events.ics` nor `/events.rss` carries it. It is only served by
+  `/api/discovery`, which robots.txt disallows, so we don't read it. Happening does tag some
+  events "Free Food", and rules mode treats that tag as a strong positive.
 
 ## Rules
 
@@ -60,16 +59,22 @@ open the page in a browser before anyone relies on them.
 - **Login:** none. Public data.
 - **Rate limits:** none published. We fetch hourly, 200 per page, 1s between pages.
 - **Difficulty:** trivial when reachable (JSON). No coordinates; we match building names.
-- **Status: blocked.** Since at least 2026-10-02 the feed answers non-browser clients with
-  `HTTP 403` and `cf-mitigated: challenge` (a Cloudflare managed challenge). Evidence: the
-  local `ingestion_runs` table has one complete run (2026-09-30, 1196 events) and one failed
-  run (2026-10-02, HTTP 403); on 2026-10-09 I got the same answer for `/list/json`,
-  `/day/json`, `/list/rss`, `/list/ical`, and `/feeds` with two honest User-Agents. I can't
-  tell from here whether the challenge applies to everyone or to this network.
-- **Verdict:** this is the right source and the right method. Do not work around the
-  challenge. Ask the Happening team whether a contact-identified client can be allowed, or
-  whether there is a supported route for campus projects. Until then ingestion fails cleanly
-  and `/api/health` reports `degraded`.
+- **Status: allowed.** Official integration header issued by Student Life Technology
+  Solutions, 2026-10-09; contact via the SL Happening TeamDynamix service.
+  - Every request to `events.umich.edu` carries `x-umich-integration: <token> <site URL>`
+    (`UMICH_INTEGRATION_TOKEN`, `PUBLIC_SITE_URL`) next to our User-Agent. The token is a
+    secret and is not written anywhere in this repository.
+  - The header goes to that exact hostname only. It is never sent to Maize Pages or any other
+    host, and a redirect to another host is refused rather than followed.
+  - Everything else is unchanged: feed endpoints only, hourly at most, 200 per page with a
+    1s pause, backoff, no HTML pages.
+  - If a request is still refused (401, 403, or a challenge), the run fails once with
+    "Happening rejected the integration header; check the token" and is
+    not retried. We do not look for another way in.
+- **History:** from about 2026-10-02 the feed answered non-browser clients with `HTTP 403` and
+  `cf-mitigated: challenge` (a Cloudflare managed challenge). We stopped, asked, and were given
+  the header above.
+- **Verdict:** in use.
 
 ## Maize Pages (maizepages.umich.edu, Anthology Engage)
 
@@ -234,7 +239,5 @@ around access controls.
 
 ## Open questions
 
-1. Is the Cloudflare challenge on `events.umich.edu` universal, and will the Happening team
-   allow a contact-identified client?
-2. Will Student Life confirm that reading the public Maize Pages feed is fine?
-3. Do any units publish events that never reach Happening? Needs a browser, not a bot.
+1. Will Student Life confirm that reading the public Maize Pages feed is fine?
+2. Do any units publish events that never reach Happening? Needs a browser, not a bot.

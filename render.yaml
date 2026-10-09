@@ -64,6 +64,12 @@ services:
         sync: false
       - key: INGEST_CONTACT_EMAIL
         sync: false
+      # Secret: the events.umich.edu integration token (Student Life Technology Solutions).
+      - key: UMICH_INTEGRATION_TOKEN
+        sync: false
+      # The public site origin sent with the token, e.g. https://maizebites.zachhoheb.dev
+      - key: PUBLIC_SITE_URL
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: RESEND_API_KEY
