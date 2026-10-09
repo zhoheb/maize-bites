@@ -1,0 +1,1 @@
+ALTER TABLE "classifications" ADD COLUMN "rules_mode" boolean DEFAULT false NOT NULL;

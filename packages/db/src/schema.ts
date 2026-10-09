@@ -106,6 +106,12 @@ export const classifications = pgTable(
     method: classificationMethod('method').notNull(),
     /** Model id for llm rows, e.g. claude-haiku-4-5. Null for rules/manual. */
     model: text('model'),
+    /**
+     * For rules rows: true when the rules were the final judge (CLASSIFIER_MODE=rules), false
+     * when the row is the llm-mode prefilter's note of whether to ask the LLM. Each mode
+     * re-judges content whose newest rules row was written by the other.
+     */
+    rulesMode: boolean('rules_mode').notNull().default(false),
     hasFreeFood: boolean('has_free_food').notNull(),
     confidence: real('confidence').notNull(),
     foodItems: text('food_items').array().notNull().default(emptyTextArray),

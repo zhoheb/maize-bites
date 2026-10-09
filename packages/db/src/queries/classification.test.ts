@@ -53,6 +53,71 @@ describe('listEventsNeedingRules', () => {
   });
 });
 
+describe('classifier modes', () => {
+  const prefilter = { method: 'rules', hasFreeFood: true, confidence: 0.3 } as const;
+  const rulesVerdict = { method: 'rules', rulesMode: true, confidence: 0.75 } as const;
+
+  it('rules mode judges content that only has a prefilter row, and not content it has judged', async () => {
+    const fresh = await event('fresh');
+    const prefiltered = await event('prefiltered only');
+    await insertClassification(db, prefiltered, { ...prefilter, createdAt: hours(-2) });
+    const judged = await event('judged in rules mode');
+    await insertClassification(db, judged, { ...rulesVerdict, createdAt: hours(-2) });
+
+    expect(titles(await listEventsNeedingRules(db, NOW, 'rules')).sort()).toEqual(
+      [fresh.title, prefiltered.title].sort(),
+    );
+  });
+
+  it('rules mode leaves content the LLM has already judged alone', async () => {
+    const byLlm = await event('judged by the llm');
+    await insertClassification(db, byLlm, { ...prefilter, createdAt: hours(-2) });
+    await insertClassification(db, byLlm, { method: 'llm', createdAt: hours(-1) });
+
+    expect(await listEventsNeedingRules(db, NOW, 'rules')).toEqual([]);
+  });
+
+  it('llm mode prefilters again over a rules-mode verdict, so it never blocks the LLM', async () => {
+    const e = await event('published by rules mode');
+    await insertClassification(db, e, { ...rulesVerdict, createdAt: hours(-2) });
+
+    // Not an LLM candidate yet: the rules-mode row is not a prefilter row.
+    expect(await listLlmCandidates(db, NOW)).toEqual([]);
+    expect(titles(await listEventsNeedingRules(db, NOW))).toEqual([e.title]);
+
+    // The prefilter writes its row, and the event is on the LLM's path as usual.
+    await insertClassification(db, e, { ...prefilter, createdAt: hours(-1) });
+    expect(await listEventsNeedingRules(db, NOW)).toEqual([]);
+    expect(titles(await listLlmCandidates(db, NOW))).toEqual([e.title]);
+  });
+
+  it('a rules-mode negative does not keep a prefilter candidate from the LLM', async () => {
+    const e = await event('lone food word');
+    await insertClassification(db, e, {
+      ...rulesVerdict,
+      hasFreeFood: false,
+      confidence: 0.2,
+      createdAt: hours(-2),
+    });
+    await insertClassification(db, e, { ...prefilter, createdAt: hours(-1) });
+
+    expect(titles(await listLlmCandidates(db, NOW))).toEqual([e.title]);
+  });
+
+  it('each mode re-judges when the other wrote the newest rules row', async () => {
+    const e = await event('flip flop');
+    await insertClassification(db, e, { ...rulesVerdict, createdAt: hours(-3) });
+    await insertClassification(db, e, { ...prefilter, createdAt: hours(-2) });
+
+    expect(titles(await listEventsNeedingRules(db, NOW, 'rules'))).toEqual([e.title]);
+    expect(await listEventsNeedingRules(db, NOW, 'llm')).toEqual([]);
+
+    await insertClassification(db, e, { ...rulesVerdict, createdAt: hours(-1) });
+    expect(await listEventsNeedingRules(db, NOW, 'rules')).toEqual([]);
+    expect(titles(await listEventsNeedingRules(db, NOW, 'llm'))).toEqual([e.title]);
+  });
+});
+
 describe('listLlmCandidates', () => {
   it('returns rules candidates without an llm verdict or flag, soonest first', async () => {
     const later = await event('later candidate', { startsAt: hours(6) });

@@ -31,23 +31,51 @@ const hasClassificationForCurrentContent = (db: Database, ...conditions: SQL[]) 
 const liveEvent = (now: Date) =>
   and(eq(events.status, 'active'), gte(effectiveEnd, timestampParam(now)));
 
-/** Live events whose current content has no rules verdict yet. */
-export function listEventsNeedingRules(db: Database, now: Date): Promise<EventRow[]> {
+export type ClassifierMode = 'llm' | 'rules';
+
+/**
+ * Whether the newest rules row for the outer event's current content was written in rules mode.
+ * NULL when the content has no rules row at all.
+ */
+const newestRulesRowIsRulesMode = sql<boolean | null>`(
+  select c.rules_mode from ${classifications} c
+  where c.event_id = ${events.id} and c.content_hash = ${events.contentHash} and c.method = 'rules'
+  order by c.created_at desc limit 1
+)`;
+
+/**
+ * Live events whose current content the rules stage still has to judge in the given mode.
+ *
+ * - llm mode: no prefilter row yet, or a rules-mode verdict was written since. Writing the
+ *   prefilter row again puts the event back on the LLM's path, so rules-mode rows never block it.
+ * - rules mode: no rules-mode verdict yet, or a prefilter row was written since. Content the
+ *   LLM has already judged is left alone: its verdict is the better one.
+ */
+export function listEventsNeedingRules(
+  db: Database,
+  now: Date,
+  mode: ClassifierMode = 'llm',
+): Promise<EventRow[]> {
   return db
     .select()
     .from(events)
     .where(
       and(
         liveEvent(now),
-        not(hasClassificationForCurrentContent(db, eq(classifications.method, 'rules'))),
+        mode === 'llm'
+          ? sql`${newestRulesRowIsRulesMode} is distinct from false`
+          : and(
+              sql`${newestRulesRowIsRulesMode} is distinct from true`,
+              not(hasClassificationForCurrentContent(db, eq(classifications.method, 'llm'))),
+            ),
       ),
     )
     .orderBy(asc(events.startsAt), asc(events.id));
 }
 
 /**
- * Live events the rules flagged as candidates for their current content that still need an
- * LLM verdict: no llm or manual row for this content, and not flagged for review.
+ * Live events the llm-mode prefilter flagged as candidates for their current content that
+ * still need an LLM verdict: no llm or manual row for this content, and not flagged for review.
  * Soonest first, so a per-run cap spends calls on the most time-sensitive events.
  */
 export function listLlmCandidates(db: Database, now: Date): Promise<EventRow[]> {
@@ -60,6 +88,7 @@ export function listLlmCandidates(db: Database, now: Date): Promise<EventRow[]> 
         hasClassificationForCurrentContent(
           db,
           eq(classifications.method, 'rules'),
+          eq(classifications.rulesMode, false),
           eq(classifications.hasFreeFood, true),
         ),
         not(hasClassificationForCurrentContent(db, ne(classifications.method, 'rules'))),

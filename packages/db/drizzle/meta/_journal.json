@@ -43,6 +43,13 @@
       "when": 1791521336428,
       "tag": "0005_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791525621814,
+      "tag": "0006_classifier_rules_mode",
+      "breakpoints": true
     }
   ]
 }
