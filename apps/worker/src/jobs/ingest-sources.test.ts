@@ -1,4 +1,6 @@
 import {
+  addBuildingAlias,
+  buildings,
   claimNotification,
   events,
   ingestionRuns,
@@ -17,7 +19,7 @@ import { FeedHttpError } from '../sources/http/client.js';
 import { createMaizepagesSource } from '../sources/maizepages/index.js';
 import type { Source } from '../sources/types.js';
 import { maizepagesIcs, sampleFeed } from '../test/fixture.js';
-import { ingestIfDue, runIngestion, type IngestDeps } from './ingest.js';
+import { ingestIfDue, relinkLocations, runIngestion, type IngestDeps } from './ingest.js';
 
 // The Maize Pages fixture covers 2026-10-09 to 2026-10-16.
 const NOW = new Date('2026-10-09T04:10:00Z');
@@ -372,5 +374,61 @@ describe('per-source schedule', () => {
       nextAllowedAt: at(599)(),
     });
     expect((await ingestIfDue(deps([source], { now: at(599) }))).status).toBe('ran');
+  });
+});
+
+describe('a pass with nothing to fetch', () => {
+  it('still classifies and alerts when no source is due', async () => {
+    const mp = maizepages(ics());
+    await ingestIfDue(deps([mp.source]));
+    const classify = vi.fn((now: Date) =>
+      classifyPendingEvents({ db, logger, now, llm: null, mode: 'rules' }),
+    );
+    const notify = vi.fn(() => Promise.resolve({ sent: 0, failed: 0 } as never));
+
+    const outcome = await ingestIfDue(deps([mp.source], { now: at(30), classify, notify }));
+
+    expect(outcome.status).toBe('skipped');
+    expect(mp.fetchFn).toHaveBeenCalledTimes(1);
+    expect(classify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledTimes(1);
+    // No new run row: nothing was fetched.
+    expect(await db.$count(ingestionRuns)).toBe(1);
+  });
+
+  it('runs with no sources at all, and logs a classifier failure instead of losing it', async () => {
+    const outcome = await ingestIfDue(
+      deps([], { classify: () => Promise.reject(new Error('db hiccup')) }),
+    );
+    expect(outcome.status).toBe('skipped');
+    expect(logger.error).toHaveBeenCalledWith('[ingest] classification failed: db hiccup');
+  });
+});
+
+describe('relinkLocations', () => {
+  it('places stored events once their location gains a building alias', async () => {
+    await runIngestion(deps([maizepages(ics()).source]));
+    const unplaced = () => db.$count(events, sql`${events.buildingId} is null`);
+    const before = await unplaced();
+    const [neal] = await db
+      .select()
+      .from(events)
+      .where(sql`${events.locationName} = 'Neal Lab'`);
+    expect(neal?.buildingId).toBeNull();
+    expect(await relinkLocations(db, NOW)).toBe(0);
+
+    const [chemistry] = await db
+      .select()
+      .from(buildings)
+      .where(sql`${buildings.name} = 'Chemistry Building'`);
+    await addBuildingAlias(db, chemistry?.id ?? '', 'Neal Lab');
+
+    expect(await relinkLocations(db, NOW)).toBe(1);
+    expect(await unplaced()).toBe(before - 1);
+    const [placed] = await db
+      .select()
+      .from(events)
+      .where(sql`${events.locationName} = 'Neal Lab'`);
+    expect(placed?.buildingId).toBe(chemistry?.id);
   });
 });

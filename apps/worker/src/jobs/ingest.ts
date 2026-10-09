@@ -2,8 +2,10 @@ import {
   finishIngestionRun,
   getLastIngestionRun,
   listBuildingsForMatching,
+  listUnplacedEvents,
   markUnseenEventsRemoved,
   recordLocationMisses,
+  setEventBuilding,
   startIngestionRun,
   upsertEvent,
   type Database,
@@ -155,8 +157,26 @@ async function ingestSource(
 }
 
 /**
- * One idempotent pass over the given sources, then classification and alerts once for all of
- * them. Each source gets its own ingestion_runs row. Per-item problems are counted and logged
+ * Matches stored events that have no building against the current names and aliases, so an alias
+ * added after an event was ingested still puts it on the map. Returns how many were placed.
+ */
+export async function relinkLocations(db: Database, now: Date): Promise<number> {
+  const unplaced = await listUnplacedEvents(db, now);
+  if (unplaced.length === 0) return 0;
+  const match = createLocationMatcher(await listBuildingsForMatching(db));
+  let placed = 0;
+  for (const event of unplaced) {
+    const building = event.locationName === null ? null : match(event.locationName);
+    if (!building) continue;
+    await setEventBuilding(db, event.id, building.id);
+    placed += 1;
+  }
+  return placed;
+}
+
+/**
+ * One idempotent pass over the given sources, then location relinking, classification, and
+ * alerts once for all of them (also when no source was given). Each source gets its own ingestion_runs row. Per-item problems are counted and logged
  * but don't stop a source, and a source that fails outright doesn't stop the next one.
  * A failed fetch is recorded as an incomplete run and nothing is removed.
  */
@@ -187,26 +207,40 @@ export async function runIngestion({
       }
     }
 
-    // Classification and alerts cover every source at once. Their problems, and verdicts on
-    // community tips, are recorded on the first run of the pass.
+    // Classification and alerts cover every source at once, and run even when no source did
+    // (stored events and community tips still need verdicts). Their problems, and verdicts on
+    // tips, are recorded on the first run of the pass; with no run, they are only logged.
     const [first] = results;
-    if (first && classify) {
+    const passFailed = first
+      ? failOn(first)
+      : (message: string) => {
+          logger.error(`[ingest] ${message}`);
+        };
+
+    try {
+      const placed = await relinkLocations(db, startedAt);
+      if (placed > 0) logger.info(`[ingest] matched ${placed} stored event(s) to a building`);
+    } catch (error) {
+      passFailed(`location relink failed: ${describeError(error)}`);
+    }
+
+    if (classify) {
       try {
         const c = await classify(startedAt);
         for (const result of results) result.classified = c.bySource[result.source] ?? 0;
-        first.classified += c.bySource.submission ?? 0;
-        if (c.llmErrors > 0) failOn(first)(`${c.llmErrors} LLM request(s) failed`);
+        if (first) first.classified += c.bySource.submission ?? 0;
+        if (c.llmErrors > 0) passFailed(`${c.llmErrors} LLM request(s) failed`);
       } catch (error) {
-        failOn(first)(`classification failed: ${describeError(error)}`);
+        passFailed(`classification failed: ${describeError(error)}`);
       }
     }
 
-    if (first && notify) {
+    if (notify) {
       try {
         const n = await notify(now());
-        if (n.failed > 0) failOn(first)(`${n.failed} alert(s) failed to send`);
+        if (n.failed > 0) passFailed(`${n.failed} alert(s) failed to send`);
       } catch (error) {
-        failOn(first)(`notifier failed: ${describeError(error)}`);
+        passFailed(`notifier failed: ${describeError(error)}`);
       }
     }
   } finally {
@@ -237,7 +271,7 @@ export type IngestOutcome =
   | { status: 'skipped'; nextAllowedAt: Date };
 
 /**
- * Runs the sources that are due. A source is due once its minimum interval, and any longer
+ * Runs the sources that are due, then classification and alerts whether or not any was. A source is due once its minimum interval, and any longer
  * refresh hint its feed gave last time, has passed since its previous run started.
  */
 export async function ingestIfDue(deps: IngestDeps): Promise<IngestOutcome> {
@@ -265,6 +299,8 @@ export async function ingestIfDue(deps: IngestDeps): Promise<IngestOutcome> {
   }
 
   if (due.length === 0) {
+    // Nothing to fetch, but what is already stored may still need classifying or alerting.
+    await runIngestion({ ...deps, sources: [] });
     const next = Math.min(...skipped.map((s) => s.nextAllowedAt.getTime()));
     return { status: 'skipped', nextAllowedAt: new Date(Number.isFinite(next) ? next : now) };
   }

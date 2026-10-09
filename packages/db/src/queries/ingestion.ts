@@ -47,6 +47,36 @@ export async function markUnseenEventsRemoved(
   return rows.length;
 }
 
+/**
+ * Live feed events that have a location name but no building: candidates for matching again
+ * after a building alias is added.
+ */
+export function listUnplacedEvents(
+  db: Database,
+  now: Date,
+): Promise<{ id: string; locationName: string | null }[]> {
+  return db
+    .select({ id: events.id, locationName: events.locationName })
+    .from(events)
+    .where(
+      and(
+        eq(events.status, 'active'),
+        sql`${events.source} <> 'submission'`,
+        sql`${events.buildingId} is null`,
+        isNotNull(events.locationName),
+        gte(effectiveEnd, timestampParam(now)),
+      ),
+    );
+}
+
+export async function setEventBuilding(
+  db: Database,
+  id: string,
+  buildingId: string,
+): Promise<void> {
+  await db.update(events).set({ buildingId }).where(eq(events.id, id));
+}
+
 export interface LocationMiss {
   normalizedName: string;
   locationName: string;
