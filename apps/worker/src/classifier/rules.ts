@@ -15,12 +15,12 @@ export interface RulesVerdict {
   excludedBy: string | null;
 }
 
-interface Phrase {
+export interface Phrase {
   phrase: string;
   pattern: RegExp;
 }
 
-function compile(phrases: readonly string[]): Phrase[] {
+export function compile(phrases: readonly string[]): Phrase[] {
   return phrases.map((phrase) => {
     const body = phrase
       .trim()
