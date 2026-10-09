@@ -14,11 +14,13 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:pg": "pnpm db:up && TEST_DB=postgres pnpm -r test",
+    "test:pg:ci": "TEST_DB=postgres pnpm -r test",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @maize-bites/db db:generate",
     "db:migrate": "pnpm --filter @maize-bites/db db:migrate",
     "db:seed": "pnpm --filter @maize-bites/db db:seed",
+    "db:seed:demo": "pnpm --filter @maize-bites/db db:seed:demo",
     "db:studio": "pnpm --filter @maize-bites/db db:studio",
     "ingest:once": "pnpm --filter @maize-bites/worker ingest:once"
   },
