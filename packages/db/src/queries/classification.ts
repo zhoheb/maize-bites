@@ -139,7 +139,7 @@ export async function listReviewQueue(db: Database, now: Date): Promise<ReviewQu
         or(
           sql`${reviewFlags.id} is not null`,
           and(
-            eq(events.source, 'happening'),
+            ne(events.source, 'submission'),
             eq(active.hasFreeFood, true),
             gte(active.confidence, REVIEW_CONFIDENCE),
             lt(active.confidence, PUBLISH_CONFIDENCE),

@@ -1,17 +1,23 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Database, DbHandle } from '../client.js';
-import { events, ingestionRuns, locationMisses } from '../schema.js';
+import { events, ingestionRuns, locationMisses, notificationLog } from '../schema.js';
 import { createTestDb, eventInput } from '../testing.js';
+import { upsertUserByEmail } from './auth.js';
 import { upsertEvent } from './events.js';
 import {
   finishIngestionRun,
-  getLastIngestionRunStart,
+  getHttpValidators,
+  getLastIngestionRun,
   getLastSuccessfulIngestion,
+  hasActiveHappeningTwin,
   markUnseenEventsRemoved,
   recordLocationMisses,
+  retireMaizepagesTwin,
+  saveHttpValidators,
   startIngestionRun,
 } from './ingestion.js';
+import { claimNotification } from './notifications.js';
 
 let handle: DbHandle;
 let db: Database;
@@ -108,10 +114,10 @@ describe('recordLocationMisses', () => {
 
 describe('ingestion runs', () => {
   it('records start, stats, and finish; reports the latest start', async () => {
-    expect(await getLastIngestionRunStart(db)).toBeNull();
+    expect(await getLastIngestionRun(db, 'happening')).toBeNull();
 
-    await startIngestionRun(db, hours(-2));
-    const id = await startIngestionRun(db, hours(-1));
+    await startIngestionRun(db, 'happening', hours(-2));
+    const id = await startIngestionRun(db, 'happening', hours(-1));
     await finishIngestionRun(db, id, NOW, {
       fetched: 10,
       created: 4,
@@ -123,7 +129,7 @@ describe('ingestion runs', () => {
       errorMessages: ['bad item'],
     });
 
-    expect(await getLastIngestionRunStart(db)).toEqual(hours(-1));
+    expect((await getLastIngestionRun(db, 'happening'))?.startedAt).toEqual(hours(-1));
     const [row] = await db.select().from(ingestionRuns).where(eq(ingestionRuns.id, id));
     expect(row).toMatchObject({
       finishedAt: NOW,
@@ -149,12 +155,109 @@ describe('getLastSuccessfulIngestion', () => {
   it('returns the finish time of the newest complete run, ignoring incomplete and unfinished ones', async () => {
     expect(await getLastSuccessfulIngestion(db)).toBeNull();
 
-    const ok = await startIngestionRun(db, hours(-3));
+    const ok = await startIngestionRun(db, 'happening', hours(-3));
     await finishIngestionRun(db, ok, hours(-2.9), { ...stats, complete: true });
-    const partial = await startIngestionRun(db, hours(-2));
+    const partial = await startIngestionRun(db, 'happening', hours(-2));
     await finishIngestionRun(db, partial, hours(-1.9), { ...stats, complete: false });
-    await startIngestionRun(db, hours(-1)); // still running / crashed
+    await startIngestionRun(db, 'happening', hours(-1)); // still running / crashed
 
     expect(await getLastSuccessfulIngestion(db)).toEqual(hours(-2.9));
+  });
+
+  it('keeps sources apart', async () => {
+    const happening = await startIngestionRun(db, 'happening', hours(-3));
+    await finishIngestionRun(db, happening, hours(-2.9), { ...stats, complete: true });
+    const maizepages = await startIngestionRun(db, 'maizepages', hours(-1));
+    await finishIngestionRun(db, maizepages, hours(-0.9), {
+      ...stats,
+      complete: true,
+      notModified: true,
+      ttlMinutes: 300,
+    });
+
+    expect(await getLastSuccessfulIngestion(db, 'happening')).toEqual(hours(-2.9));
+    expect(await getLastSuccessfulIngestion(db, 'maizepages')).toEqual(hours(-0.9));
+    expect(await getLastSuccessfulIngestion(db)).toEqual(hours(-0.9));
+    expect(await getLastIngestionRun(db, 'happening')).toEqual({
+      startedAt: hours(-3),
+      ttlMinutes: null,
+    });
+    expect(await getLastIngestionRun(db, 'maizepages')).toEqual({
+      startedAt: hours(-1),
+      ttlMinutes: 300,
+    });
+  });
+});
+
+describe('http validators', () => {
+  const URL_ = 'https://maizepages.umich.edu/events.ics';
+
+  it('stores and replaces the validators for a url', async () => {
+    expect(await getHttpValidators(db, URL_)).toBeNull();
+
+    await saveHttpValidators(db, URL_, { etag: '"a"', lastModified: null }, hours(-1));
+    expect(await getHttpValidators(db, URL_)).toEqual({ etag: '"a"', lastModified: null });
+
+    const lastModified = 'Fri, 09 Oct 2026 04:03:14 GMT';
+    await saveHttpValidators(db, URL_, { etag: null, lastModified }, NOW);
+    expect(await getHttpValidators(db, URL_)).toEqual({ etag: null, lastModified });
+  });
+});
+
+describe('Maize Pages / Happening duplicates', () => {
+  const MP_ID = '12668714';
+  const happeningCopy = (extra: Parameters<typeof eventInput>[0] = {}) =>
+    eventInput({ source: 'happening', maizepagesEventId: MP_ID, startsAt: hours(5), ...extra });
+  const maizepagesOriginal = () =>
+    eventInput({
+      source: 'maizepages',
+      sourceEventId: MP_ID,
+      maizepagesEventId: MP_ID,
+      startsAt: hours(5),
+    });
+
+  it('hasActiveHappeningTwin sees only active Happening rows with that id', async () => {
+    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(false);
+
+    await upsertEvent(db, maizepagesOriginal());
+    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(false);
+
+    await upsertEvent(db, happeningCopy({ status: 'removed' }));
+    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(false);
+
+    await upsertEvent(db, happeningCopy());
+    expect(await hasActiveHappeningTwin(db, MP_ID)).toBe(true);
+    expect(await hasActiveHappeningTwin(db, '999')).toBe(false);
+  });
+
+  it('retireMaizepagesTwin hides the Maize Pages row and carries its alert claims over', async () => {
+    const { event: original } = await upsertEvent(db, maizepagesOriginal());
+    const { event: copy } = await upsertEvent(db, happeningCopy());
+    const user = await upsertUserByEmail(db, 'reader@umich.edu');
+    const claim = { userId: user.id, channel: 'email', kind: 'instant', sentAt: NOW } as const;
+    await claimNotification(db, { ...claim, eventId: original.id });
+
+    expect(await retireMaizepagesTwin(db, MP_ID, copy.id)).toBe(1);
+
+    const [row] = await db.select().from(events).where(eq(events.id, original.id));
+    expect(row?.status).toBe('removed');
+    // The alert already went out for the original, so the copy can't be claimed again.
+    expect(await claimNotification(db, { ...claim, eventId: copy.id })).toBe(false);
+    expect(await db.$count(notificationLog)).toBe(2);
+
+    // Nothing left to retire the second time.
+    expect(await retireMaizepagesTwin(db, MP_ID, copy.id)).toBe(0);
+  });
+
+  it('retireMaizepagesTwin leaves other events alone', async () => {
+    const { event: other } = await upsertEvent(
+      db,
+      eventInput({ source: 'maizepages', sourceEventId: '555', startsAt: hours(5) }),
+    );
+    const { event: copy } = await upsertEvent(db, happeningCopy());
+
+    expect(await retireMaizepagesTwin(db, MP_ID, copy.id)).toBe(0);
+    const [row] = await db.select().from(events).where(eq(events.id, other.id));
+    expect(row?.status).toBe('active');
   });
 });

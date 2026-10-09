@@ -21,7 +21,7 @@ import {
 // only `import type` from @maize-bites/shared here. Enum values are duplicated from
 // shared/src/enums.ts; schema.test.ts asserts they match.
 
-export const eventSource = pgEnum('event_source', ['happening', 'submission']);
+export const eventSource = pgEnum('event_source', ['happening', 'maizepages', 'submission']);
 export const eventStatus = pgEnum('event_status', ['active', 'cancelled', 'removed']);
 export const classificationMethod = pgEnum('classification_method', ['rules', 'llm', 'manual']);
 export const audience = pgEnum('audience', ['open', 'members', 'rsvp']);
@@ -78,9 +78,16 @@ export const events = pgTable(
     firstSeenAt: timestamptz('first_seen_at').notNull().defaultNow(),
     lastSeenAt: timestamptz('last_seen_at').notNull().defaultNow(),
     status: eventStatus('status').notNull().default('active'),
+    /**
+     * The Maize Pages event this row is, or was imported from. Set on maizepages rows and on
+     * happening rows that Happening imported from Maize Pages; ingestion uses it to keep the two
+     * from showing as separate events.
+     */
+    maizepagesEventId: text('maizepages_event_id'),
   },
   (t) => [
     uniqueIndex('events_source_key').on(t.source, t.sourceEventId, t.occurrenceId),
+    index('events_maizepages_event_id_idx').on(t.maizepagesEventId),
     index('events_starts_at_idx').on(t.startsAt),
     index('events_building_id_idx').on(t.buildingId),
     check('events_ends_after_starts', sql`${t.endsAt} is null or ${t.endsAt} >= ${t.startsAt}`),
@@ -270,6 +277,8 @@ export const ingestionRuns = pgTable(
   'ingestion_runs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    /** One row per source per pass. */
+    source: eventSource('source').notNull(),
     startedAt: timestamptz('started_at').notNull().defaultNow(),
     /** Null while running or if the run crashed. */
     finishedAt: timestamptz('finished_at'),
@@ -281,10 +290,16 @@ export const ingestionRuns = pgTable(
     removed: integer('removed').notNull().default(0),
     /** Every feed page was fetched. Removal only runs on complete fetches. */
     complete: boolean('complete').notNull().default(false),
+    /** The source answered 304: nothing to do, and the run counts as complete. */
+    notModified: boolean('not_modified').notNull().default(false),
+    /** Items skipped because another source already carries the same event. */
+    skippedDuplicates: integer('skipped_duplicates').notNull().default(0),
+    /** Refresh hint the feed gave (RSS <ttl>), in minutes. The next run waits at least this long. */
+    ttlMinutes: integer('ttl_minutes'),
     errors: integer('errors').notNull().default(0),
     errorMessages: text('error_messages').array().notNull().default(emptyTextArray),
   },
-  (t) => [index('ingestion_runs_started_at_idx').on(t.startedAt)],
+  (t) => [index('ingestion_runs_started_at_idx').on(t.source, t.startedAt)],
 );
 
 /**
@@ -307,6 +322,14 @@ export const reviewFlags = pgTable(
   },
   (t) => [uniqueIndex('review_flags_event_hash_key').on(t.eventId, t.contentHash)],
 );
+
+/** Validators from a feed's last 200 response, for If-None-Match / If-Modified-Since. */
+export const httpCache = pgTable('http_cache', {
+  url: text('url').primaryKey(),
+  etag: text('etag'),
+  lastModified: text('last_modified'),
+  updatedAt: timestamptz('updated_at').notNull().defaultNow(),
+});
 
 /** Who did what, for every admin action. Append-only. */
 export const auditLog = pgTable(

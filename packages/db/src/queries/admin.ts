@@ -1,4 +1,4 @@
-import { PUBLISH_CONFIDENCE, REVIEW_CONFIDENCE } from '@maize-bites/shared';
+import { PUBLISH_CONFIDENCE, REVIEW_CONFIDENCE, type EventSource } from '@maize-bites/shared';
 import { and, asc, desc, eq, exists, gte, lte, sql } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import {
@@ -95,7 +95,7 @@ export type EventOutcome =
 
 /** Where an event ended up. Mirrors listPublishedEvents and listReviewQueue. */
 export function classifyOutcome(input: {
-  source: 'happening' | 'submission';
+  source: EventSource;
   active: Pick<ClassificationRow, 'method' | 'hasFreeFood' | 'confidence'> | null;
   flagged: boolean;
 }): EventOutcome {

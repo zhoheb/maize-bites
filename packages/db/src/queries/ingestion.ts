@@ -4,8 +4,10 @@ import type { Database } from '../client.js';
 import {
   buildings,
   events,
+  httpCache,
   ingestionRuns,
   locationMisses,
+  notificationLog,
   type BuildingRow,
   type IngestionRunRow,
 } from '../schema.js';
@@ -79,10 +81,14 @@ export async function recordLocationMisses(
     });
 }
 
-export async function startIngestionRun(db: Database, startedAt: Date): Promise<string> {
+export async function startIngestionRun(
+  db: Database,
+  source: EventSource,
+  startedAt: Date,
+): Promise<string> {
   const [row] = await db
     .insert(ingestionRuns)
-    .values({ startedAt })
+    .values({ source, startedAt })
     .returning({ id: ingestionRuns.id });
   if (!row) throw new Error('insert returned no row');
   return row.id;
@@ -98,7 +104,8 @@ export type IngestionRunStats = Pick<
   | 'complete'
   | 'errors'
   | 'errorMessages'
->;
+> &
+  Partial<Pick<IngestionRunRow, 'notModified' | 'skippedDuplicates' | 'ttlMinutes'>>;
 
 export async function finishIngestionRun(
   db: Database,
@@ -112,23 +119,117 @@ export async function finishIngestionRun(
     .where(eq(ingestionRuns.id, id));
 }
 
-/** Most recent run start, finished or not. Used to keep ingestion at most hourly. */
-export async function getLastIngestionRunStart(db: Database): Promise<Date | null> {
+/** A source's most recent run, finished or not. Used to keep each source at most hourly. */
+export async function getLastIngestionRun(
+  db: Database,
+  source: EventSource,
+): Promise<{ startedAt: Date; ttlMinutes: number | null } | null> {
   const [row] = await db
-    .select({ startedAt: ingestionRuns.startedAt })
+    .select({ startedAt: ingestionRuns.startedAt, ttlMinutes: ingestionRuns.ttlMinutes })
     .from(ingestionRuns)
+    .where(eq(ingestionRuns.source, source))
     .orderBy(desc(ingestionRuns.startedAt))
     .limit(1);
-  return row?.startedAt ?? null;
+  return row ?? null;
 }
 
-/** Finish time of the newest run that fetched the whole feed window. */
-export async function getLastSuccessfulIngestion(db: Database): Promise<Date | null> {
+/** Finish time of the newest complete run, for one source or across all of them. */
+export async function getLastSuccessfulIngestion(
+  db: Database,
+  source?: EventSource,
+): Promise<Date | null> {
   const [row] = await db
     .select({ finishedAt: ingestionRuns.finishedAt })
     .from(ingestionRuns)
-    .where(and(eq(ingestionRuns.complete, true), isNotNull(ingestionRuns.finishedAt)))
+    .where(
+      and(
+        eq(ingestionRuns.complete, true),
+        isNotNull(ingestionRuns.finishedAt),
+        source && eq(ingestionRuns.source, source),
+      ),
+    )
     .orderBy(desc(ingestionRuns.finishedAt))
     .limit(1);
   return row?.finishedAt ?? null;
+}
+
+// ── Conditional requests ──────────────────────────────────────────────────
+
+export interface HttpValidators {
+  etag: string | null;
+  lastModified: string | null;
+}
+
+export async function getHttpValidators(db: Database, url: string): Promise<HttpValidators | null> {
+  const [row] = await db
+    .select({ etag: httpCache.etag, lastModified: httpCache.lastModified })
+    .from(httpCache)
+    .where(eq(httpCache.url, url));
+  return row ?? null;
+}
+
+export async function saveHttpValidators(
+  db: Database,
+  url: string,
+  validators: HttpValidators,
+  at: Date,
+): Promise<void> {
+  await db
+    .insert(httpCache)
+    .values({ url, ...validators, updatedAt: at })
+    .onConflictDoUpdate({ target: httpCache.url, set: { ...validators, updatedAt: at } });
+}
+
+// ── Maize Pages / Happening duplicates ────────────────────────────────────
+
+/** True when an active Happening event was imported from this Maize Pages event. */
+export async function hasActiveHappeningTwin(
+  db: Database,
+  maizepagesEventId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        eq(events.source, 'happening'),
+        eq(events.status, 'active'),
+        eq(events.maizepagesEventId, maizepagesEventId),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
+ * Hides the Maize Pages copy of an event now that Happening carries it, and copies its alert
+ * claims to the Happening event so nobody is told about the same event twice.
+ * Returns how many rows were retired (0 or 1).
+ */
+export function retireMaizepagesTwin(
+  db: Database,
+  maizepagesEventId: string,
+  happeningEventId: string,
+): Promise<number> {
+  return db.transaction(async (tx) => {
+    const retired = await tx
+      .update(events)
+      .set({ status: 'removed' })
+      .where(
+        and(
+          eq(events.source, 'maizepages'),
+          eq(events.sourceEventId, maizepagesEventId),
+          eq(events.status, 'active'),
+        ),
+      )
+      .returning({ id: events.id });
+    for (const { id } of retired) {
+      await tx.execute(sql`
+        insert into ${notificationLog} (user_id, event_id, channel, sent_at, kind, error)
+        select user_id, ${happeningEventId}::uuid, channel, sent_at, kind, error
+        from ${notificationLog} where event_id = ${id}::uuid
+        on conflict do nothing`);
+    }
+    return retired.length;
+  });
 }

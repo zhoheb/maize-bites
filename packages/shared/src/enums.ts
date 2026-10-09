@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Source of truth for enumerated values. The Postgres enums in packages/db/src/schema.ts
 // mirror these; packages/db/src/schema.test.ts fails if they drift.
 
-export const EVENT_SOURCES = ['happening', 'submission'] as const;
+export const EVENT_SOURCES = ['happening', 'maizepages', 'submission'] as const;
 export const EVENT_STATUSES = ['active', 'cancelled', 'removed'] as const;
 export const CLASSIFICATION_METHODS = ['rules', 'llm', 'manual'] as const;
 export const AUDIENCES = ['open', 'members', 'rsvp'] as const;

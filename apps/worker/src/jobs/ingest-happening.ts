@@ -1,6 +1,6 @@
 import {
   finishIngestionRun,
-  getLastIngestionRunStart,
+  getLastIngestionRun,
   listBuildingsForMatching,
   markUnseenEventsRemoved,
   recordLocationMisses,
@@ -67,7 +67,7 @@ export async function runIngestion({
   notify,
 }: IngestDeps): Promise<IngestResult> {
   const startedAt = now();
-  const runId = await startIngestionRun(db, startedAt);
+  const runId = await startIngestionRun(db, 'happening', startedAt);
   const stats: IngestionRunStats = {
     fetched: 0,
     created: 0,
@@ -181,7 +181,7 @@ export type IngestOutcome =
 /** Runs ingestion unless another run started within MIN_INGEST_INTERVAL_MS. */
 export async function ingestIfDue(deps: IngestDeps): Promise<IngestOutcome> {
   const now = deps.now ?? (() => new Date());
-  const last = await getLastIngestionRunStart(deps.db);
+  const last = (await getLastIngestionRun(deps.db, 'happening'))?.startedAt ?? null;
   if (!isIngestionDue(last, now())) {
     const nextAllowedAt = new Date((last?.getTime() ?? 0) + MIN_INGEST_INTERVAL_MS);
     deps.logger.info(

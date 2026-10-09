@@ -23,7 +23,7 @@ const stats = {
 };
 
 async function run(finishedHoursAgo: number, complete = true) {
-  const id = await startIngestionRun(api.handle.db, at(-finishedHoursAgo - 0.01));
+  const id = await startIngestionRun(api.handle.db, 'happening', at(-finishedHoursAgo - 0.01));
   await finishIngestionRun(api.handle.db, id, at(-finishedHoursAgo), { ...stats, complete });
 }
 
