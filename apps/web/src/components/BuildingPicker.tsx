@@ -79,7 +79,7 @@ export function BuildingPicker({
         role="listbox"
         aria-label="Buildings"
         hidden={options.length === 0}
-        className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+        className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-line bg-surface py-1 shadow-lift"
       >
         {options.map((building, index) => (
           <li
@@ -88,7 +88,7 @@ export function BuildingPicker({
             role="option"
             aria-selected={index === active}
             className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 px-3 text-sm ${
-              index === active ? 'bg-michigan-blue/10 text-michigan-blue' : 'text-slate-800'
+              index === active ? 'bg-sunken text-ink' : 'text-ink'
             }`}
             // mousedown fires before the input's blur closes the list.
             onMouseDown={(e) => {
@@ -100,9 +100,7 @@ export function BuildingPicker({
             }}
           >
             <span className="font-medium">{building.name}</span>
-            <span className="shrink-0 text-xs text-slate-500">
-              {CAMPUS_LABELS[building.campus]}
-            </span>
+            <span className="shrink-0 text-xs text-ink-3">{CAMPUS_LABELS[building.campus]}</span>
           </li>
         ))}
       </ul>

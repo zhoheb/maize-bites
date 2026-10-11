@@ -5,6 +5,7 @@
 //   pnpm --filter @maize-bites/web screenshots -- --label before --out docs/screenshots/x
 //
 // Needs the site running (pnpm dev) and, for a full set of states, pnpm db:seed:demo.
+/* global document */
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -42,7 +43,7 @@ async function waitForMap(page, timeout = 20_000) {
     // The redesigned map marks its container once MapLibre reports idle (all tiles drawn).
     await page.waitForSelector('[data-map-idle="true"]', { timeout });
   } catch {
-    await page.waitForLoadState('networkidle', { timeout }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout }).catch(() => undefined);
     await page.waitForTimeout(2_000);
   }
   return true;
@@ -66,7 +67,9 @@ try {
       const page = await context.newPage();
       for (const target of PAGES) {
         await page.goto(values.base + target.path, { waitUntil: 'domcontentloaded' });
-        await page.waitForSelector('article, [data-empty-state]', { timeout: 20_000 }).catch(() => {});
+        await page
+          .waitForSelector('article, [data-empty-state]', { timeout: 20_000 })
+          .catch(() => undefined);
         await page.evaluate(() => document.fonts.ready);
         const hasMap = await waitForMap(page);
         const file = `${values.label}-${target.name}-${viewport.name}-${scheme}.png`;

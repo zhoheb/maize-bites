@@ -37,12 +37,12 @@ export function SignInPage() {
       <div className={card}>
         {state.step === 'sent' ? (
           <div role="status">
-            <h1 className="text-2xl font-extrabold text-michigan-blue">Check your email</h1>
-            <p className="mt-3 text-slate-700">
+            <h1 className="text-2xl font-bold text-ink">Check your email</h1>
+            <p className="mt-3 text-ink-2">
               We sent a sign-in link to <strong>{state.email}</strong>. It works once and expires in
               15 minutes.
             </p>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-ink-2">
               Open it on this device to stay signed in here.
             </p>
             <button
@@ -63,11 +63,11 @@ export function SignInPage() {
               void submit();
             }}
           >
-            <h1 className="text-2xl font-extrabold text-michigan-blue">Sign in</h1>
-            <p className="mt-2 text-slate-700">
+            <h1 className="text-2xl font-bold text-ink">Sign in</h1>
+            <p className="mt-2 text-ink-2">
               Get free-food alerts. No password: we'll email you a link.
             </p>
-            <label htmlFor="email" className="mt-5 block text-sm font-semibold text-slate-900">
+            <label htmlFor="email" className="mt-5 block text-sm font-semibold text-ink">
               UMich email
             </label>
             <input
@@ -86,11 +86,11 @@ export function SignInPage() {
               className={`${inputClass} mt-1.5`}
             />
             {state.step === 'form' && state.error ? (
-              <p id="email-error" role="alert" className="mt-2 text-sm font-medium text-red-700">
+              <p id="email-error" role="alert" className="mt-2 text-sm font-medium text-warn">
                 {state.error}
               </p>
             ) : (
-              <p id="email-hint" className="mt-2 text-sm text-slate-600">
+              <p id="email-hint" className="mt-2 text-sm text-ink-2">
                 Only @umich.edu addresses can sign in.
               </p>
             )}

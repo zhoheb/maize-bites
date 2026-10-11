@@ -15,16 +15,16 @@ import { fromCampusInput, toCampusInput } from '../lib/campus-time';
 
 type Errors = Partial<Record<'title' | 'buildingId' | 'startsAt' | 'endsAt' | 'form', string>>;
 
-const labelClass = 'block text-sm font-semibold text-slate-900';
-const errorClass = 'mt-1.5 text-sm font-medium text-red-700';
+const labelClass = 'block text-sm font-semibold text-ink';
+const errorClass = 'mt-1.5 text-sm font-medium text-warn';
 
 function Done({ result, onAnother }: { result: SubmissionResponse; onAnother: () => void }) {
   return (
     <div role="status" className={card}>
-      <h1 className="text-2xl font-extrabold text-michigan-blue">
+      <h1 className="text-2xl font-bold text-ink">
         {result.status === 'approved' ? 'Your tip is live' : 'Thanks for the tip'}
       </h1>
-      <p className="mt-3 text-slate-700">
+      <p className="mt-3 text-ink-2">
         {result.status === 'approved'
           ? 'It was published right away because your earlier tips checked out.'
           : 'A moderator will look at it before it shows up. After three approved tips, yours publish right away.'}
@@ -58,13 +58,13 @@ export function SubmitPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [result, setResult] = useState<SubmissionResponse | null>(null);
 
-  if (me.isPending) return <p className="mx-auto max-w-xl px-4 py-10 text-slate-600">Loading…</p>;
+  if (me.isPending) return <p className="mx-auto max-w-xl px-4 py-10 text-ink-2">Loading…</p>;
   if (!signedIn) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10">
         <EmptyState
           title="Sign in to share free food"
-          action={{ label: 'Sign in', to: '/sign-in' }}
+          actions={[{ label: 'Sign in', to: '/sign-in', primary: true }]}
         >
           Tips come from people with a UMich email, so everyone can trust what's listed.
         </EmptyState>
@@ -133,8 +133,8 @@ export function SubmitPage() {
           onSubmit();
         }}
       >
-        <h1 className="text-2xl font-extrabold text-michigan-blue">Share free food</h1>
-        <p className="mt-2 text-slate-700">
+        <h1 className="text-2xl font-bold text-ink">Share free food</h1>
+        <p className="mt-2 text-ink-2">
           Spotted leftovers or an event feeding people? Tell everyone where.
         </p>
 
@@ -188,7 +188,7 @@ export function SubmitPage() {
         )}
 
         <label htmlFor="tip-room" className={`${labelClass} mt-5`}>
-          Room or spot <span className="font-normal text-slate-500">(optional)</span>
+          Room or spot <span className="font-normal text-ink-3">(optional)</span>
         </label>
         <input
           id="tip-room"
@@ -205,7 +205,7 @@ export function SubmitPage() {
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="tip-starts" className={labelClass}>
-              Starts <span className="font-normal text-slate-500">(Ann Arbor time)</span>
+              Starts <span className="font-normal text-ink-3">(Ann Arbor time)</span>
             </label>
             <input
               id="tip-starts"
@@ -226,7 +226,7 @@ export function SubmitPage() {
           </div>
           <div>
             <label htmlFor="tip-ends" className={labelClass}>
-              Ends <span className="font-normal text-slate-500">(optional)</span>
+              Ends <span className="font-normal text-ink-3">(optional)</span>
             </label>
             <input
               id="tip-ends"
@@ -248,7 +248,7 @@ export function SubmitPage() {
         </div>
 
         <label htmlFor="tip-description" className={`${labelClass} mt-5`}>
-          Details <span className="font-normal text-slate-500">(optional)</span>
+          Details <span className="font-normal text-ink-3">(optional)</span>
         </label>
         <textarea
           id="tip-description"

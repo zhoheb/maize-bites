@@ -39,16 +39,14 @@ export function VerifyPage() {
       <div className={card} role={failed ? 'alert' : 'status'}>
         {failed ? (
           <>
-            <h1 className="text-2xl font-extrabold text-michigan-blue">That link didn't work</h1>
-            <p className="mt-3 text-slate-700">
-              Sign-in links work once and expire after 15 minutes.
-            </p>
+            <h1 className="text-2xl font-bold text-ink">That link didn't work</h1>
+            <p className="mt-3 text-ink-2">Sign-in links work once and expire after 15 minutes.</p>
             <Link to="/sign-in" className={`${primaryButton} mt-5`}>
               Send a new link
             </Link>
           </>
         ) : (
-          <p className="text-slate-700">Signing you in…</p>
+          <p className="text-ink-2">Signing you in…</p>
         )}
       </div>
     </div>

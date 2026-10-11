@@ -28,7 +28,7 @@ export function PushSetup({ onChange }: { onChange: (enabled: boolean) => void }
 
   if (support.kind === 'ios-needs-install') {
     return (
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-ink-2">
         On iPhone and iPad, push alerts work once Maize Bites is on your Home Screen: tap{' '}
         <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and open it from there.
       </p>
@@ -36,21 +36,21 @@ export function PushSetup({ onChange }: { onChange: (enabled: boolean) => void }
   }
   if (support.kind === 'unsupported') {
     return (
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-ink-2">
         This browser doesn't support push notifications. Use email alerts instead.
       </p>
     );
   }
   if (key.isSuccess && key.data === null) {
     return (
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-ink-2">
         Push notifications aren't available yet. Use email alerts for now.
       </p>
     );
   }
   if (status === 'denied') {
     return (
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-ink-2">
         Notifications are blocked for this site. To turn them on, allow notifications in your
         browser's site settings, then reload this page.
       </p>
@@ -92,12 +92,12 @@ export function PushSetup({ onChange }: { onChange: (enabled: boolean) => void }
   }
 
   return (
-    <div className="space-y-2 text-sm text-slate-700">
+    <div className="space-y-2 text-sm text-ink-2">
       {status === 'on' ? (
         <>
           <p>
-            <strong className="text-michigan-blue">Push is on for this device.</strong> Other
-            devices need to be turned on separately.
+            <strong className="text-ink">Push is on for this device.</strong> Other devices need to
+            be turned on separately.
           </p>
           <button type="button" className={secondaryButton} onClick={() => void disable()}>
             Turn off on this device
@@ -118,7 +118,7 @@ export function PushSetup({ onChange }: { onChange: (enabled: boolean) => void }
             {status === 'working' ? 'Turning on…' : 'Turn on push for this device'}
           </button>
           {status === 'error' && (
-            <p role="alert" className="font-medium text-red-700">
+            <p role="alert" className="font-medium text-warn">
               Something went wrong turning on push. Try again.
             </p>
           )}

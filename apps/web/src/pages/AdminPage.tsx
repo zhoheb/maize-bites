@@ -16,7 +16,7 @@ import {
   useReviewSubmission,
 } from '../api/admin';
 import { useBuildings } from '../api/crowd';
-import { Badge } from '../components/Badge';
+import { Badge } from '../components/ui/Badge';
 import { card, inputClass, primaryButton, secondaryButton } from '../components/forms';
 import { EmptyState, ErrorState } from '../components/States';
 import { formatRelative, formatTimeRange } from '../lib/format';
@@ -42,7 +42,7 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
   const id = `admin-${title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
   return (
     <section aria-labelledby={id} className={card}>
-      <h2 id={id} className="text-lg font-bold text-michigan-blue">
+      <h2 id={id} className="text-lg font-bold text-ink">
         {title}
       </h2>
       <div className="mt-3">{children}</div>
@@ -73,9 +73,9 @@ function EventReview({ item }: { item: QueueEvent }) {
   };
 
   return (
-    <li className="border-t border-slate-200 py-4 first:border-t-0 first:pt-0">
+    <li className="border-t border-line py-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="blue">{SOURCE_LABELS[event.source] ?? event.source}</Badge>
+        <Badge tone="info">{SOURCE_LABELS[event.source] ?? event.source}</Badge>
         {flag && <Badge tone="warn">Classifier failed</Badge>}
         {classification && (
           <Badge>
@@ -83,32 +83,30 @@ function EventReview({ item }: { item: QueueEvent }) {
           </Badge>
         )}
       </div>
-      <h3 className="mt-1 font-semibold text-slate-900">{event.title}</h3>
-      <p className="text-sm text-slate-600">
+      <h3 className="mt-1 font-semibold text-ink">{event.title}</h3>
+      <p className="text-sm text-ink-2">
         <time dateTime={event.startsAt}>{formatTimeRange(event)}</time>
         {event.locationName && <> · {event.locationName}</>}
       </p>
       {classification?.evidence && (
-        <p className="mt-1 text-sm text-slate-700">Evidence: “{classification.evidence}”</p>
+        <p className="mt-1 text-sm text-ink-2">Evidence: “{classification.evidence}”</p>
       )}
-      {flag && <p className="mt-1 text-sm text-amber-900">{flag.detail ?? flag.reason}</p>}
+      {flag && <p className="mt-1 text-sm text-amber">{flag.detail ?? flag.reason}</p>}
       {event.url && (
         <a
           href={event.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 inline-block text-sm font-semibold text-michigan-blue underline"
+          className="mt-1 inline-block text-sm font-semibold text-ink underline"
         >
           Source listing<span className="sr-only"> (opens in a new tab)</span>
         </a>
       )}
 
       <details className="mt-2">
-        <summary className="cursor-pointer text-sm font-semibold text-michigan-blue">
-          Edit details
-        </summary>
+        <summary className="cursor-pointer text-sm font-semibold text-ink">Edit details</summary>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
-          <label className="text-sm font-medium text-slate-800">
+          <label className="text-sm font-medium text-ink">
             Food (comma-separated)
             <input
               type="text"
@@ -119,7 +117,7 @@ function EventReview({ item }: { item: QueueEvent }) {
               }}
             />
           </label>
-          <label className="text-sm font-medium text-slate-800">
+          <label className="text-sm font-medium text-ink">
             Meal
             <select
               className={`${inputClass} mt-1`}
@@ -136,7 +134,7 @@ function EventReview({ item }: { item: QueueEvent }) {
               ))}
             </select>
           </label>
-          <label className="text-sm font-medium text-slate-800">
+          <label className="text-sm font-medium text-ink">
             Who can come
             <select
               className={`${inputClass} mt-1`}
@@ -181,7 +179,7 @@ function EventReview({ item }: { item: QueueEvent }) {
         </button>
       </div>
       {override.isError && (
-        <p role="alert" className="mt-2 text-sm font-medium text-red-700">
+        <p role="alert" className="mt-2 text-sm font-medium text-warn">
           Couldn't save that. Try again.
         </p>
       )}
@@ -192,14 +190,14 @@ function EventReview({ item }: { item: QueueEvent }) {
 function TipReview({ tip }: { tip: ReviewQueueResponse['submissions'][number] }) {
   const review = useReviewSubmission();
   return (
-    <li className="border-t border-slate-200 py-4 first:border-t-0 first:pt-0">
-      <h3 className="font-semibold text-slate-900">{tip.title}</h3>
-      <p className="text-sm text-slate-600">
+    <li className="border-t border-line py-4 first:border-t-0 first:pt-0">
+      <h3 className="font-semibold text-ink">{tip.title}</h3>
+      <p className="text-sm text-ink-2">
         <time dateTime={tip.startsAt}>{formatTimeRange(tip)}</time> · {tip.locationName}
         {tip.room && <> · {tip.room}</>}
       </p>
-      {tip.description && <p className="mt-1 text-sm text-slate-700">{tip.description}</p>}
-      <p className="mt-1 text-xs text-slate-500">
+      {tip.description && <p className="mt-1 text-sm text-ink-2">{tip.description}</p>}
+      <p className="mt-1 text-xs text-ink-3">
         From {tip.submitter.email} ({tip.submitter.trustLevel} approved so far)
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -227,7 +225,7 @@ function TipReview({ tip }: { tip: ReviewQueueResponse['submissions'][number] })
         </button>
       </div>
       {review.isError && (
-        <p role="alert" className="mt-2 text-sm font-medium text-red-700">
+        <p role="alert" className="mt-2 text-sm font-medium text-warn">
           Couldn't save that. Try again.
         </p>
       )}
@@ -242,12 +240,12 @@ function OverrideById() {
   const id = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.exec(value)?.[0];
   return (
     <form
-      className="mt-4 border-t border-slate-200 pt-4"
+      className="mt-4 border-t border-line pt-4"
       onSubmit={(e) => {
         e.preventDefault();
       }}
     >
-      <label htmlFor="override-id" className="block text-sm font-semibold text-slate-900">
+      <label htmlFor="override-id" className="block text-sm font-semibold text-ink">
         Override any event
       </label>
       <input
@@ -275,7 +273,7 @@ function OverrideById() {
           </button>
         ))}
       </div>
-      <p role="status" className="mt-2 text-sm text-slate-600">
+      <p role="status" className="mt-2 text-sm text-ink-2">
         {override.isSuccess && 'Saved.'}
         {override.isError && "Couldn't find or change that event."}
       </p>
@@ -293,14 +291,14 @@ function MissRow({
   const addAlias = useAddAlias();
   const [buildingId, setBuildingId] = useState('');
   return (
-    <li className="flex flex-wrap items-center gap-2 border-t border-slate-200 py-2 first:border-t-0">
-      <span className="min-w-0 flex-1 text-sm text-slate-800">
+    <li className="flex flex-wrap items-center gap-2 border-t border-line py-2 first:border-t-0">
+      <span className="min-w-0 flex-1 text-sm text-ink">
         <span className="font-medium">{miss.locationName}</span>
-        <span className="text-slate-500"> · seen {miss.seenCount}×</span>
+        <span className="text-ink-3"> · seen {miss.seenCount}×</span>
       </span>
       <select
         aria-label={`Building for ${miss.locationName}`}
-        className="min-h-10 max-w-44 rounded-lg border border-slate-300 bg-white px-2 text-sm"
+        className="min-h-10 max-w-44 rounded-lg border border-line-strong bg-surface px-2 text-sm"
         value={buildingId}
         onChange={(e) => {
           setBuildingId(e.target.value);
@@ -335,11 +333,14 @@ export function AdminPage() {
   const buildings = useBuildings(isAdmin);
   const now = new Date();
 
-  if (me.isPending) return <p className="mx-auto max-w-3xl px-4 py-10 text-slate-600">Loading…</p>;
+  if (me.isPending) return <p className="mx-auto max-w-3xl px-4 py-10 text-ink-2">Loading…</p>;
   if (!isAdmin) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10">
-        <EmptyState title="Admins only" action={{ label: 'Back to free food', to: '/' }}>
+        <EmptyState
+          title="Admins only"
+          actions={[{ label: 'Back to free food', to: '/', primary: true }]}
+        >
           This page is for the people who review listings.
         </EmptyState>
       </div>
@@ -348,20 +349,20 @@ export function AdminPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
-      <h1 className="text-2xl font-extrabold text-michigan-blue">Admin</h1>
+      <h1 className="text-2xl font-bold text-ink">Admin</h1>
 
       <Panel title="Review queue">
-        {queue.isPending && <p className="text-sm text-slate-600">Loading…</p>}
+        {queue.isPending && <p className="text-sm text-ink-2">Loading…</p>}
         {queue.isError && (
           <ErrorState message="Couldn't load the queue." onRetry={() => void queue.refetch()} />
         )}
         {queue.data && (
           <>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-3">
               Tips ({queue.data.submissions.length})
             </h3>
             {queue.data.submissions.length === 0 ? (
-              <p className="mt-1 text-sm text-slate-600">No tips waiting.</p>
+              <p className="mt-1 text-sm text-ink-2">No tips waiting.</p>
             ) : (
               <ul className="mt-2">
                 {queue.data.submissions.map((tip) => (
@@ -369,11 +370,11 @@ export function AdminPage() {
                 ))}
               </ul>
             )}
-            <h3 className="mt-5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h3 className="mt-5 text-sm font-semibold uppercase tracking-wide text-ink-3">
               Events ({queue.data.events.length})
             </h3>
             {queue.data.events.length === 0 ? (
-              <p className="mt-1 text-sm text-slate-600">No events need a look.</p>
+              <p className="mt-1 text-sm text-ink-2">No events need a look.</p>
             ) : (
               <ul className="mt-2">
                 {queue.data.events.map((item) => (
@@ -393,7 +394,7 @@ export function AdminPage() {
         <>
           <Panel title="Ingestion">
             {metrics.data.sources.length === 0 ? (
-              <p className="text-sm text-slate-600">No ingestion runs yet.</p>
+              <p className="text-sm text-ink-2">No ingestion runs yet.</p>
             ) : (
               <ul className="space-y-3">
                 {metrics.data.sources.map((s) => {
@@ -401,20 +402,20 @@ export function AdminPage() {
                   return (
                     <li key={s.source}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-900">
+                        <span className="font-semibold text-ink">
                           {SOURCE_LABELS[s.source] ?? s.source}
                         </span>
-                        <Badge tone={healthy ? 'maize' : 'warn'}>
+                        <Badge tone={healthy ? 'ok' : 'warn'}>
                           {healthy ? 'Healthy' : 'Failing'}
                         </Badge>
                       </div>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-ink-2">
                         Last success:{' '}
                         {s.lastSuccessAt ? formatRelative(new Date(s.lastSuccessAt), now) : 'never'}{' '}
                         · {s.recentComplete} of {s.recentRuns} recent runs completed
                       </p>
                       {s.lastError && (
-                        <p className="mt-1 break-words text-sm text-amber-900">{s.lastError}</p>
+                        <p className="mt-1 break-words text-sm text-amber">{s.lastError}</p>
                       )}
                     </li>
                   );
@@ -427,21 +428,21 @@ export function AdminPage() {
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
               {Object.entries(OUTCOME_LABELS).map(([key, label]) => (
                 <div key={key}>
-                  <dt className="text-slate-600">{label}</dt>
-                  <dd className="text-lg font-bold text-slate-900">
+                  <dt className="text-ink-2">{label}</dt>
+                  <dd className="text-lg font-bold text-ink">
                     {metrics.data.classifier.outcomes[key as keyof typeof OUTCOME_LABELS]}
                   </dd>
                 </div>
               ))}
               <div>
-                <dt className="text-slate-600">LLM verdicts this week</dt>
-                <dd className="text-lg font-bold text-slate-900">
+                <dt className="text-ink-2">LLM verdicts this week</dt>
+                <dd className="text-lg font-bold text-ink">
                   {metrics.data.classifier.llmClassifications}
                 </dd>
               </div>
               <div>
-                <dt className="text-slate-600">Alerts sent / failed</dt>
-                <dd className="text-lg font-bold text-slate-900">
+                <dt className="text-ink-2">Alerts sent / failed</dt>
+                <dd className="text-lg font-bold text-ink">
                   {metrics.data.classifier.alerts.sent} / {metrics.data.classifier.alerts.failed}
                 </dd>
               </div>
@@ -450,7 +451,7 @@ export function AdminPage() {
 
           <Panel title="Location misses">
             {metrics.data.locationMisses.length === 0 ? (
-              <p className="text-sm text-slate-600">Every location matched a building.</p>
+              <p className="text-sm text-ink-2">Every location matched a building.</p>
             ) : (
               <ul>
                 {metrics.data.locationMisses.slice(0, 25).map((miss) => (
