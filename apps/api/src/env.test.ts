@@ -14,7 +14,7 @@ describe('parseEnv', () => {
       API_PORT: 3001,
       LOG_LEVEL: 'info',
       TRUST_PROXY: 0,
-      EMAIL_FROM: 'Maize Bites <onboarding@resend.dev>',
+      EMAIL_FROM: 'Maize Bites <noreply@zachhoheb.dev>',
     });
   });
 

@@ -18,8 +18,7 @@ export const HAPPENING_HOST = 'events.umich.edu';
  * 2026-10-09). Its value is "<token> <site URL>" and it goes to HAPPENING_HOST only.
  */
 export const HAPPENING_INTEGRATION_HEADER = 'x-umich-integration';
-export const HAPPENING_REJECTED =
-  'Happening rejected the integration header; check the token';
+export const HAPPENING_REJECTED = 'Happening rejected the integration header; check the token';
 
 export function happeningIntegrationHeader(token: string, siteUrl: string): Record<string, string> {
   return { [HAPPENING_INTEGRATION_HEADER]: `${token} ${siteUrl}` };

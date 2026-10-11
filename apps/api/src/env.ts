@@ -26,7 +26,7 @@ export const apiEnvSchema = databaseEnvSchema
     TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
     /** Resend API key. Without it (development only), emails are printed to the log. */
     RESEND_API_KEY: z.preprocess(emptyAsUndefined, z.string().startsWith('re_').optional()),
-    EMAIL_FROM: z.string().min(3).default('Maize Bites <onboarding@resend.dev>'),
+    EMAIL_FROM: z.string().min(3).default('Maize Bites <noreply@zachhoheb.dev>'),
     /** Web Push. The public key is served to browsers; the private key lives in the worker. */
     VAPID_PUBLIC_KEY: z.preprocess(emptyAsUndefined, z.string().min(80).optional()),
   })

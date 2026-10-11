@@ -65,7 +65,7 @@ export const workerEnvSchema = databaseEnvSchema.extend({
   WEB_ORIGIN: z.url().default('http://localhost:5173'),
   /** Resend API key. Without it, alert emails are printed to the log (development). */
   RESEND_API_KEY: z.preprocess(emptyAsUndefined, z.string().startsWith('re_').optional()),
-  EMAIL_FROM: z.string().min(3).default('Maize Bites <onboarding@resend.dev>'),
+  EMAIL_FROM: z.string().min(3).default('Maize Bites <noreply@zachhoheb.dev>'),
   /** Web Push (VAPID). Generate with `pnpm --filter worker vapid:keys`. */
   VAPID_PUBLIC_KEY: z.preprocess(emptyAsUndefined, z.string().min(80).optional()),
   VAPID_PRIVATE_KEY: z.preprocess(emptyAsUndefined, z.string().min(40).optional()),

@@ -16,7 +16,7 @@ describe('parseEnv', () => {
       EVENT_RETENTION_DAYS: 30,
       PRUNE_INTERVAL_MINUTES: 60,
       WEB_ORIGIN: 'http://localhost:5173',
-      EMAIL_FROM: 'Maize Bites <onboarding@resend.dev>',
+      EMAIL_FROM: 'Maize Bites <noreply@zachhoheb.dev>',
     });
     expect(
       parseEnv({ DATABASE_URL, INGEST_CONTACT_EMAIL: 'me@umich.edu' }).INGEST_CONTACT_EMAIL,

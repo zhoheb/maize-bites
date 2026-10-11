@@ -35,7 +35,7 @@ jobs:
       WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
       PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       INGEST_CONTACT_EMAIL: ${{ vars.INGEST_CONTACT_EMAIL }}
-      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'Maize Bites <onboarding@resend.dev>' }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'Maize Bites <noreply@zachhoheb.dev>' }}
       VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
       VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
       HAPPENING_ENABLED: ${{ vars.HAPPENING_ENABLED || 'true' }}
