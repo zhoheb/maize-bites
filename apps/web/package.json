@@ -8,19 +8,31 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc && tsc -p src/sw",
-    "test": "vitest run"
+    "test": "vitest run",
+    "screenshots": "node scripts/screenshots.js"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "catalog:",
+    "@fontsource-variable/inter": "catalog:",
     "@maize-bites/shared": "workspace:*",
+    "@radix-ui/react-dialog": "catalog:",
+    "@radix-ui/react-dropdown-menu": "catalog:",
+    "@radix-ui/react-switch": "catalog:",
+    "@radix-ui/react-toggle-group": "catalog:",
     "@tanstack/react-query": "catalog:",
+    "lucide-react": "catalog:",
     "maplibre-gl": "catalog:",
+    "motion": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "catalog:",
+    "supercluster": "catalog:",
+    "vaul": "catalog:",
     "workbox-window": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
@@ -28,6 +40,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/supercluster": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",
@@ -35,6 +48,7 @@
     "vite": "catalog:",
     "vite-plugin-pwa": "catalog:",
     "vitest": "catalog:",
+    "vitest-axe": "catalog:",
     "workbox-precaching": "catalog:",
     "workbox-routing": "catalog:"
   }
