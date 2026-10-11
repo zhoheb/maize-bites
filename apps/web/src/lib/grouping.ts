@@ -13,7 +13,8 @@ export interface EventGroup {
 /**
  * The list in urgency order: happening now, starting soon, later today, then one group per
  * following day. Events that ended since the list was fetched sink to the bottom. Order within a
- * group is the order given (the API sorts by start time).
+ * group is the order given (the API sorts by start time), except that events reported as likely
+ * over go last in their group.
  */
 export function groupEvents(events: readonly FoodEvent[], now: Date): EventGroup[] {
   const groups = new Map<string, EventGroup>();
@@ -51,5 +52,11 @@ export function groupEvents(events: readonly FoodEvent[], now: Date): EventGroup
         }
     }
   }
-  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, group]) => group);
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, group]) => ({
+      ...group,
+      // Array.prototype.sort is stable, so the given order holds within each half.
+      events: [...group.events].sort((a, b) => Number(a.likelyGone) - Number(b.likelyGone)),
+    }));
 }

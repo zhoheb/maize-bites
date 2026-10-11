@@ -43,6 +43,12 @@ describe('groupEvents', () => {
     expect(group?.events.map((e) => e.title)).toEqual(['Event 2', 'Event 1', 'Event 3']);
   });
 
+  it('puts events that are likely over last in their group', () => {
+    const gone = { ...ev(1, -50), likelyGone: true };
+    const [group] = groupEvents([gone, ev(2, -30), ev(3, -10)], NOW);
+    expect(group?.events.map((e) => e.title)).toEqual(['Event 2', 'Event 3', 'Event 1']);
+  });
+
   it('puts an event starting within two hours under soon even when that is past midnight', () => {
     const lateNight = new Date('2026-10-02T03:30:00Z'); // 11:30 PM Oct 1
     const groups = groupEvents([eventAt(lateNight, 60, 60)], lateNight);
