@@ -6,6 +6,11 @@ const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
 export const apiEnvSchema = databaseEnvSchema
   .extend({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /**
+     * Set by hosts that choose the port for you (Render, Heroku, Fly). When present it wins
+     * over API_PORT; see `listenPort`.
+     */
+    PORT: z.preprocess(emptyAsUndefined, z.coerce.number().int().min(1).max(65535).optional()),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
     /** The only browser origin allowed by CORS, e.g. https://maizebites.app. No trailing slash. */
     WEB_ORIGIN: z
@@ -31,6 +36,11 @@ export const apiEnvSchema = databaseEnvSchema
     }
   });
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
+
+/** The port to listen on: the host's PORT when it sets one, else API_PORT. */
+export function listenPort(env: Pick<ApiEnv, 'PORT' | 'API_PORT'>): number {
+  return env.PORT ?? env.API_PORT;
+}
 
 export function parseEnv(source: NodeJS.ProcessEnv): ApiEnv {
   const result = apiEnvSchema.safeParse(source);

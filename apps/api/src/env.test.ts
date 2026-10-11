@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEnv } from './env.js';
+import { listenPort, parseEnv } from './env.js';
 
 const base = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
@@ -20,6 +20,24 @@ describe('parseEnv', () => {
 
   it('coerces API_PORT', () => {
     expect(parseEnv({ ...base, API_PORT: '4000' }).API_PORT).toBe(4000);
+  });
+
+  describe('listenPort', () => {
+    it('uses API_PORT, or its default, when the host sets no PORT', () => {
+      expect(listenPort(parseEnv(base))).toBe(3001);
+      expect(listenPort(parseEnv({ ...base, API_PORT: '4000' }))).toBe(4000);
+      expect(listenPort(parseEnv({ ...base, PORT: '' }))).toBe(3001);
+    });
+
+    it('uses PORT when the host sets it, even with API_PORT also set', () => {
+      expect(listenPort(parseEnv({ ...base, PORT: '10000' }))).toBe(10000);
+      expect(listenPort(parseEnv({ ...base, PORT: '10000', API_PORT: '4000' }))).toBe(10000);
+    });
+
+    it('rejects a PORT that is not a port', () => {
+      expect(() => parseEnv({ ...base, PORT: 'http' })).toThrow(/PORT/);
+      expect(() => parseEnv({ ...base, PORT: '70000' })).toThrow(/PORT/);
+    });
   });
 
   it('requires DATABASE_URL and WEB_ORIGIN', () => {

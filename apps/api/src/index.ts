@@ -1,7 +1,7 @@
 import { createDb, loadRootEnvFile, sql } from '@maize-bites/db';
 import { createMailer } from '@maize-bites/email';
 import { createApp } from './app.js';
-import { parseEnv } from './env.js';
+import { listenPort, parseEnv } from './env.js';
 import { createLogger } from './logger.js';
 
 loadRootEnvFile();
@@ -25,11 +25,9 @@ const app = createApp({
   vapidPublicKey: env.VAPID_PUBLIC_KEY ?? null,
   trustProxy: env.TRUST_PROXY,
 });
-const server = app.listen(env.API_PORT, () => {
-  logger.info(
-    { port: env.API_PORT, webOrigin: env.WEB_ORIGIN },
-    `listening on http://localhost:${env.API_PORT}`,
-  );
+const port = listenPort(env);
+const server = app.listen(port, () => {
+  logger.info({ port, webOrigin: env.WEB_ORIGIN }, `listening on http://localhost:${port}`);
 });
 
 function shutdown(signal: NodeJS.Signals): void {
