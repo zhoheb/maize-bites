@@ -1,81 +1,143 @@
-import { NavLink, Outlet } from 'react-router';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Menu, Moon, Sun } from 'lucide-react';
+import { MotionConfig } from 'motion/react';
+import { NavLink, Outlet, useMatch } from 'react-router';
 import { useMe } from '../api/account';
+import { useTheme } from '../hooks/useTheme';
+import { Logo } from './Logo';
+import { SiteCredit } from './SiteCredit';
+import { buttonClass } from './ui/button-class';
+import { cx } from './ui/cx';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  [
-    'rounded-lg px-3 py-2 text-sm font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-maize',
-    isActive ? 'bg-white/10 text-maize' : 'text-white/90 hover:text-white',
-  ].join(' ');
+  cx(
+    'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+    isActive ? 'bg-sunken font-semibold text-ink' : 'text-ink-2 hover:text-ink',
+  );
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const dark = theme === 'dark';
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+      className={buttonClass({ variant: 'ghost', size: 'icon' })}
+    >
+      {dark ? (
+        <Sun aria-hidden="true" className="size-4.5" />
+      ) : (
+        <Moon aria-hidden="true" className="size-4.5" />
+      )}
+    </button>
+  );
+}
 
 export function AppShell() {
   const me = useMe();
   const signedIn = me.isSuccess && me.data !== null;
+  // Home lays itself out to the viewport and shows the credit at the end of its list.
+  const isHome = useMatch('/') !== null;
+  const links = [
+    { to: '/', label: 'Free food', end: true },
+    { to: '/alerts', label: 'Alerts' },
+    { to: '/submit', label: 'Share' },
+    { to: '/about', label: 'About' },
+    ...(me.data?.isAdmin ? [{ to: '/admin', label: 'Admin' }] : []),
+  ];
+
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-50">
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-lg bg-maize px-4 py-2 font-semibold text-michigan-blue focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
-      >
-        Skip to content
-      </a>
-      <header className="bg-michigan-blue">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3">
-          <NavLink
-            to="/"
-            className="flex items-center gap-2 rounded-lg focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-maize"
-          >
-            <img src="/icons/favicon.svg" alt="" width="32" height="32" className="size-8" />
-            <span className="text-lg font-extrabold tracking-tight text-maize">Maize Bites</span>
-          </NavLink>
-          <nav aria-label="Main">
-            <ul className="-mx-1 flex flex-wrap items-center gap-1">
-              <li>
-                <NavLink to="/" end className={navClass}>
-                  Free food
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/alerts" className={navClass}>
-                  Alerts
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/submit" className={navClass}>
-                  Share
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/about" className={navClass}>
-                  About
-                </NavLink>
-              </li>
-              {me.data?.isAdmin && (
-                <li>
-                  <NavLink to="/admin" className={navClass}>
-                    Admin
-                  </NavLink>
-                </li>
-              )}
+    // Animations follow the system's reduced-motion setting everywhere.
+    <MotionConfig reducedMotion="user">
+      <div className="flex min-h-dvh flex-col bg-page text-ink">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-full bg-maize px-4 py-2 font-semibold text-on-maize focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+        >
+          Skip to content
+        </a>
+        <header className="sticky top-0 z-30 h-14 border-b border-line bg-page/90 backdrop-blur">
+          <div className="flex h-full items-center gap-2 px-4 lg:px-6">
+            <NavLink to="/" className="flex items-center gap-2 rounded-full pr-2">
+              <Logo className="size-7" />
+              <span className="font-display text-lg font-bold tracking-tight text-ink">
+                Maize Bites
+              </span>
+            </NavLink>
+
+            <nav aria-label="Main" className="ml-4 hidden md:block">
+              <ul className="flex items-center gap-1">
+                {links.map((link) => (
+                  <li key={link.to}>
+                    <NavLink to={link.to} end={link.end ?? false} className={navClass}>
+                      {link.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="ml-auto flex items-center gap-1">
+              <ThemeToggle />
               {!signedIn && me.isSuccess && (
-                <li className="hidden sm:block">
-                  <NavLink to="/sign-in" className={navClass}>
-                    Sign in
-                  </NavLink>
-                </li>
+                <NavLink
+                  to="/sign-in"
+                  className={buttonClass(
+                    { variant: 'primary', size: 'sm' },
+                    'hidden sm:inline-flex',
+                  )}
+                >
+                  Sign in
+                </NavLink>
               )}
-            </ul>
-          </nav>
-        </div>
-      </header>
-      <main id="main" tabIndex={-1} className="flex-1 outline-none">
-        <Outlet />
-      </main>
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-600">
-          Event data from Happening @ Michigan and Maize Pages. Not affiliated with the University
-          of Michigan.
-        </div>
-      </footer>
-    </div>
+              <DropdownMenu.Root modal={false}>
+                <DropdownMenu.Trigger
+                  aria-label="Menu"
+                  className={buttonClass({ variant: 'ghost', size: 'icon' }, 'md:hidden')}
+                >
+                  <Menu aria-hidden="true" className="size-5" />
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={6}
+                    className="z-50 min-w-48 rounded-card border border-line bg-surface p-1.5 text-ink shadow-lift"
+                  >
+                    {[
+                      ...links,
+                      ...(!signedIn && me.isSuccess ? [{ to: '/sign-in', label: 'Sign in' }] : []),
+                    ].map((link) => (
+                      <DropdownMenu.Item key={link.to} asChild>
+                        <NavLink
+                          to={link.to}
+                          end={'end' in link}
+                          className={({ isActive }) =>
+                            cx(
+                              'flex min-h-11 items-center rounded-lg px-3 text-sm outline-none data-highlighted:bg-sunken',
+                              isActive ? 'font-semibold' : 'font-medium',
+                            )
+                          }
+                        >
+                          {link.label}
+                        </NavLink>
+                      </DropdownMenu.Item>
+                    ))}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
+          </div>
+        </header>
+        <main id="main" tabIndex={-1} className="flex-1 outline-none">
+          <Outlet />
+        </main>
+        {!isHome && (
+          <footer className="border-t border-line">
+            <SiteCredit className="mx-auto max-w-5xl px-4 py-5" />
+          </footer>
+        )}
+      </div>
+    </MotionConfig>
   );
 }

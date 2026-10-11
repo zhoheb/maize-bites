@@ -37,7 +37,7 @@ describe('fetchEventPage', () => {
 
     expect(page.nextCursor).toBe('abc');
     expect(fetchFn.mock.calls[0]?.[0]).toBe(
-      '/api/events?to=2026-10-02T04%3A00%3A00.000Z&campus=north&open_only=true&limit=30&cursor=c1',
+      '/api/events?to=2026-10-02T04%3A00%3A00.000Z&campus=north&open_only=true&limit=100&cursor=c1',
     );
   });
 
