@@ -19,7 +19,10 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # Production (Neon) runs Postgres 18, so the real-database tests do too. Local
+        # development (docker-compose.yml) is still on 16; the in-memory suite above covers
+        # neither.
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: maize
           POSTGRES_PASSWORD: ci-only
