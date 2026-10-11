@@ -8,13 +8,13 @@ export const SNAP_LABELS: Record<SheetSnap, string> = {
   full: 'full height',
 };
 
-/** Enough for the handle, the headline and the search box. */
-export const PEEK_HEIGHT = 156;
+/** Enough for the handle, the headline, the time control and the first card. */
+export const PEEK_HEIGHT = 336;
 
 /** The sheet's height in pixels at a snap point, inside a container `available` pixels tall. */
 export function snapHeight(snap: SheetSnap, available: number): number {
   if (snap === 'peek') return Math.min(PEEK_HEIGHT, available);
-  if (snap === 'half') return Math.round(available * 0.55);
+  if (snap === 'half') return Math.round(available * 0.62);
   return Math.max(PEEK_HEIGHT, available - 8);
 }
 

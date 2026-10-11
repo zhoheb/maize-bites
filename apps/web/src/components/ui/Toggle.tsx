@@ -16,20 +16,20 @@ export function Toggle({
 }) {
   const id = useId();
   return (
-    <div className={cx('inline-flex min-h-10 shrink-0 items-center gap-2', className)}>
+    <div className={cx('inline-flex h-9 shrink-0 items-center gap-2', className)}>
       <Switch.Root
         id={id}
         checked={checked}
         onCheckedChange={onChange}
         className={cx(
-          'relative h-6 w-10 shrink-0 rounded-full border transition-colors',
-          checked ? 'border-on-maize/20 bg-maize' : 'border-line-strong bg-sunken',
+          'relative h-5.5 w-9.5 shrink-0 rounded-full border transition-colors',
+          checked ? 'border-primary bg-primary' : 'border-line-strong bg-sunken',
         )}
       >
         <Switch.Thumb
           className={cx(
-            'block size-4.5 rounded-full shadow-card transition-transform',
-            checked ? 'translate-x-4.5 bg-on-maize' : 'translate-x-0.5 bg-ink-3',
+            'block size-4 rounded-full shadow-card transition-transform',
+            checked ? 'translate-x-4.5 bg-on-primary' : 'translate-x-0.5 bg-ink-3',
           )}
         />
       </Switch.Root>

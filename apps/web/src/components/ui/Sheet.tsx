@@ -34,6 +34,8 @@ export function BottomSheet({
     lastY: number;
     lastT: number;
     v: number;
+    /** The press began on the handle (once captured, later events no longer say so). */
+    onHandle: boolean;
   } | null>(null);
 
   const index = SHEET_SNAPS.indexOf(snap);
@@ -42,9 +44,21 @@ export function BottomSheet({
     if (next !== undefined) onSnapChange(next);
   };
 
+  /** Up through the sizes, then back to the smallest. */
+  const cycle = () => {
+    if (index === SHEET_SNAPS.length - 1) onSnapChange('peek');
+    else step(1);
+  };
+
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
-    // Leave taps on controls inside the header (the search box) alone.
-    if (e.target instanceof HTMLElement && e.target.closest('input, a, [data-no-drag]')) return;
+    // Leave the controls inside the header alone: capturing the pointer would swallow their
+    // clicks. The handle is the exception; it is both a button and the thing to drag.
+    if (
+      e.target instanceof Element &&
+      e.target.closest('button, input, a, [role="radio"]') &&
+      !e.target.closest('[data-sheet-handle]')
+    )
+      return;
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = {
       y: e.clientY,
@@ -52,6 +66,7 @@ export function BottomSheet({
       lastY: e.clientY,
       lastT: e.timeStamp,
       v: 0,
+      onHandle: e.target instanceof Element && e.target.closest('[data-sheet-handle]') !== null,
     };
   }
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
@@ -72,7 +87,12 @@ export function BottomSheet({
     e.currentTarget.releasePointerCapture(e.pointerId);
     const released = dragHeight ?? target;
     setDragHeight(null);
-    if (Math.abs(e.clientY - d.y) < 4) return; // a tap, not a drag: the handle's click handles it
+    if (Math.abs(e.clientY - d.y) < 4) {
+      // A tap, not a drag. Pointer capture sends the click to this wrapper instead of the
+      // handle button, so a tap on the handle is acted on here.
+      if (d.onHandle) cycle();
+      return;
+    }
     onSnapChange(nearestSnap(released, d.v, available));
   }
 
@@ -80,7 +100,7 @@ export function BottomSheet({
     <section
       aria-label={label}
       style={{ height: dragHeight ?? target }}
-      className={`${dragHeight === null ? 'transition-[height] duration-300 ease-out ' : ''}absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-3xl border border-b-0 border-line bg-surface text-ink shadow-lift`}
+      className={`${dragHeight === null ? 'transition-[height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ' : ''}absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-panel border border-b-0 border-line bg-(--list-bg) text-ink shadow-lift [--list-bg:var(--bg)] dark:[--list-bg:var(--panel)]`}
     >
       <div
         onPointerDown={onPointerDown}
@@ -92,10 +112,11 @@ export function BottomSheet({
         <button
           type="button"
           aria-label={`Resize ${label.toLowerCase()}. Now ${SNAP_LABELS[snap]}.`}
-          onClick={() => {
-            // Up through the sizes, then back to the smallest.
-            if (index === SHEET_SNAPS.length - 1) onSnapChange('peek');
-            else step(1);
+          data-sheet-handle
+          // Pointer taps are handled above; this is for the keyboard (Enter and Space arrive as
+          // a click with no pointer behind it, which browsers mark with detail 0).
+          onClick={(e) => {
+            if (e.detail === 0) cycle();
           }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowUp') {

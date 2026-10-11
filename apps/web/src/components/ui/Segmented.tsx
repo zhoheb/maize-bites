@@ -2,8 +2,8 @@ import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import { cx } from './cx';
 
 /**
- * A single-choice segmented control (Radix toggle group: one tab stop, arrow keys move). The
- * active segment is maize.
+ * A single-choice segmented control on a sunken track (Radix toggle group: one tab stop, arrow
+ * keys move). The chosen segment is ink, not maize: maize is kept for pins and selection.
  */
 export function Segmented<T extends string>({
   label,
@@ -28,16 +28,16 @@ export function Segmented<T extends string>({
         const option = options.find((o) => o.value === next);
         if (option) onChange(option.value);
       }}
-      className={cx('inline-flex rounded-full border border-line bg-sunken p-1', className)}
+      className={cx('inline-flex rounded-full bg-sunken p-1', className)}
     >
       {options.map((option) => (
         <ToggleGroup.Item
           key={option.value}
           value={option.value}
           className={cx(
-            'min-h-9 rounded-full px-3.5 text-sm font-semibold whitespace-nowrap transition-colors',
+            'h-8 rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors sm:px-3.5',
             option.value === value
-              ? 'bg-maize text-on-maize shadow-card'
+              ? 'bg-active text-on-active shadow-card'
               : 'text-ink-2 hover:text-ink',
           )}
         >

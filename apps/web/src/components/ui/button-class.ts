@@ -2,15 +2,13 @@ import { cx } from './cx';
 
 const VARIANTS = {
   primary: 'bg-primary text-on-primary hover:opacity-90',
-  maize: 'bg-maize text-on-maize hover:brightness-95',
-  secondary: 'border border-line-strong bg-surface text-ink hover:bg-sunken',
+  secondary: 'border border-line-strong bg-card text-ink hover:bg-sunken',
   ghost: 'text-ink hover:bg-sunken',
 } as const;
 
 const SIZES = {
-  sm: 'min-h-9 px-3 text-sm',
-  md: 'min-h-11 px-4 text-sm',
-  icon: 'size-10',
+  sm: 'h-9 px-3.5 text-sm',
+  md: 'h-11 px-4 text-sm',
 } as const;
 
 export interface ButtonStyle {
@@ -24,9 +22,22 @@ export function buttonClass(
   extra?: string,
 ) {
   return cx(
-    'inline-flex shrink-0 items-center justify-center gap-2 rounded-full font-semibold transition-[background-color,opacity,filter] disabled:cursor-not-allowed disabled:opacity-50',
+    'inline-flex shrink-0 items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap transition-[background-color,opacity] disabled:cursor-not-allowed disabled:opacity-50',
     VARIANTS[variant],
     SIZES[size],
+    extra,
+  );
+}
+
+/** A square, icon-only button. Give it an aria-label. */
+export function iconButtonClass(
+  { variant = 'ghost', size = 'sm' }: ButtonStyle = {},
+  extra?: string,
+) {
+  return cx(
+    'inline-flex shrink-0 items-center justify-center rounded-full transition-[background-color,opacity] disabled:cursor-not-allowed disabled:opacity-50',
+    VARIANTS[variant],
+    size === 'sm' ? 'size-9' : 'size-11',
     extra,
   );
 }

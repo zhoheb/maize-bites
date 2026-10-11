@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { MotionConfig, motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
-import { buttonClass } from './button-class';
+import { iconButtonClass } from './button-class';
 
 /**
  * A modal panel: slides in from the right on wide screens and is a full-height sheet on phones.
@@ -34,26 +34,32 @@ export function Drawer({
         <MotionConfig reducedMotion="user">
           <Dialog.Overlay asChild>
             <motion.div
-              className="fixed inset-0 z-40 bg-[#0b1f3a]/35 dark:bg-black/55"
+              className="fixed inset-0 z-40 bg-ink/20 dark:bg-sunken/50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.18 }}
             />
           </Dialog.Overlay>
-          <Dialog.Content asChild aria-describedby={undefined}>
+          <Dialog.Content
+            asChild
+            aria-describedby={undefined}
+            // Focus the panel itself, not its first button, so opening doesn't ring "Share".
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              if (e.currentTarget instanceof HTMLElement) e.currentTarget.focus();
+            }}
+          >
             <motion.div
-              className="fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-surface text-ink shadow-lift sm:max-w-[30rem] sm:border-l sm:border-line"
+              tabIndex={-1}
+              className="fixed inset-y-0 right-0 z-50 flex w-full flex-col outline-none bg-panel text-ink shadow-lift sm:max-w-[27.5rem] sm:border-l sm:border-line"
               initial={reduced ? { opacity: 0 } : { x: 48, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             >
               <Dialog.Title className="sr-only">{title}</Dialog.Title>
               <div className="flex items-center justify-end gap-1 border-b border-line px-3 py-2">
                 {actions}
-                <Dialog.Close
-                  aria-label="Close"
-                  className={buttonClass({ variant: 'ghost', size: 'icon' })}
-                >
+                <Dialog.Close aria-label="Close" className={iconButtonClass()}>
                   <X aria-hidden="true" className="size-5" />
                 </Dialog.Close>
               </div>
