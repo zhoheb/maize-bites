@@ -6,69 +6,119 @@
    (the saved choice, else the system setting). */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
-/* Design tokens. Every colour used for text is checked against its background in
-   src/lib/tokens.test.ts (WCAG AA), so change values here and run the tests. */
+/* Design tokens: "campus field guide". Light is the default; dark is elevation by lightness.
+   Components use only these (through the Tailwind names in @theme below), never raw colours.
+   src/lib/tokens.test.ts reads this file and fails if a text/background pair drops below
+   WCAG AA, so change values here and run the tests.
+
+   Maize is reserved for three things: map pins, the selected state, and the brand mark. Active
+   controls use ink, and status uses the now/soon colours. */
 :root {
   color-scheme: light;
-  --bg: #faf8f3;
-  --surface: #ffffff;
-  --sunken: #f1ede3;
-  --ink: #0b1f3a;
-  --ink-2: #4b5567;
+  --bg: #f7f5f0;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --raised: #ffffff;
+  --sunken: #efece4;
+  --ink: #0e1a2b;
+  --ink-2: #4a5568;
   --ink-3: #5c6678;
-  --line: #e7e1d5;
-  --line-strong: #cbc3b3;
-  --primary: #0b1f3a;
+  --line: #e6e1d6;
+  --line-strong: #d5cebf;
+  --primary: #0e1a2b;
   --on-primary: #ffffff;
+  --active: #0e1a2b;
+  --on-active: #ffffff;
   --maize: #ffcb05;
-  --on-maize: #0b1f3a;
-  --now: #14613a;
-  --now-bg: #e1f3e7;
-  --now-dot: #1c9a55;
-  --warn: #a3301e;
-  --warn-bg: #fce9e4;
-  --amber: #7a4f00;
-  --amber-line: #dcae4f;
-  --info: #1d4e9e;
-  --info-line: #9db7e4;
-  --food: #8a4b00;
-  --focus: #0b1f3a;
-  --shadow-1: 0 1px 2px rgb(11 31 58 / 0.06), 0 1px 1px rgb(11 31 58 / 0.04);
-  --shadow-2: 0 10px 28px -8px rgb(11 31 58 / 0.18), 0 2px 6px rgb(11 31 58 / 0.06);
+  --maize-ink: #3d2e00;
+  --maize-soft: #fff4c2;
+  --now: #16a34a;
+  --now-soft: #dcfce7;
+  --now-ink: #166534;
+  --soon: #d97706;
+  --soon-soft: #fef3c7;
+  --soon-ink: #92400e;
+  --over: #9ca3af;
+  --members: #a34a06;
+  --rsvp: #2563eb;
+  --danger: #b42318;
+  --danger-soft: #fee4e2;
+  --focus: #0e1a2b;
+  --pin-ring: #ffffff;
+  --pin-selected: #0e1a2b;
+  --meal-breakfast: #fef3c7;
+  --meal-breakfast-ink: #92400e;
+  --meal-lunch: #dcfce7;
+  --meal-lunch-ink: #166534;
+  --meal-dinner: #e0e7ff;
+  --meal-dinner-ink: #3730a3;
+  --meal-snacks: #ffe4e6;
+  --meal-snacks-ink: #9f1239;
+  --meal-drinks: #e0f2fe;
+  --meal-drinks-ink: #075985;
+  --meal-other: #efece4;
+  --meal-other-ink: #4a5568;
+  --shadow-1: 0 1px 2px rgba(14, 26, 43, 0.06), 0 1px 1px rgba(14, 26, 43, 0.04);
+  --shadow-2: 0 8px 24px -8px rgba(14, 26, 43, 0.18), 0 2px 6px rgba(14, 26, 43, 0.06);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0b1f3a;
-  --surface: #12294a;
-  --sunken: #081830;
-  --ink: #f4f1ea;
-  --ink-2: #b9c4d6;
-  --ink-3: #9aa9be;
-  --line: #233c61;
-  --line-strong: #3a5682;
-  --primary: #f4f1ea;
-  --on-primary: #0b1f3a;
-  --maize: #ffcb05;
-  --on-maize: #0b1f3a;
-  --now: #7ee0a6;
-  --now-bg: #0e3a2b;
-  --now-dot: #3ddc84;
-  --warn: #ffa693;
-  --warn-bg: #4a1f1a;
-  --amber: #ffd27a;
-  --amber-line: #8a6a1c;
-  --info: #a9c7ff;
-  --info-line: #3b5f9c;
-  --food: #ffd98a;
-  --focus: #ffcb05;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-2: 0 12px 32px -8px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.3);
+  --bg: #0c1117;
+  --panel: #121922;
+  --card: #18212c;
+  --raised: #1f2a37;
+  --sunken: #0a0e13;
+  --ink: #e8edf3;
+  --ink-2: #a9b4c2;
+  --ink-3: #8e9aab;
+  --line: #253141;
+  --line-strong: #334255;
+  --primary: #e8edf3;
+  --on-primary: #0c1117;
+  --active: #1f2a37;
+  --on-active: #e8edf3;
+  --maize: #ffd43b;
+  --maize-ink: #3d2e00;
+  --maize-soft: rgba(255, 212, 59, 0.12);
+  --now: #4ade80;
+  --now-soft: rgba(74, 222, 128, 0.12);
+  --now-ink: #6ee7a0;
+  --soon: #fbbf24;
+  --soon-soft: rgba(251, 191, 36, 0.12);
+  --soon-ink: #fcd34d;
+  --over: #6b7787;
+  --members: #f6a654;
+  --rsvp: #7fb0ff;
+  --danger: #ffa193;
+  --danger-soft: rgba(255, 161, 147, 0.12);
+  --focus: #ffd43b;
+  --pin-ring: #e8edf3;
+  --pin-selected: #e8edf3;
+  --meal-breakfast: rgba(251, 191, 36, 0.14);
+  --meal-breakfast-ink: #fcd34d;
+  --meal-lunch: rgba(74, 222, 128, 0.14);
+  --meal-lunch-ink: #86efac;
+  --meal-dinner: rgba(129, 140, 248, 0.18);
+  --meal-dinner-ink: #a5b4fc;
+  --meal-snacks: rgba(251, 113, 133, 0.16);
+  --meal-snacks-ink: #fda4af;
+  --meal-drinks: rgba(56, 189, 248, 0.16);
+  --meal-drinks-ink: #7dd3fc;
+  --meal-other: #1f2a37;
+  --meal-other-ink: #a9b4c2;
+  /* Cards read as raised by a hairline of light along their top edge. */
+  --shadow-1: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 32px -8px rgba(0, 0, 0, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 @theme inline {
   --color-page: var(--bg);
-  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-card: var(--card);
+  --color-raised: var(--raised);
   --color-sunken: var(--sunken);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
@@ -77,19 +127,35 @@
   --color-line-strong: var(--line-strong);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
+  --color-active: var(--active);
+  --color-on-active: var(--on-active);
   --color-maize: var(--maize);
-  --color-on-maize: var(--on-maize);
+  --color-maize-ink: var(--maize-ink);
+  --color-maize-soft: var(--maize-soft);
   --color-now: var(--now);
-  --color-now-bg: var(--now-bg);
-  --color-now-dot: var(--now-dot);
-  --color-warn: var(--warn);
-  --color-warn-bg: var(--warn-bg);
-  --color-amber: var(--amber);
-  --color-amber-line: var(--amber-line);
-  --color-info: var(--info);
-  --color-info-line: var(--info-line);
-  --color-food: var(--food);
+  --color-now-soft: var(--now-soft);
+  --color-now-ink: var(--now-ink);
+  --color-soon: var(--soon);
+  --color-soon-soft: var(--soon-soft);
+  --color-soon-ink: var(--soon-ink);
+  --color-over: var(--over);
+  --color-members: var(--members);
+  --color-rsvp: var(--rsvp);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-focus: var(--focus);
+  --color-meal-breakfast: var(--meal-breakfast);
+  --color-meal-breakfast-ink: var(--meal-breakfast-ink);
+  --color-meal-lunch: var(--meal-lunch);
+  --color-meal-lunch-ink: var(--meal-lunch-ink);
+  --color-meal-dinner: var(--meal-dinner);
+  --color-meal-dinner-ink: var(--meal-dinner-ink);
+  --color-meal-snacks: var(--meal-snacks);
+  --color-meal-snacks-ink: var(--meal-snacks-ink);
+  --color-meal-drinks: var(--meal-drinks);
+  --color-meal-drinks-ink: var(--meal-drinks-ink);
+  --color-meal-other: var(--meal-other);
+  --color-meal-other-ink: var(--meal-other-ink);
   /* The old name, kept so pages written before the redesign still resolve. */
   --color-michigan-blue: var(--primary);
 
@@ -99,27 +165,24 @@
     'Bricolage Grotesque Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: 0.875rem;
+  --radius-panel: 1.25rem;
   --shadow-card: var(--shadow-1);
   --shadow-lift: var(--shadow-2);
   --spacing-18: 4.5rem;
 
-  --animate-ring: ring 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  --animate-ring: ring 2s ease-out infinite;
   --animate-shimmer: shimmer 1.6s linear infinite;
-  --animate-enter: enter 0.22s ease-out both;
-  @keyframes enter {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-  }
+  --animate-enter: enter 0.24s ease-out both;
+  --animate-fade: fade 0.3s ease-out both;
+  --animate-flash: flash 1.5s ease-out both;
   @keyframes ring {
     0% {
       transform: scale(1);
-      opacity: 0.7;
+      opacity: 0.65;
     }
     80%,
     100% {
-      transform: scale(2.4);
+      transform: scale(2.2);
       opacity: 0;
     }
   }
@@ -131,6 +194,23 @@
       background-position: -200% 0;
     }
   }
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes flash {
+    0%,
+    60% {
+      background-color: var(--maize-soft);
+    }
+  }
 }
 
 @layer base {
@@ -139,25 +219,22 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
   }
-  h1,
-  h2 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
-  }
-  /* One on-brand focus ring for everything: navy on light, maize on dark. */
+  /* One focus ring for everything: ink on light, maize on dark. */
   :focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
   ::selection {
     background: var(--maize);
-    color: var(--on-maize);
+    color: var(--maize-ink);
   }
 }
 
+/* Times and counts: fixed-width digits so they don't jitter as they tick. */
 @utility tabular {
-  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
 }
 
 /* Loading placeholder: a slow sheen instead of a spinner. */
@@ -192,33 +269,52 @@
   background: none;
   border: 0;
   padding: 0;
+  animation: var(--animate-fade);
 }
+/* Later: small, quiet, outlined in maize. */
 .map-pin-body {
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   display: grid;
   place-items: center;
   border-radius: 9999px;
-  background: var(--surface);
+  background: var(--panel);
   color: var(--ink);
-  border: 2px solid var(--ink);
-  box-shadow: var(--shadow-1);
+  border: 2px solid var(--maize);
+  box-shadow: 0 1px 3px rgba(14, 26, 43, 0.3);
   transition:
     transform 140ms ease,
     box-shadow 140ms ease;
 }
 .map-pin-body svg {
-  width: 15px;
-  height: 15px;
+  width: 12px;
+  height: 12px;
 }
-.map-pin[data-status='now'] .map-pin-body,
-.map-pin[data-status='soon'] .map-pin-body {
+/* Soon and now: filled maize with a light ring, growing with urgency. */
+.map-pin[data-status='soon'] .map-pin-body,
+.map-pin[data-status='now'] .map-pin-body {
+  width: 26px;
+  height: 26px;
   background: var(--maize);
-  color: var(--on-maize);
-  border-color: #0b1f3a;
+  color: var(--maize-ink);
+  border-color: var(--pin-ring);
+  box-shadow: 0 2px 6px rgba(14, 26, 43, 0.35);
 }
-.map-pin[data-status='now'] .map-pin-body::before {
+.map-pin[data-status='soon'] .map-pin-body svg,
+.map-pin[data-status='now'] .map-pin-body svg {
+  width: 14px;
+  height: 14px;
+}
+.map-pin[data-status='now'] .map-pin-body {
+  width: 30px;
+  height: 30px;
+}
+.map-pin[data-status='now'] .map-pin-body svg {
+  width: 16px;
+  height: 16px;
+}
+.map-pin[data-status='now']:not([data-gone]) .map-pin-body::before {
   content: '';
   position: absolute;
   inset: -2px;
@@ -227,70 +323,56 @@
   animation: var(--animate-ring);
   pointer-events: none;
 }
+/* Likely over, or ended: grey and set back, whatever its time status. */
 .map-pin[data-status='ended'] .map-pin-body,
 .map-pin[data-gone='true'] .map-pin-body {
-  opacity: 0.55;
+  background: var(--over);
+  color: var(--panel);
+  border-color: var(--pin-ring);
+  opacity: 0.7;
 }
 .map-pin:hover .map-pin-body,
-.map-pin.is-highlighted .map-pin-body {
-  transform: scale(1.25);
-  box-shadow: var(--shadow-2);
-}
+.map-pin.is-highlighted .map-pin-body,
 .map-pin.is-selected .map-pin-body {
-  transform: scale(1.35);
-  background: var(--maize);
-  color: var(--on-maize);
-  border-color: #0b1f3a;
+  transform: scale(1.25);
   box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--maize) 40%, transparent),
-    var(--shadow-2);
+    0 0 0 2px var(--pin-selected),
+    0 6px 14px rgba(14, 26, 43, 0.4);
+  opacity: 1;
 }
 .map-pin.is-highlighted,
-.map-pin.is-selected {
+.map-pin.is-selected,
+.map-pin:hover {
   z-index: 3;
 }
 .map-pin:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
-.map-cluster .map-pin-body {
+.map-cluster .map-pin-body,
+.map-cluster[data-status] .map-pin-body {
   width: 34px;
   height: 34px;
-  background: var(--primary);
-  color: var(--on-primary);
-  border-color: var(--surface);
+  background: var(--maize-soft);
+  /* The soft maize is translucent in dark mode; back it so the map doesn't show through. */
+  background-image:
+    linear-gradient(var(--maize-soft), var(--maize-soft)),
+    linear-gradient(var(--panel), var(--panel));
+  color: var(--ink);
+  border: 2px solid var(--maize);
   font: 700 13px/1 var(--font-sans);
-  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }
-.map-cluster[data-status='now'] .map-pin-body {
-  background: var(--maize);
-  color: var(--on-maize);
-  border-color: #0b1f3a;
+.map-cluster .map-pin-body::before {
+  content: none !important;
 }
 
 /* MapLibre chrome, restyled to match. */
 .maplibregl-map {
   font-family: var(--font-sans);
 }
-.maplibregl-ctrl-group {
-  border-radius: 0.75rem !important;
-  overflow: hidden;
-  background: var(--surface) !important;
-  box-shadow: var(--shadow-1) !important;
-  border: 1px solid var(--line);
-}
-.maplibregl-ctrl-group button {
-  width: 36px !important;
-  height: 36px !important;
-}
-.maplibregl-ctrl-group button + button {
-  border-top: 1px solid var(--line) !important;
-}
-[data-theme='dark'] .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-  filter: invert(1) brightness(1.6);
-}
 .maplibregl-ctrl-attrib {
-  background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
+  background: color-mix(in srgb, var(--panel) 80%, transparent) !important;
   color: var(--ink-2);
   font-size: 11px;
 }
@@ -298,33 +380,34 @@
 .maplibregl-ctrl-attrib-inner {
   color: var(--ink-2) !important;
 }
-/* Phones pinch to zoom; the buttons would sit under the page's own controls. */
-@media (max-width: 1023px) {
-  .maplibregl-ctrl-top-right {
-    display: none;
-  }
-}
 [data-theme='dark'] .maplibregl-ctrl-attrib-button {
   filter: invert(1);
 }
+.maplibregl-popup {
+  animation: var(--animate-fade);
+}
 .maplibregl-popup-content {
-  background: var(--surface) !important;
+  background: var(--raised) !important;
   color: var(--ink);
-  border-radius: 0.875rem !important;
+  border-radius: var(--radius-card) !important;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-2) !important;
   padding: 0 !important;
   font-family: var(--font-sans);
 }
-.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-  border-top-color: var(--surface) !important;
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--raised) !important;
 }
-.maplibregl-popup-anchor-top .maplibregl-popup-tip {
-  border-bottom-color: var(--surface) !important;
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--raised) !important;
 }
 .maplibregl-popup-anchor-left .maplibregl-popup-tip {
-  border-right-color: var(--surface) !important;
+  border-right-color: var(--raised) !important;
 }
 .maplibregl-popup-anchor-right .maplibregl-popup-tip {
-  border-left-color: var(--surface) !important;
+  border-left-color: var(--raised) !important;
 }
