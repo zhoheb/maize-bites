@@ -53,9 +53,9 @@ describe('buildDemoEvents', () => {
   it.each([
     ['afternoon', AFTERNOON],
     ['small hours', SMALL_HOURS],
-  ])('gives 17 upcoming events with three live now and one starting soon (%s)', (_label, now) => {
+  ])('gives 20 upcoming events with three live now and one starting soon (%s)', (_label, now) => {
     const demo = buildDemoEvents(now);
-    expect(demo).toHaveLength(17);
+    expect(demo).toHaveLength(20);
     expect(demo.every((d) => d.endsAt > now && d.endsAt > d.startsAt)).toBe(true);
     expect(demo.filter((d) => d.startsAt <= now)).toHaveLength(3);
     const soon = demo.filter(
@@ -69,7 +69,7 @@ describe('buildDemoEvents', () => {
 
   it('keeps several events on the current local day', () => {
     const endOfToday = startOfNextLocalDay(SMALL_HOURS, CAMPUS_TIME_ZONE);
-    expect(buildDemoEvents(SMALL_HOURS).filter((d) => d.startsAt < endOfToday).length).toBe(10);
+    expect(buildDemoEvents(SMALL_HOURS).filter((d) => d.startsAt < endOfToday).length).toBe(12);
   });
 });
 
@@ -91,21 +91,22 @@ describe('seedDemoEvents', () => {
   it('publishes clearly marked events across Central and North campus', async () => {
     await seedBuildings(db);
 
-    expect(await seedDemoEvents(db, AFTERNOON)).toBe(17);
+    expect(await seedDemoEvents(db, AFTERNOON)).toBe(20);
 
     const rows = await db.select().from(events);
-    expect(rows).toHaveLength(17);
+    expect(rows).toHaveLength(20);
     expect(rows.every((e) => e.source === 'submission')).toBe(true);
     expect(rows.every((e) => e.title.startsWith(DEMO_TITLE_PREFIX))).toBe(true);
     expect(rows.every((e) => e.sourceEventId.startsWith('demo-'))).toBe(true);
     expect(rows.every((e) => e.description?.includes('This is demo data'))).toBe(true);
 
     const { items } = await listPublishedEvents(db, { from: AFTERNOON, limit: 100 });
-    expect(items).toHaveLength(17);
+    expect(items).toHaveLength(20);
     const campuses = items.map((i) => i.building?.campus);
     expect(campuses.filter((c) => c === 'central').length).toBeGreaterThanOrEqual(5);
     expect(campuses.filter((c) => c === 'north').length).toBeGreaterThanOrEqual(5);
-    expect(items.every((i) => (i.classification?.foodItems.length ?? 0) > 0)).toBe(true);
+    // One listing names no food at all, so the site can be seen handling that.
+    expect(items.filter((i) => (i.classification?.foodItems.length ?? 0) === 0)).toHaveLength(1);
   });
 
   it('marks one live event likely over, with three fresh reports', async () => {
@@ -129,11 +130,11 @@ describe('seedDemoEvents', () => {
     await seedDemoEvents(db, AFTERNOON);
     await seedDemoEvents(db, new Date(AFTERNOON.getTime() + 3_600_000));
 
-    expect(await db.$count(events)).toBe(18);
-    expect(await db.$count(classifications)).toBe(17);
+    expect(await db.$count(events)).toBe(21);
+    expect(await db.$count(classifications)).toBe(20);
     expect(await db.$count(reports)).toBe(3);
 
-    expect(await clearDemoEvents(db)).toBe(17);
+    expect(await clearDemoEvents(db)).toBe(20);
     expect(await db.select({ id: events.id }).from(events)).toEqual([{ id: real.id }]);
     expect(await db.$count(users)).toBe(0);
     expect(await db.$count(classifications, eq(classifications.method, 'manual'))).toBe(0);

@@ -41,7 +41,8 @@ interface DemoSpec {
   room: string;
   sponsor: string;
   foodItems: string[];
-  mealType: MealType;
+  /** Null when the listing names no meal. */
+  mealType: MealType | null;
   dietary: DietaryTag[];
   audience: Audience;
   /** Minutes from now, for events that should be live or about to start. */
@@ -76,10 +77,11 @@ const SPECS: DemoSpec[] = [
     room: 'First floor lobby',
     sponsor: 'University Library',
     foodItems: ['bagels', 'coffee', 'fruit'],
-    mealType: 'snacks',
+    mealType: 'breakfast',
     dietary: ['vegetarian'],
     audience: 'open',
-    startsInMinutes: -10,
+    day: 1,
+    hour: 8.5,
     durationMinutes: 90,
   },
   {
@@ -109,7 +111,50 @@ const SPECS: DemoSpec[] = [
     startsInMinutes: 35,
     durationMinutes: 90,
   },
+  {
+    title: 'Grad student coffee hour',
+    description: 'Last call: the coffee and pastries come down at the top of the hour.',
+    building: 'Rackham Graduate School',
+    room: 'West Lounge',
+    sponsor: 'Rackham Student Government',
+    foodItems: ['coffee', 'pastries'],
+    mealType: 'snacks',
+    dietary: [],
+    audience: 'members',
+    startsInMinutes: -80,
+    durationMinutes: 90,
+  },
   // Later today.
+  {
+    title:
+      'An evening with the Center for Southeast Asian Studies: film screening, panel discussion, and community reception',
+    description: 'Doors at 6. A reception with food follows the panel.',
+    building: 'Weill Hall',
+    room: 'Betty Ford Classroom',
+    sponsor: 'Center for Southeast Asian Studies',
+    // The listing promises food without naming any, so there is nothing to show for it.
+    foodItems: [],
+    mealType: null,
+    dietary: [],
+    audience: 'open',
+    day: 0,
+    hour: 18,
+    durationMinutes: 150,
+  },
+  {
+    title: 'Inclusive potluck-style dinner (catered)',
+    description: 'Every dish is labelled. Vegan, halal, kosher, gluten-free and nut-free plates.',
+    building: 'Trotter Multicultural Center',
+    room: 'Multipurpose Room',
+    sponsor: 'Office of Multi-Ethnic Student Affairs',
+    foodItems: ['rice bowls', 'curry', 'flatbread'],
+    mealType: 'dinner',
+    dietary: ['vegan', 'vegetarian', 'halal', 'kosher', 'gluten_free', 'nut_free', 'dairy_free'],
+    audience: 'rsvp',
+    day: 0,
+    hour: 20,
+    durationMinutes: 90,
+  },
   {
     title: 'Donuts with the Dean',
     description: 'Drop in for cider donuts and a chat.',
@@ -319,8 +364,10 @@ export interface DemoEvent extends DemoSpec {
 }
 
 /**
- * The demo events with times placed relative to `now`: three live (one of them likely over),
- * one starting within the hour, the rest later today and through the week. A "today" slot that has already ended moves to the same time tomorrow, so
+ * The demo events with times placed relative to `now`: three live (one early, one about to end, one
+ * likely over), one starting within the hour, the rest later today and through the week. Between
+ * them they cover every state the site draws, including a very long title, a listing with no
+ * named food, one with every dietary tag, and two events in the same building. A "today" slot that has already ended moves to the same time tomorrow, so
  * the list is the same size whatever time of day the seed runs.
  */
 export function buildDemoEvents(now: Date): DemoEvent[] {
