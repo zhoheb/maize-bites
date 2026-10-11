@@ -1,5 +1,5 @@
 // Generates the PWA icons in public/icons from one geometric logo: a maize circle with a bite
-// taken out, on Michigan blue. No image dependencies: shapes are rasterized with 4x4
+// taken out and a crumb beside it, on navy. No image dependencies: shapes are rasterized with 4x4
 // supersampling and written as PNG with node:zlib.
 //
 //   node scripts/generate-icons.js
@@ -7,16 +7,18 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
 const OUT = new URL('../public/icons/', import.meta.url);
-const BLUE = [0, 39, 76];
+const BLUE = [11, 31, 58];
 const MAIZE = [255, 203, 5];
 
 // Logo in unit coordinates (0..1). Bites are circles cut out of the plate.
-const PLATE = { x: 0.5, y: 0.53, r: 0.29 };
+// Keep in step with src/components/Logo.tsx, which draws the same mark in the header.
+const PLATE = { x: 0.5, y: 0.53, r: 0.3 };
 const BITES = [
-  { x: 0.745, y: 0.285, r: 0.11 },
-  { x: 0.625, y: 0.215, r: 0.07 },
-  { x: 0.83, y: 0.405, r: 0.07 },
+  { x: 0.76, y: 0.29, r: 0.13 },
+  { x: 0.62, y: 0.2, r: 0.08 },
+  { x: 0.85, y: 0.43, r: 0.08 },
 ];
+const CRUMB = { x: 0.8, y: 0.18, r: 0.035 };
 
 const inCircle = (px, py, c) => (px - c.x) ** 2 + (py - c.y) ** 2 <= c.r ** 2;
 
@@ -43,7 +45,11 @@ function render(size, { rounded, scale = 1 }) {
           bg++;
           const lu = 0.5 + (u - 0.5) / scale;
           const lv = 0.5 + (v - 0.5) / scale;
-          if (inCircle(lu, lv, PLATE) && !BITES.some((b) => inCircle(lu, lv, b))) maize++;
+          if (
+            (inCircle(lu, lv, PLATE) && !BITES.some((b) => inCircle(lu, lv, b))) ||
+            inCircle(lu, lv, CRUMB)
+          )
+            maize++;
         }
       }
       const i = (y * size + x) * 4;
@@ -94,11 +100,12 @@ function png(size, rgba) {
 }
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#00274c"/>
+  <rect width="100" height="100" rx="22" fill="#0b1f3a"/>
   <mask id="bite"><rect width="100" height="100" fill="#fff"/>${BITES.map(
     (b) => `<circle cx="${b.x * 100}" cy="${b.y * 100}" r="${b.r * 100}" fill="#000"/>`,
   ).join('')}</mask>
   <circle cx="${PLATE.x * 100}" cy="${PLATE.y * 100}" r="${PLATE.r * 100}" fill="#ffcb05" mask="url(#bite)"/>
+  <circle cx="${CRUMB.x * 100}" cy="${CRUMB.y * 100}" r="${CRUMB.r * 100}" fill="#ffcb05"/>
 </svg>
 `;
 
