@@ -1,4 +1,4 @@
-import type { FoodEvent } from '@maize-bites/shared';
+import type { EventDetail, FoodEvent, HealthResponse } from '@maize-bites/shared';
 
 export function makeEvent(overrides: Partial<FoodEvent> = {}): FoodEvent {
   return {
@@ -27,3 +27,39 @@ export function makeEvent(overrides: Partial<FoodEvent> = {}): FoodEvent {
     ...overrides,
   };
 }
+
+export function makeDetail(overrides: Partial<EventDetail> = {}): EventDetail {
+  return {
+    ...makeEvent(),
+    classification: null,
+    reportCounts: { food_gone: 0, still_food: 0, not_free: 0, wrong_info: 0 },
+    lastReportAt: null,
+    ...overrides,
+  };
+}
+
+/** A distinct, valid event id for the nth fixture. */
+export const eventId = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
+/** An event placed relative to `now`: starting `startMin` minutes from it, lasting `lengthMin`. */
+export function eventAt(
+  now: Date,
+  startMin: number,
+  lengthMin: number,
+  overrides: Partial<FoodEvent> = {},
+): FoodEvent {
+  const start = now.getTime() + startMin * 60_000;
+  return makeEvent({
+    startsAt: new Date(start).toISOString(),
+    endsAt: new Date(start + lengthMin * 60_000).toISOString(),
+    ...overrides,
+  });
+}
+
+export const HEALTH: HealthResponse = {
+  status: 'ok',
+  database: 'ok',
+  lastSuccessfulIngestionAt: '2026-10-01T15:57:00.000Z',
+  ingestionStale: false,
+  sources: [],
+};
