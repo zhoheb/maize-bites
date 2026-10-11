@@ -8,7 +8,7 @@ import {
 } from '@maize-bites/shared';
 
 // Home page state lives in the URL so views are shareable and survive reloads:
-//   ?tab=today&campus=central,north&diet=vegan&open=1&meal=lunch&event=<id>&view=map
+//   ?tab=today&campus=central,north&diet=vegan&open=1&meal=lunch&q=pizza&event=<id>&view=list
 
 export const TABS = ['now', 'today', 'week'] as const;
 export type Tab = (typeof TABS)[number];
@@ -62,6 +62,15 @@ export function hasActiveFilters(filters: Filters): boolean {
   );
 }
 
+export function countActiveFilters(filters: Filters): number {
+  return (
+    filters.campuses.length +
+    filters.dietary.length +
+    (filters.openOnly ? 1 : 0) +
+    (filters.mealType === null ? 0 : 1)
+  );
+}
+
 export function toggle<T>(list: readonly T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
@@ -79,4 +88,46 @@ export function toApiParams(filters: Filters): Record<string, string> {
   if (filters.openOnly) params['open_only'] = 'true';
   if (filters.mealType) params['meal_type'] = filters.mealType;
   return params;
+}
+
+export interface FilterChip {
+  key: string;
+  label: string;
+  /** The filters with this one removed. */
+  without: Filters;
+}
+
+/** One removable chip per active filter, in the order of the filter row. */
+export function activeFilterChips(
+  filters: Filters,
+  labels: {
+    campus: Record<Campus, string>;
+    dietary: Record<DietaryTag, string>;
+    meal: Record<MealType, string>;
+  },
+): FilterChip[] {
+  return [
+    ...filters.campuses.map((c) => ({
+      key: `campus-${c}`,
+      label: `${labels.campus[c]} Campus`,
+      without: { ...filters, campuses: filters.campuses.filter((v) => v !== c) },
+    })),
+    ...filters.dietary.map((d) => ({
+      key: `diet-${d}`,
+      label: labels.dietary[d],
+      without: { ...filters, dietary: filters.dietary.filter((v) => v !== d) },
+    })),
+    ...(filters.mealType
+      ? [
+          {
+            key: `meal-${filters.mealType}`,
+            label: labels.meal[filters.mealType],
+            without: { ...filters, mealType: null },
+          },
+        ]
+      : []),
+    ...(filters.openOnly
+      ? [{ key: 'open', label: 'Open to all', without: { ...filters, openOnly: false } }]
+      : []),
+  ];
 }

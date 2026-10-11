@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { parseFilters, parseTab, withFilters, type Filters, type Tab } from '../lib/filters';
 
-export type View = 'list' | 'map';
+/** On phones: the map with the list in a sheet over it (default), or the list alone. */
+export type View = 'map' | 'list';
 
 function setOrDelete(params: URLSearchParams, key: string, value: string | null): URLSearchParams {
   const next = new URLSearchParams(params);
@@ -15,7 +16,7 @@ function setOrDelete(params: URLSearchParams, key: string, value: string | null)
 export function useHomeParams() {
   const [params, setParams] = useSearchParams();
   const filters = useMemo(() => parseFilters(params), [params]);
-  const view: View = params.get('view') === 'map' ? 'map' : 'list';
+  const view: View = params.get('view') === 'list' ? 'list' : 'map';
 
   const update = useCallback(
     (change: (prev: URLSearchParams) => URLSearchParams, push = false) => {
@@ -28,11 +29,18 @@ export function useHomeParams() {
     params,
     filters,
     tab: parseTab(params),
+    search: params.get('q') ?? '',
     selectedId: params.get('event'),
     view,
     setFilters: useCallback(
       (f: Filters) => {
         update((prev) => withFilters(prev, f));
+      },
+      [update],
+    ),
+    setSearch: useCallback(
+      (q: string) => {
+        update((prev) => setOrDelete(prev, 'q', q === '' ? null : q));
       },
       [update],
     ),
@@ -45,7 +53,7 @@ export function useHomeParams() {
     ),
     setView: useCallback(
       (v: View) => {
-        update((prev) => setOrDelete(prev, 'view', v === 'list' ? null : v));
+        update((prev) => setOrDelete(prev, 'view', v === 'map' ? null : v));
       },
       [update],
     ),
