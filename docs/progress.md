@@ -605,8 +605,9 @@ email = '...'`. There is no UI for it, on purpose.
     the three ranges parallel.
 12. **Phone search is behind an icon** in the sheet header, so the peek can show the first
     card. `/` opens it.
-13. **`main` was fast-forwarded locally and not pushed.** `render.yaml` and `vercel.json`
-    suggest a push deploys, and nothing here has been checked against production data.
+13. **`main` was fast-forwarded locally to `ui-v3`.** This repository has no git remote
+    configured, so nothing was pushed or deployed. Nothing here has been checked against
+    production data.
 
 ## Before deploying
 
