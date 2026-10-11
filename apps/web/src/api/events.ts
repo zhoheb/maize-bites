@@ -7,6 +7,7 @@ import {
   type HealthResponse,
   type ListEventsResponse,
 } from '@maize-bites/shared';
+import { config } from '../config';
 import { toApiParams, type Filters, type Tab } from '../lib/filters';
 import { getJson, type RequestOptions } from './client';
 
@@ -29,15 +30,25 @@ export function tabRequest(tab: Tab, now: Date): { path: string; params: Record<
   }
 }
 
-export function fetchEventPage(
+/** Demo events are marked by this title prefix (packages/db/src/seed/demo.ts). */
+export const DEMO_TITLE_PREFIX = '[demo]';
+
+/** Drops demo events unless the page was built or served with VITE_SHOW_DEMO=true. */
+export function withoutDemo(page: ListEventsResponse, showDemo: boolean): ListEventsResponse {
+  if (showDemo) return page;
+  return { ...page, events: page.events.filter((e) => !e.title.startsWith(DEMO_TITLE_PREFIX)) };
+}
+
+export async function fetchEventPage(
   tab: Tab,
   filters: Filters,
   cursor: string | null,
-  options: Pick<RequestOptions, 'signal' | 'fetchFn'> & { now?: Date } = {},
+  options: Pick<RequestOptions, 'signal' | 'fetchFn'> & { now?: Date; showDemo?: boolean } = {},
 ): Promise<ListEventsResponse> {
   const { path, params } = tabRequest(tab, options.now ?? new Date());
-  return getJson(path, listEventsResponseSchema, {
-    ...options,
+  const page = await getJson(path, listEventsResponseSchema, {
+    ...(options.signal ? { signal: options.signal } : {}),
+    ...(options.fetchFn ? { fetchFn: options.fetchFn } : {}),
     params: {
       ...params,
       ...toApiParams(filters),
@@ -45,6 +56,7 @@ export function fetchEventPage(
       cursor: cursor ?? undefined,
     },
   });
+  return withoutDemo(page, options.showDemo ?? config.VITE_SHOW_DEMO);
 }
 
 export function fetchEventDetail(

@@ -12,8 +12,34 @@ import { HomePage } from './HomePage';
 // event is hovered and focused) and offers one "pin" per event, so the list↔map wiring is
 // tested without a real map.
 vi.mock('../components/EventMap', () => ({
-  default: ({ events, hoveredId, focusedId, onFocus, onHover, onOpen }: EventMapProps) => (
-    <div data-testid="map" data-hovered={hoveredId ?? ''} data-focused={focusedId ?? ''}>
+  default: ({
+    events,
+    hoveredId,
+    focusedId,
+    onFocus,
+    onHover,
+    onOpen,
+    onSearchArea,
+    peek,
+  }: EventMapProps) => (
+    <div
+      data-testid="map"
+      data-hovered={hoveredId ?? ''}
+      data-focused={focusedId ?? ''}
+      data-peek={String(peek ?? true)}
+    >
+      <button
+        type="button"
+        onClick={() => onSearchArea?.({ west: -84, south: 42, east: -83, north: 43 })}
+      >
+        search this area
+      </button>
+      <button
+        type="button"
+        onClick={() => onSearchArea?.({ west: 0, south: 0, east: 1, north: 1 })}
+      >
+        search an empty area
+      </button>
       {events.map((e) => (
         <button
           key={e.id}
@@ -94,12 +120,72 @@ afterEach(() => {
 });
 
 describe('HomePage', () => {
-  it('leads with how much free food is live right now', async () => {
-    api();
-    renderApp(<HomePage />, '/?tab=week');
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '1 spot with free food right now' }),
-    ).toBeTruthy();
+  describe('headline', () => {
+    const headline = (name: string | RegExp) => screen.findByRole('heading', { level: 1, name });
+
+    // The headline is computed from the list on screen, so the two can never disagree.
+    it.each([
+      ['/', '1 spot with free food right now'],
+      ['/?tab=today', '3 spots today'],
+      ['/?tab=week', '3 spots this week'],
+    ])('at %s reads "%s"', async (url, text) => {
+      api();
+      renderApp(<HomePage />, url);
+      expect(await headline(text)).toBeTruthy();
+    });
+
+    it('follows search and filters', async () => {
+      api();
+      const { user } = renderApp(<HomePage />, '/?tab=week');
+      await cardFor('Leftover pizza');
+      await user.type(screen.getByRole('searchbox'), 'ramen');
+      expect(await headline('1 spot this week')).toBeTruthy();
+    });
+
+    it('with nothing live, links to what is next', async () => {
+      api([soon, nextWeek]);
+      renderApp(<HomePage />, '/');
+      const next = await screen.findByRole('link', {
+        name: /^Bagels at Michigan Union in \d+ min$/,
+      });
+      expect(next.getAttribute('href')).toBe(`/?event=${soon.id}`);
+      expect(next.closest('h1')?.textContent).toMatch(/^Nothing right now — next up: Bagels/);
+    });
+  });
+
+  describe('freshness', () => {
+    const dot = () => document.querySelector('[data-freshness]')?.getAttribute('data-freshness');
+    const healthAt = (minutesAgo: number) => ({
+      ...HEALTH,
+      lastSuccessfulIngestionAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+    });
+    const withHealth = (minutesAgo: number) =>
+      mockApi({
+        'GET /api/me': SIGNED_OUT,
+        'GET /api/health': healthAt(minutesAgo),
+        'GET /api/events/now': { events: [live], nextCursor: null },
+      });
+
+    it('is green only when the data is minutes old', async () => {
+      withHealth(4);
+      renderApp(<HomePage />);
+      expect(await screen.findByText(/^Updated/)).toBeTruthy();
+      expect(dot()).toBe('fresh');
+    });
+
+    it('is amber, not green, at an hour and a quarter', async () => {
+      withHealth(74);
+      renderApp(<HomePage />);
+      expect((await screen.findByText(/^Updated/)).textContent).toBe('Updated 1 hr 14 min ago');
+      expect(dot()).toBe('aging');
+    });
+
+    it('is grey beyond two hours', async () => {
+      withHealth(200);
+      renderApp(<HomePage />);
+      await screen.findByText(/^Updated/);
+      expect(dot()).toBe('old');
+    });
   });
 
   it('groups the list by urgency under headings', async () => {
@@ -122,13 +208,40 @@ describe('HomePage', () => {
     expect(groups[2]?.[1]).toEqual(['Ramen night']);
   });
 
+  it('shows each event’s time once', async () => {
+    api();
+    renderApp(<HomePage />, '/?tab=week');
+    await cardFor('Leftover pizza');
+    for (const card of screen.getAllByRole('article')) {
+      expect(card.querySelectorAll('time')).toHaveLength(1);
+    }
+  });
+
+  it('offers "Search this area" results as a removable chip', async () => {
+    api();
+    const { user } = renderApp(<HomePage />, '/?tab=week');
+    await cardFor('Leftover pizza');
+    // The stand-in map searches an area that holds only the Duderstadt Center.
+    await user.click(screen.getByRole('button', { name: 'search this area' }));
+    expect(screen.getAllByRole('article')).toHaveLength(3);
+
+    await user.click(screen.getByRole('button', { name: 'search an empty area' }));
+    expect(await screen.findByText('Nothing in this part of the map.')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Show everywhere' }));
+    expect(screen.getAllByRole('article')).toHaveLength(3);
+
+    await user.click(screen.getByRole('button', { name: 'search this area' }));
+    await user.click(screen.getByRole('button', { name: 'Remove filter: Map area' }));
+    expect(screen.queryByRole('button', { name: 'Remove filter: Map area' })).toBeNull();
+  });
+
   it('badges only the exceptions', async () => {
     api();
     renderApp(<HomePage />, '/?tab=week');
     expect((await cardFor('Leftover pizza')).textContent).not.toMatch(/Open to all|Members|RSVP/);
     expect((await cardFor('Bagel break')).textContent).toContain('Members only');
     expect((await cardFor('Ramen night')).textContent).toContain('RSVP required');
-    // "Open to all" exists once, as the filter switch, and on no card.
+    // "Open to all" exists once, as the filter switch: on no card, and with no chip even when on.
     expect(screen.getAllByText('Open to all')).toHaveLength(1);
   });
 
@@ -177,6 +290,24 @@ describe('HomePage', () => {
       const dialog = await screen.findByRole('dialog', { name: 'Event details' });
       expect(await within(dialog).findByRole('heading', { name: 'Leftover pizza' })).toBeTruthy();
       expect(map().dataset['focused']).toBe(live.id);
+      // The peek card would sit under the drawer, so it is put away while the details are open.
+      expect(map().dataset['peek']).toBe('false');
+    });
+
+    it('washes the row in colour for a moment after its pin is picked', async () => {
+      api();
+      const { user } = renderApp(<HomePage />, '/?tab=week');
+      await cardFor('Ramen night');
+      await user.click(screen.getByRole('button', { name: 'pin: Ramen night' }));
+      expect((await cardFor('Ramen night')).className).toContain('animate-flash');
+      await waitFor(
+        () => {
+          expect(screen.getByRole('article', { name: 'Ramen night' }).className).not.toContain(
+            'animate-flash',
+          );
+        },
+        { timeout: 2500 },
+      );
     });
 
     it('the pin popover opens the details', async () => {
@@ -200,7 +331,7 @@ describe('HomePage', () => {
       'Ramen night',
     ]);
     // The map shows the same narrowed set.
-    expect(within(map()).getAllByRole('button')).toHaveLength(1);
+    expect(within(map()).getAllByRole('button', { name: /^pin:/ })).toHaveLength(1);
 
     await user.clear(box);
     await user.type(box, 'union');
@@ -259,8 +390,8 @@ describe('HomePage', () => {
   it('has an empty state with a next step when nothing is on', async () => {
     api([]);
     renderApp(<HomePage />);
-    expect(await screen.findByText('No free food right now.')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'See later today' }).getAttribute('href')).toBe(
+    expect(await screen.findByText('Quiet right now.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'See today' }).getAttribute('href')).toBe(
       '/?tab=today',
     );
     expect(screen.getByRole('link', { name: 'Get alerts' }).getAttribute('href')).toBe('/alerts');
@@ -271,7 +402,7 @@ describe('HomePage', () => {
     const { user } = renderApp(<HomePage />, '/?tab=week&diet=kosher');
     expect(await screen.findByText('Nothing matches those filters.')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
-    expect(await screen.findByText('No free food found this week yet.')).toBeTruthy();
+    expect(await screen.findByText('Nothing this week yet.')).toBeTruthy();
   });
 
   it('shows an error with a retry that works', async () => {
@@ -307,7 +438,7 @@ describe('HomePage', () => {
     mockApi({ 'GET /api/me': SIGNED_OUT }); // every other request now fails
     renderApp(<HomePage />, '/?tab=week');
     expect(await cardFor('Ramen night')).toBeTruthy();
-    expect(screen.getByText("You're offline.")).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/^Offline — showing data from \d+:\d\d/);
   });
 
   it('on a phone, puts the list in a sheet over the map with a filter button', async () => {
@@ -336,7 +467,21 @@ describe('HomePage', () => {
     expect(
       within(filters).getByRole('button', { name: 'North' }).getAttribute('aria-pressed'),
     ).toBe('true');
-    expect(await within(filters).findByRole('button', { name: 'Show 3 events' })).toBeTruthy();
+    expect(await within(filters).findByRole('button', { name: 'Show 3 spots' })).toBeTruthy();
+  });
+
+  it('on a phone, keeps search behind a button until it is wanted', async () => {
+    setMediaQueries(() => false);
+    api();
+    const { user } = renderApp(<HomePage />, '/?tab=week');
+    await cardFor('Leftover pizza');
+    expect(screen.queryByRole('searchbox')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    const box = screen.getByRole('searchbox', { name: 'Search events' });
+    expect(document.activeElement).toBe(box);
+    await user.type(box, 'ramen');
+    expect(screen.getAllByRole('article')).toHaveLength(1);
   });
 
   it('on a phone, the list view is a plain list with no map', async () => {

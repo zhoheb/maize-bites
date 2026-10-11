@@ -25,7 +25,7 @@ function Fieldset({
 }) {
   return (
     <fieldset className="border-t border-line pt-5 first:border-t-0 first:pt-0">
-      <legend className="float-left mb-1 w-full text-base font-bold text-ink">{legend}</legend>
+      <legend className="float-left mb-1 w-full text-base font-semibold text-ink">{legend}</legend>
       {hint && <p className="clear-left mb-3 text-sm text-ink-2">{hint}</p>}
       <div className="clear-left">{children}</div>
     </fieldset>
@@ -50,7 +50,7 @@ export function AlertsPage() {
 
   if (me.isPending || (user !== null && saved.isPending)) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-10" role="status">
+      <div className="mx-auto max-w-[35rem] px-4 py-10" role="status">
         <span className="sr-only">Loading your alert settings…</span>
         <div aria-hidden="true" className="h-64 rounded-card bg-line motion-safe:animate-pulse" />
       </div>
@@ -59,9 +59,9 @@ export function AlertsPage() {
 
   if (user === null) {
     return (
-      <div className="mx-auto max-w-md px-4 py-10">
+      <div className="mx-auto max-w-[35rem] px-4 py-10">
         <div className={card}>
-          <h1 className="text-2xl font-bold text-ink">Free food alerts</h1>
+          <h1 className="text-2xl font-semibold text-ink">Free food alerts</h1>
           <p className="mt-3 text-ink-2">
             Get an email or a push notification when free food you'd want shows up: your campus,
             your diet, open events only. Or a single 7:30 AM digest.
@@ -111,10 +111,10 @@ function AlertsForm({ email, initial }: { email: string; initial: AlertPreferenc
   const quietOn = draft.quietHours !== null;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-[35rem] px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Alerts</h1>
+          <h1 className="text-2xl font-semibold text-ink">Alerts</h1>
           <p className="mt-1 text-sm text-ink-2">Signed in as {email}</p>
         </div>
         <button

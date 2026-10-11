@@ -33,11 +33,11 @@ export function SignInPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-10">
+    <div className="mx-auto max-w-[35rem] px-4 py-10">
       <div className={card}>
         {state.step === 'sent' ? (
           <div role="status">
-            <h1 className="text-2xl font-bold text-ink">Check your email</h1>
+            <h1 className="text-2xl font-semibold text-ink">Check your email</h1>
             <p className="mt-3 text-ink-2">
               We sent a sign-in link to <strong>{state.email}</strong>. It works once and expires in
               15 minutes.
@@ -63,7 +63,7 @@ export function SignInPage() {
               void submit();
             }}
           >
-            <h1 className="text-2xl font-bold text-ink">Sign in</h1>
+            <h1 className="text-2xl font-semibold text-ink">Sign in</h1>
             <p className="mt-2 text-ink-2">
               Get free-food alerts. No password: we'll email you a link.
             </p>
@@ -86,7 +86,7 @@ export function SignInPage() {
               className={`${inputClass} mt-1.5`}
             />
             {state.step === 'form' && state.error ? (
-              <p id="email-error" role="alert" className="mt-2 text-sm font-medium text-warn">
+              <p id="email-error" role="alert" className="mt-2 text-sm font-medium text-danger">
                 {state.error}
               </p>
             ) : (

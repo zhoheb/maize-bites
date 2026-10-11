@@ -7,6 +7,11 @@ const configSchema = z.object({
    * OpenFreeMap's free OSM tiles) in both themes. Leave unset to use the built-in styles.
    */
   VITE_MAP_STYLE_URL: z.url().optional(),
+  /**
+   * Show events whose titles start with "[demo]" (from `pnpm db:seed:demo`). Off unless set, so
+   * demo data in a local database never reaches the page by accident.
+   */
+  VITE_SHOW_DEMO: z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0', ''] }).default(false),
 });
 
 export const config = configSchema.parse(import.meta.env);

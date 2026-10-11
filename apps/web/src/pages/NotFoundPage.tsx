@@ -2,7 +2,7 @@ import { EmptyState } from '../components/States';
 
 export function NotFoundPage() {
   return (
-    <div className="mx-auto max-w-xl px-4 py-12">
+    <div className="mx-auto max-w-[35rem] px-4 py-10">
       <h1 className="sr-only">Page not found</h1>
       <EmptyState
         title="That page doesn't exist."

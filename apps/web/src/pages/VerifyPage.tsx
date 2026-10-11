@@ -35,11 +35,11 @@ export function VerifyPage() {
   }, [token, client, navigate]);
 
   return (
-    <div className="mx-auto max-w-md px-4 py-10">
+    <div className="mx-auto max-w-[35rem] px-4 py-10">
       <div className={card} role={failed ? 'alert' : 'status'}>
         {failed ? (
           <>
-            <h1 className="text-2xl font-bold text-ink">That link didn't work</h1>
+            <h1 className="text-2xl font-semibold text-ink">That link didn't work</h1>
             <p className="mt-3 text-ink-2">Sign-in links work once and expire after 15 minutes.</p>
             <Link to="/sign-in" className={`${primaryButton} mt-5`}>
               Send a new link

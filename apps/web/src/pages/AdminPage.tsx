@@ -42,7 +42,7 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
   const id = `admin-${title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
   return (
     <section aria-labelledby={id} className={card}>
-      <h2 id={id} className="text-lg font-bold text-ink">
+      <h2 id={id} className="text-lg font-semibold text-ink">
         {title}
       </h2>
       <div className="mt-3">{children}</div>
@@ -75,8 +75,8 @@ function EventReview({ item }: { item: QueueEvent }) {
   return (
     <li className="border-t border-line py-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="info">{SOURCE_LABELS[event.source] ?? event.source}</Badge>
-        {flag && <Badge tone="warn">Classifier failed</Badge>}
+        <Badge tone="neutral">{SOURCE_LABELS[event.source] ?? event.source}</Badge>
+        {flag && <Badge tone="danger">Classifier failed</Badge>}
         {classification && (
           <Badge>
             {classification.method} {Math.round(classification.confidence * 100)}%
@@ -91,7 +91,7 @@ function EventReview({ item }: { item: QueueEvent }) {
       {classification?.evidence && (
         <p className="mt-1 text-sm text-ink-2">Evidence: “{classification.evidence}”</p>
       )}
-      {flag && <p className="mt-1 text-sm text-amber">{flag.detail ?? flag.reason}</p>}
+      {flag && <p className="mt-1 text-sm text-members">{flag.detail ?? flag.reason}</p>}
       {event.url && (
         <a
           href={event.url}
@@ -179,7 +179,7 @@ function EventReview({ item }: { item: QueueEvent }) {
         </button>
       </div>
       {override.isError && (
-        <p role="alert" className="mt-2 text-sm font-medium text-warn">
+        <p role="alert" className="mt-2 text-sm font-medium text-danger">
           Couldn't save that. Try again.
         </p>
       )}
@@ -225,7 +225,7 @@ function TipReview({ tip }: { tip: ReviewQueueResponse['submissions'][number] })
         </button>
       </div>
       {review.isError && (
-        <p role="alert" className="mt-2 text-sm font-medium text-warn">
+        <p role="alert" className="mt-2 text-sm font-medium text-danger">
           Couldn't save that. Try again.
         </p>
       )}
@@ -298,7 +298,7 @@ function MissRow({
       </span>
       <select
         aria-label={`Building for ${miss.locationName}`}
-        className="min-h-10 max-w-44 rounded-lg border border-line-strong bg-surface px-2 text-sm"
+        className="min-h-10 max-w-44 rounded-lg border border-line-strong bg-card px-2 text-sm"
         value={buildingId}
         onChange={(e) => {
           setBuildingId(e.target.value);
@@ -336,7 +336,7 @@ export function AdminPage() {
   if (me.isPending) return <p className="mx-auto max-w-3xl px-4 py-10 text-ink-2">Loading…</p>;
   if (!isAdmin) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-10">
+      <div className="mx-auto max-w-[35rem] px-4 py-10">
         <EmptyState
           title="Admins only"
           actions={[{ label: 'Back to free food', to: '/', primary: true }]}
@@ -349,7 +349,7 @@ export function AdminPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
-      <h1 className="text-2xl font-bold text-ink">Admin</h1>
+      <h1 className="text-2xl font-semibold text-ink">Admin</h1>
 
       <Panel title="Review queue">
         {queue.isPending && <p className="text-sm text-ink-2">Loading…</p>}
@@ -405,7 +405,7 @@ export function AdminPage() {
                         <span className="font-semibold text-ink">
                           {SOURCE_LABELS[s.source] ?? s.source}
                         </span>
-                        <Badge tone={healthy ? 'ok' : 'warn'}>
+                        <Badge tone={healthy ? 'ok' : 'danger'}>
                           {healthy ? 'Healthy' : 'Failing'}
                         </Badge>
                       </div>
@@ -415,7 +415,7 @@ export function AdminPage() {
                         · {s.recentComplete} of {s.recentRuns} recent runs completed
                       </p>
                       {s.lastError && (
-                        <p className="mt-1 break-words text-sm text-amber">{s.lastError}</p>
+                        <p className="mt-1 break-words text-sm text-members">{s.lastError}</p>
                       )}
                     </li>
                   );
@@ -429,20 +429,20 @@ export function AdminPage() {
               {Object.entries(OUTCOME_LABELS).map(([key, label]) => (
                 <div key={key}>
                   <dt className="text-ink-2">{label}</dt>
-                  <dd className="text-lg font-bold text-ink">
+                  <dd className="text-lg font-semibold text-ink">
                     {metrics.data.classifier.outcomes[key as keyof typeof OUTCOME_LABELS]}
                   </dd>
                 </div>
               ))}
               <div>
                 <dt className="text-ink-2">LLM verdicts this week</dt>
-                <dd className="text-lg font-bold text-ink">
+                <dd className="text-lg font-semibold text-ink">
                   {metrics.data.classifier.llmClassifications}
                 </dd>
               </div>
               <div>
                 <dt className="text-ink-2">Alerts sent / failed</dt>
-                <dd className="text-lg font-bold text-ink">
+                <dd className="text-lg font-semibold text-ink">
                   {metrics.data.classifier.alerts.sent} / {metrics.data.classifier.alerts.failed}
                 </dd>
               </div>

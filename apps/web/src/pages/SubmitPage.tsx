@@ -16,12 +16,12 @@ import { fromCampusInput, toCampusInput } from '../lib/campus-time';
 type Errors = Partial<Record<'title' | 'buildingId' | 'startsAt' | 'endsAt' | 'form', string>>;
 
 const labelClass = 'block text-sm font-semibold text-ink';
-const errorClass = 'mt-1.5 text-sm font-medium text-warn';
+const errorClass = 'mt-1.5 text-sm font-medium text-danger';
 
 function Done({ result, onAnother }: { result: SubmissionResponse; onAnother: () => void }) {
   return (
     <div role="status" className={card}>
-      <h1 className="text-2xl font-bold text-ink">
+      <h1 className="text-2xl font-semibold text-ink">
         {result.status === 'approved' ? 'Your tip is live' : 'Thanks for the tip'}
       </h1>
       <p className="mt-3 text-ink-2">
@@ -58,10 +58,10 @@ export function SubmitPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [result, setResult] = useState<SubmissionResponse | null>(null);
 
-  if (me.isPending) return <p className="mx-auto max-w-xl px-4 py-10 text-ink-2">Loading…</p>;
+  if (me.isPending) return <p className="mx-auto max-w-[35rem] px-4 py-10 text-ink-2">Loading…</p>;
   if (!signedIn) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-10">
+      <div className="mx-auto max-w-[35rem] px-4 py-10">
         <EmptyState
           title="Sign in to share free food"
           actions={[{ label: 'Sign in', to: '/sign-in', primary: true }]}
@@ -73,7 +73,7 @@ export function SubmitPage() {
   }
   if (result) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-8">
+      <div className="mx-auto max-w-[35rem] px-4 py-10">
         <Done
           result={result}
           onAnother={() => {
@@ -124,7 +124,7 @@ export function SubmitPage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-8">
+    <div className="mx-auto max-w-[35rem] px-4 py-10">
       <form
         noValidate
         className={card}
@@ -133,7 +133,7 @@ export function SubmitPage() {
           onSubmit();
         }}
       >
-        <h1 className="text-2xl font-bold text-ink">Share free food</h1>
+        <h1 className="text-2xl font-semibold text-ink">Share free food</h1>
         <p className="mt-2 text-ink-2">
           Spotted leftovers or an event feeding people? Tell everyone where.
         </p>

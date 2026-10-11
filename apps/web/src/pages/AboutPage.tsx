@@ -5,19 +5,23 @@ import { Link } from 'react-router';
 import { linkClass } from '../components/forms';
 import { buttonClass } from '../components/ui/button-class';
 
-const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
+// Tinted like the meal tiles in the list, so the page belongs to the same product.
+const STEPS: { icon: LucideIcon; tint: string; title: string; text: string }[] = [
   {
     icon: Rss,
+    tint: 'bg-meal-drinks text-meal-drinks-ink',
     title: 'Sources',
     text: 'Every hour we read the public Happening @ Michigan feed, and a few times a day the public Maize Pages feed.',
   },
   {
     icon: ScanSearch,
+    tint: 'bg-meal-dinner text-meal-dinner-ink',
     title: 'Classifier',
     text: 'Each listing is checked for free food: what it is, who can come, dietary details, and the exact phrase that says so.',
   },
   {
     icon: Utensils,
+    tint: 'bg-meal-lunch text-meal-lunch-ink',
     title: 'You',
     text: 'Confident finds show up here within the hour, on the list and the map, most urgent first.',
   },
@@ -26,7 +30,7 @@ const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-10">
-      <h2 className="text-xl font-bold text-ink">{title}</h2>
+      <h2 className="text-lg font-semibold text-ink">{title}</h2>
       <div className="mt-2 space-y-3 text-ink-2">{children}</div>
     </section>
   );
@@ -37,15 +41,17 @@ export function AboutPage() {
   const review = Math.round(REVIEW_CONFIDENCE * 100);
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-4xl font-bold text-ink">Free food, found for you.</h1>
-      <p className="mt-3 max-w-2xl text-lg text-ink-2">
+      <h1 className="font-display text-[2rem] leading-9 font-bold tracking-[-0.02em] text-ink">
+        Free food, found for you.
+      </h1>
+      <p className="mt-3 max-w-2xl text-base leading-6 text-ink-2">
         Maize Bites shows the free food on the University of Michigan campus: what's out right now,
         where it is, and whether it's open to you. It isn't run by or affiliated with the
         university.
       </p>
 
       <section aria-labelledby="how" className="mt-10">
-        <h2 id="how" className="text-xl font-bold text-ink">
+        <h2 id="how" className="text-lg font-semibold text-ink">
           How it works
         </h2>
         <ol className="mt-4 grid items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
@@ -56,11 +62,11 @@ export function AboutPage() {
                   <ArrowRight className="size-5" />
                 </li>
               )}
-              <li className="rounded-card border border-line bg-surface p-5 shadow-card">
-                <span className="grid size-11 place-items-center rounded-full bg-maize text-on-maize">
-                  <step.icon aria-hidden="true" className="size-5" />
+              <li className="rounded-card border border-line bg-card p-4 shadow-card">
+                <span className={`grid size-10 place-items-center rounded-xl ${step.tint}`}>
+                  <step.icon aria-hidden="true" className="size-[1.125rem]" strokeWidth={1.75} />
                 </span>
-                <h3 className="mt-3 font-display text-lg font-bold text-ink">
+                <h3 className="mt-3 text-base font-semibold text-ink">
                   <span className="tabular mr-1.5 text-ink-3">{i + 1}</span>
                   {step.title}
                 </h3>

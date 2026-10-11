@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { makeEvent } from '../test/fixtures';
 import { ApiRequestError } from './client';
-import { fetchEventPage, fetchHealth, tabRequest } from './events';
+import { fetchEventPage, fetchHealth, tabRequest, withoutDemo } from './events';
 import { NO_FILTERS } from '../lib/filters';
 
 const NOW = new Date('2026-10-01T16:00:00Z'); // noon in Ann Arbor
@@ -56,6 +56,40 @@ describe('fetchEventPage', () => {
     );
     expect(error).toBeInstanceOf(ApiRequestError);
     expect(error).toMatchObject({ status: 400, code: 'invalid_request', requestId: 'r1' });
+  });
+});
+
+describe('demo events', () => {
+  const real = makeEvent({ title: 'Pizza at the Dude' });
+  const demo = makeEvent({ id: '00000000-0000-4000-8000-000000000009', title: '[demo] Pizza' });
+  const page = { events: [real, demo], nextCursor: null };
+
+  it('are dropped unless the page was started with VITE_SHOW_DEMO=true', async () => {
+    const hidden = await fetchEventPage('now', NO_FILTERS, null, {
+      fetchFn: fakeFetch(page),
+      showDemo: false,
+    });
+    expect(hidden.events.map((e) => e.title)).toEqual(['Pizza at the Dude']);
+
+    const shown = await fetchEventPage('now', NO_FILTERS, null, {
+      fetchFn: fakeFetch(page),
+      showDemo: true,
+    });
+    expect(shown.events).toHaveLength(2);
+  });
+
+  it('are hidden by default', async () => {
+    // No VITE_SHOW_DEMO in the test environment, as in production.
+    const result = await fetchEventPage('now', NO_FILTERS, null, { fetchFn: fakeFetch(page) });
+    expect(result.events.map((e) => e.title)).toEqual(['Pizza at the Dude']);
+  });
+
+  it('withoutDemo keeps the cursor and matches only the title prefix', () => {
+    const mention = makeEvent({ title: 'Cooking [demo] night' });
+    expect(withoutDemo({ events: [demo, mention], nextCursor: 'c2' }, false)).toEqual({
+      events: [mention],
+      nextCursor: 'c2',
+    });
   });
 });
 

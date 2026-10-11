@@ -16,7 +16,7 @@ export function EventPage() {
         </Link>
         <ShareButton title="Free food on Maize Bites" url={eventUrl(id)} />
       </div>
-      <div className="mt-3 rounded-card border border-line bg-surface p-5 shadow-card sm:p-7">
+      <div className="mt-3 rounded-card border border-line bg-card p-5 shadow-card sm:p-7">
         <EventDetails id={id} titleId="event-title" headingLevel={1} />
       </div>
     </div>
