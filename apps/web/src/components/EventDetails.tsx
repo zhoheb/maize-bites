@@ -1,37 +1,85 @@
-import type { ClassificationMethod } from '@maize-bites/shared';
+import type { Audience, ClassificationMethod, EventSource } from '@maize-bites/shared';
+import {
+  CalendarPlus,
+  Clock,
+  ExternalLink,
+  MapPin,
+  Navigation,
+  ScrollText,
+  Users,
+  Utensils,
+  type LucideIcon,
+} from 'lucide-react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { ApiRequestError } from '../api/client';
 import { icsUrl } from '../api/events';
 import { useEventDetail } from '../api/queries';
-import { useNow } from '../hooks/useNow';
+import { EXCEPTION_LABELS, exceptionBadges } from '../lib/badges';
 import { directionsUrl, formatLocation, formatTimeRange } from '../lib/format';
-import { DIETARY_LABELS, MEAL_LABELS } from '../lib/labels';
-import { AudienceBadge, Badge } from './Badge';
-import { Countdown } from './Countdown';
+import { CAMPUS_LABELS } from '../lib/labels';
+import { DietaryChips, FoodLine } from './EventCard';
+import { MapBoundary } from './MapBoundary';
 import { ReportButtons } from './ReportButtons';
 import { EmptyState, ErrorState } from './States';
+import { StatusPill } from './StatusPill';
+import { Badge } from './ui/Badge';
+import { buttonClass } from './ui/button-class';
+import { cx } from './ui/cx';
+import { Skeleton } from './ui/Skeleton';
+
+const MiniMap = lazy(() => import('./MiniMap'));
 
 const METHOD_LABELS: Record<ClassificationMethod, string> = {
-  llm: 'Found by our AI classifier',
-  rules: 'Matched by keyword rules',
-  manual: 'Checked by a person',
+  llm: 'Our AI classifier read the listing',
+  rules: 'Keyword rules matched the listing',
+  manual: 'A person checked this listing',
 };
 
-const actionClass =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-michigan-blue';
+const SOURCE_LABELS: Record<EventSource, string> = {
+  happening: 'Happening @ Michigan',
+  maizepages: 'Maize Pages',
+  submission: 'A community tip',
+};
+
+const AUDIENCE_TEXT: Record<Audience, string> = {
+  open: 'Open to everyone. Just show up.',
+  members: "For members of the host group. Please don't crash it for the food.",
+  rsvp: 'You need to RSVP or register first. Check the listing for how.',
+};
+
+/** Apple Maps where it's the native choice; Google Maps everywhere else. */
+const isApple = () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
 function DetailsSkeleton() {
   return (
     <div role="status" className="space-y-3">
       <span className="sr-only">Loading event…</span>
-      {[80, 40, 60, 90, 70].map((w) => (
-        <div
-          key={w}
-          aria-hidden="true"
-          className="h-4 rounded bg-slate-200 motion-safe:animate-pulse"
-          style={{ width: `${w}%` }}
-        />
-      ))}
+      <Skeleton className="h-6 w-44 rounded-full" />
+      <Skeleton className="h-8 w-11/12" />
+      <Skeleton className="h-6 w-1/2" />
+      <Skeleton className="mt-6 h-24 w-full" />
+      <Skeleton className="h-40 w-full" />
     </div>
+  );
+}
+
+function Section({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid grid-cols-[1.25rem_1fr] gap-x-3 border-t border-line py-4">
+      <Icon aria-hidden="true" className="mt-0.5 size-4.5 text-ink-3" />
+      <div className="min-w-0">
+        <h3 className="text-xs font-semibold tracking-wider text-ink-2 uppercase">{title}</h3>
+        <div className="mt-1.5 space-y-2.5 text-[0.9375rem] text-ink">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -46,7 +94,6 @@ export function EventDetails({
   headingLevel?: 1 | 2;
 }) {
   const query = useEventDetail(id);
-  const now = useNow();
 
   if (query.isPending) return <DetailsSkeleton />;
   if (query.isError) {
@@ -57,7 +104,7 @@ export function EventDetails({
       return (
         <EmptyState
           title="This event isn't listed anymore"
-          action={{ label: 'See free food now', to: '/' }}
+          actions={[{ label: 'See free food now', to: '/', primary: true }]}
         >
           It may have been removed from the source feed or hidden after review.
         </EmptyState>
@@ -69,119 +116,155 @@ export function EventDetails({
   const event = query.data;
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const location = formatLocation(event);
-  const directions = directionsUrl(event);
+  const directions = directionsUrl(event, isApple());
+  const badges = exceptionBadges(event);
+  const hasFood = event.foodItems.length > 0 || event.mealType !== null;
 
   return (
     <article>
       <div className="flex flex-wrap items-center gap-2">
-        <AudienceBadge audience={event.audience} />
-        {event.mealType && <Badge tone="blue">{MEAL_LABELS[event.mealType]}</Badge>}
-        {event.likelyGone && <Badge tone="warn">Food may be gone</Badge>}
+        <StatusPill event={event} muted={event.likelyGone} />
+        {badges.map((badge) => (
+          <Badge
+            key={badge}
+            tone={badge === 'gone' ? 'warn' : badge === 'members' ? 'amber' : 'info'}
+          >
+            {EXCEPTION_LABELS[badge]}
+          </Badge>
+        ))}
       </div>
       <Heading
         id={titleId}
-        className={`mt-2 text-2xl font-bold leading-tight ${
-          event.likelyGone ? 'text-slate-500 line-through decoration-1' : 'text-michigan-blue'
-        }`}
+        className={cx(
+          'mt-3 text-[1.625rem] leading-tight font-bold',
+          event.likelyGone ? 'text-ink-2' : 'text-ink',
+        )}
       >
         {event.title}
       </Heading>
-
-      <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-700">
-        <Countdown event={event} now={now} />
-        <time dateTime={event.startsAt}>{formatTimeRange(event)}</time>
-      </p>
-      {location && <p className="mt-1 text-sm text-slate-700">{location}</p>}
+      <FoodLine event={event} className="mt-2 text-lg leading-snug" />
 
       {event.likelyGone && (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="mt-4 rounded-card bg-warn-bg px-3.5 py-2.5 text-sm font-medium text-warn">
           {event.reportCounts.food_gone} people reported the food is gone.
         </p>
       )}
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        <a
-          href={icsUrl(event.id)}
-          download
-          className={`${actionClass} bg-michigan-blue text-white hover:bg-michigan-blue/90`}
-        >
-          Add to calendar
-        </a>
-        {directions && (
+      <div className="mt-5">
+        <Section icon={Clock} title="When">
+          <p className="tabular">
+            <time dateTime={event.startsAt}>{formatTimeRange(event)}</time>
+          </p>
           <a
-            href={directions}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${actionClass} bg-maize text-michigan-blue hover:brightness-95`}
+            href={icsUrl(event.id)}
+            download
+            className={buttonClass({ variant: 'secondary', size: 'sm' })}
           >
-            Directions<span className="sr-only"> (opens in a new tab)</span>
+            <CalendarPlus aria-hidden="true" className="size-4" />
+            Add to calendar
           </a>
-        )}
-        {event.url && (
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${actionClass} border border-slate-300 bg-white text-michigan-blue hover:bg-slate-50`}
-          >
-            Source listing<span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        )}
-      </div>
+        </Section>
 
-      <dl className="mt-6 space-y-4 text-sm">
-        {event.foodItems.length > 0 && (
-          <div>
-            <dt className="font-semibold text-slate-900">Food</dt>
-            <dd className="mt-1 capitalize text-slate-700">{event.foodItems.join(', ')}</dd>
-          </div>
+        <Section icon={MapPin} title="Where">
+          {location ? (
+            <p>
+              {location}
+              {event.building && (
+                <span className="text-ink-2"> · {CAMPUS_LABELS[event.building.campus]} Campus</span>
+              )}
+            </p>
+          ) : (
+            <p className="text-ink-2">The listing doesn't give a location.</p>
+          )}
+          {event.lat !== null && event.lng !== null && (
+            <div className="h-36 overflow-hidden rounded-card border border-line">
+              <MapBoundary>
+                <Suspense fallback={<Skeleton className="h-full w-full rounded-none" />}>
+                  <MiniMap
+                    at={{ lat: event.lat, lng: event.lng }}
+                    label={`Map showing ${location ?? 'the event location'}`}
+                  />
+                </Suspense>
+              </MapBoundary>
+            </div>
+          )}
+          {directions && (
+            <a
+              href={directions}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClass({ variant: 'primary', size: 'sm' })}
+            >
+              <Navigation aria-hidden="true" className="size-4" />
+              Directions<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          )}
+        </Section>
+
+        <Section icon={Users} title="Who it's for">
+          <p>
+            {event.audience
+              ? AUDIENCE_TEXT[event.audience]
+              : "The listing doesn't say who can come. Check it before you go."}
+          </p>
+          {event.sponsor && <p className="text-sm text-ink-2">Hosted by {event.sponsor}</p>}
+        </Section>
+
+        <Section icon={Utensils} title="What's there">
+          {hasFood ? (
+            <FoodLine event={event} />
+          ) : (
+            <p className="text-ink-2">The listing mentions free food without saying what.</p>
+          )}
+          <DietaryChips tags={event.dietary} long />
+          <p className="text-xs text-ink-3">
+            Dietary details come from the listing and may be incomplete. Confirm with the host if
+            you have allergies.
+          </p>
+        </Section>
+
+        <div className="border-t border-line py-4">
+          <ReportButtons event={event} />
+        </div>
+
+        {event.description && (
+          <Section icon={ScrollText} title="About this event">
+            <p className="text-sm leading-relaxed whitespace-pre-line text-ink-2">
+              {event.description}
+            </p>
+          </Section>
         )}
-        {event.dietary.length > 0 && (
-          <div>
-            <dt className="font-semibold text-slate-900">Dietary</dt>
-            <dd className="mt-1 flex flex-wrap gap-1.5">
-              {event.dietary.map((d) => (
-                <Badge key={d}>{DIETARY_LABELS[d]}</Badge>
-              ))}
-            </dd>
-          </div>
-        )}
-        {event.sponsor && (
-          <div>
-            <dt className="font-semibold text-slate-900">Hosted by</dt>
-            <dd className="mt-1 text-slate-700">{event.sponsor}</dd>
-          </div>
-        )}
-        <div>
-          <dt className="font-semibold text-slate-900">Why it's listed</dt>
-          <dd className="mt-1 text-slate-700">
+
+        <Section icon={ExternalLink} title="Source">
+          <p>
+            {event.url ? (
+              <a
+                href={event.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline underline-offset-2"
+              >
+                {SOURCE_LABELS[event.source]}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              SOURCE_LABELS[event.source]
+            )}
+          </p>
+          <p className="text-sm text-ink-2">
             {event.classification ? (
               <>
                 {METHOD_LABELS[event.classification.method]}
-                {event.classification.evidence && <> from “{event.classification.evidence}”</>}.
+                {event.classification.evidence && <>: “{event.classification.evidence}”</>}.{' '}
+                {event.classification.method !== 'manual' &&
+                  'Detected automatically; may be wrong.'}
               </>
             ) : (
-              'Shared by a community member.'
+              'Shared by a community member and not yet checked.'
             )}
-          </dd>
-        </div>
-      </dl>
-
-      {event.description && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-slate-900">About this event</h3>
-          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-700">
-            {event.description}
           </p>
-        </div>
-      )}
-
-      <ReportButtons event={event} />
-
-      <p className="mt-6 text-xs text-slate-500">
-        Dietary details come from the listing and our classifier and may be incomplete. Confirm with
-        the host if you have allergies.
-      </p>
+        </Section>
+      </div>
     </article>
   );
 }

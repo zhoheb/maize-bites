@@ -37,9 +37,13 @@ export function useSubmitTip() {
   });
 }
 
-/** Reports on one event. The answer's counts go straight into the cached event. */
+/**
+ * Reports on one event. Optimistic: the count goes up the moment the button is pressed, the
+ * server's answer then replaces it, and a failure puts back what was there.
+ */
 export function useReport(eventId: string) {
   const client = useQueryClient();
+  const key = queryKeys.event(eventId);
   return useMutation({
     mutationFn: async (kind: ReportKind) => {
       const result = await sendJson(
@@ -51,10 +55,23 @@ export function useReport(eventId: string) {
       if (!result) throw new Error('Empty response');
       return result;
     },
+    onMutate: async (kind) => {
+      await client.cancelQueries({ queryKey: key });
+      const before = client.getQueryData<EventDetail>(key);
+      if (before) {
+        client.setQueryData<EventDetail>(key, {
+          ...before,
+          reportCounts: { ...before.reportCounts, [kind]: before.reportCounts[kind] + 1 },
+          lastReportAt: new Date().toISOString(),
+        });
+      }
+      return { before };
+    },
+    onError: (_error, _kind, context) => {
+      if (context?.before) client.setQueryData(key, context.before);
+    },
     onSuccess: (result) => {
-      client.setQueryData<EventDetail>(queryKeys.event(eventId), (event) =>
-        event ? { ...event, ...result } : event,
-      );
+      client.setQueryData<EventDetail>(key, (event) => (event ? { ...event, ...result } : event));
       void client.invalidateQueries({ queryKey: ['events'] });
     },
   });
