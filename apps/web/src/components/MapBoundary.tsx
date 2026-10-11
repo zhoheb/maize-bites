@@ -18,10 +18,10 @@ export class MapBoundary extends Component<{ children: ReactNode }, { failed: bo
     return (
       <div
         role="status"
-        className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 text-center"
+        className="flex h-full items-center justify-center border border-dashed border-line-strong bg-surface px-6 text-center"
       >
-        <p className="text-sm text-slate-600">
-          <span className="block font-semibold text-michigan-blue">
+        <p className="text-sm text-ink-2">
+          <span className="block font-semibold text-ink">
             The map can't be shown in this browser.
           </span>
           Every event is still in the list, with its building and room.

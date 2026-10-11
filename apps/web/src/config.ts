@@ -2,8 +2,11 @@ import { z } from 'zod';
 
 // Client config. Only VITE_* variables reach the browser; never put secrets here.
 const configSchema = z.object({
-  /** MapLibre style URL. Default: OpenFreeMap's OSM-based "positron" (free, no key). */
-  VITE_MAP_STYLE_URL: z.url().default('https://tiles.openfreemap.org/styles/positron'),
+  /**
+   * Optional MapLibre style URL that replaces our own basemap (lib/map-style.ts, drawn over
+   * OpenFreeMap's free OSM tiles) in both themes. Leave unset to use the built-in styles.
+   */
+  VITE_MAP_STYLE_URL: z.url().optional(),
 });
 
 export const config = configSchema.parse(import.meta.env);
