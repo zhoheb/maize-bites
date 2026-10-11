@@ -46,6 +46,8 @@ export type ReportCounts = z.infer<typeof reportCountsSchema>;
 /** Answer to POST /api/events/:id/reports: the event's counts after this report. */
 export const reportResponseSchema = z.object({
   reportCounts: reportCountsSchema,
+  /** When anyone last reported on this event, whatever the kind. */
+  lastReportAt: z.iso.datetime({ offset: true }).nullable(),
   likelyGone: z.boolean(),
 });
 export type ReportResponse = z.infer<typeof reportResponseSchema>;
@@ -62,6 +64,8 @@ export const eventDetailSchema = foodEventSchema.extend({
     .nullable(),
   /** All reports on this occurrence, by kind. (likelyGone counts only recent food_gone.) */
   reportCounts: reportCountsSchema,
+  /** When anyone last reported on this event, whatever the kind. Null with no reports. */
+  lastReportAt: z.iso.datetime({ offset: true }).nullable(),
 });
 export type EventDetail = z.infer<typeof eventDetailSchema>;
 

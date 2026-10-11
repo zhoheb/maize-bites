@@ -1,6 +1,7 @@
 import {
   countReportsByKind,
   getPublishedEvent,
+  lastReportAt,
   listPublishedEvents,
   toFoodEvent,
   type Database,
@@ -91,6 +92,7 @@ export function eventsRouter(ctx: ApiContext): Router {
     const body: EventDetail = toEventDetail(
       published,
       await countReportsByKind(db, published.event.id),
+      await lastReportAt(db, published.event.id),
     );
     res.json(body);
   });

@@ -3,7 +3,7 @@ import type { DbHandle } from '../client.js';
 import { reports, users } from '../schema.js';
 import { createTestDb, eventInput } from '../testing.js';
 import { upsertEvent } from './events.js';
-import { countReportsByKind } from './reports.js';
+import { countReportsByKind, lastReportAt } from './reports.js';
 
 let handle: DbHandle;
 beforeEach(async () => {
@@ -37,5 +37,27 @@ describe('countReportsByKind', () => {
       not_free: 0,
       wrong_info: 0,
     });
+  });
+});
+
+describe('lastReportAt', () => {
+  it('is the newest report of any kind on the event, and null with none', async () => {
+    const { db } = handle;
+    const { event } = await upsertEvent(db, eventInput());
+    const { event: quiet } = await upsertEvent(db, eventInput());
+    const [a, b] = await db
+      .insert(users)
+      .values(['a', 'b'].map((n) => ({ email: `${n}@umich.edu` })))
+      .returning();
+    if (!a || !b) throw new Error('seed users missing');
+    const older = new Date('2026-10-01T15:00:00Z');
+    const newer = new Date('2026-10-01T15:40:00Z');
+    await db.insert(reports).values([
+      { eventId: event.id, userId: a.id, kind: 'food_gone', createdAt: older },
+      { eventId: event.id, userId: b.id, kind: 'still_food', createdAt: newer },
+    ]);
+
+    expect(await lastReportAt(db, event.id)).toEqual(newer);
+    expect(await lastReportAt(db, quiet.id)).toBeNull();
   });
 });

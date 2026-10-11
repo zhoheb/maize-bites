@@ -1,5 +1,5 @@
 import { REPORT_KINDS, type ReportKind } from '@maize-bites/shared';
-import { count, eq } from 'drizzle-orm';
+import { count, eq, max } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { reports } from '../schema.js';
 
@@ -16,6 +16,15 @@ export async function countReportsByKind(
   const counts = Object.fromEntries(REPORT_KINDS.map((k) => [k, 0])) as Record<ReportKind, number>;
   for (const { kind, n } of rows) counts[kind] = n;
   return counts;
+}
+
+/** When the newest report of any kind on this event was made, or null with none. */
+export async function lastReportAt(db: Database, eventId: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ at: max(reports.createdAt) })
+    .from(reports)
+    .where(eq(reports.eventId, eventId));
+  return row?.at ?? null;
 }
 
 /** One report of each kind per user per event (unique index). Returns whether it was new. */

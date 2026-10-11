@@ -14,7 +14,11 @@ import {
   type SourceHealth,
 } from '@maize-bites/shared';
 
-export function toEventDetail(published: PublishedEvent, reportCounts: ReportCounts): EventDetail {
+export function toEventDetail(
+  published: PublishedEvent,
+  reportCounts: ReportCounts,
+  lastReportAt: Date | null,
+): EventDetail {
   const { classification } = published;
   return {
     ...toFoodEvent(published),
@@ -25,6 +29,7 @@ export function toEventDetail(published: PublishedEvent, reportCounts: ReportCou
       classifiedAt: classification.createdAt.toISOString(),
     },
     reportCounts,
+    lastReportAt: lastReportAt?.toISOString() ?? null,
   };
 }
 

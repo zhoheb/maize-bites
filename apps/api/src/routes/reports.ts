@@ -1,4 +1,4 @@
-import { addReport, countReportsByKind, getPublishedEvent } from '@maize-bites/db';
+import { addReport, countReportsByKind, getPublishedEvent, lastReportAt } from '@maize-bites/db';
 import {
   FOOD_GONE_THRESHOLD,
   FOOD_GONE_WINDOW_MS,
@@ -42,6 +42,7 @@ export function reportsRouter({ db, now, rateLimits }: ApiContext): Router {
       const fresh = await getPublishedEvent(db, id, { reportsSince });
       const body: ReportResponse = {
         reportCounts: await countReportsByKind(db, id),
+        lastReportAt: (await lastReportAt(db, id))?.toISOString() ?? null,
         likelyGone: (fresh?.recentFoodGone ?? 0) >= FOOD_GONE_THRESHOLD,
       };
       res.status(created ? 201 : 200).json(body);

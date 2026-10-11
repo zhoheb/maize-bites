@@ -199,6 +199,13 @@ describe('GET /api/events/:id', () => {
     expect(detail.likelyGone).toBe(false);
   });
 
+  it('says when the last report came in, or null with none', async () => {
+    const detail = async (id: string) =>
+      eventDetailSchema.parse((await request(api.app).get(`/api/events/${id}`)).body);
+    expect((await detail(api.seeded.pizza.id)).lastReportAt).not.toBeNull();
+    expect((await detail(api.seeded.bagels.id)).lastReportAt).toBeNull();
+  });
+
   it('still serves published events that already ended', async () => {
     expect((await request(api.app).get(`/api/events/${api.seeded.ended.id}`)).status).toBe(200);
   });

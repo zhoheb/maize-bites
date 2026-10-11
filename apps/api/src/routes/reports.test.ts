@@ -7,7 +7,7 @@ import {
 } from '@maize-bites/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { TEST_RATE_LIMITS, at, createTestApi, signIn, type TestApi } from '../test/seed.js';
+import { NOW, TEST_RATE_LIMITS, at, createTestApi, signIn, type TestApi } from '../test/seed.js';
 
 let api: TestApi;
 let cookie: string;
@@ -57,6 +57,7 @@ describe('POST /api/events/:id/reports', () => {
     expect(first.status).toBe(201);
     expect(reportResponseSchema.parse(first.body)).toEqual({
       reportCounts: { food_gone: 0, still_food: 1, not_free: 0, wrong_info: 0 },
+      lastReportAt: NOW.toISOString(),
       likelyGone: false,
     });
 
