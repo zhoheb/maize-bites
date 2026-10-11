@@ -87,17 +87,20 @@ describe('EventCard', () => {
       expect(badges()).toEqual(['RSVP required']);
     });
 
-    it('shows Likely over, dims the card, and mutes the pill', () => {
+    it('shows Likely over, sets the card back, and mutes the pill', () => {
       renderCard({ event: makeEvent({ likelyGone: true }), now: DURING });
       expect(badges()).toEqual(['Likely over']);
-      expect(card().className).toContain('opacity-60');
+      expect(card().dataset['likelyOver']).toBe('true');
+      expect(card().className).toContain('bg-sunken');
+      // Set back with colour, not opacity, so the text keeps its contrast.
+      expect(card().className).not.toContain('opacity');
       // No pulsing dot on a muted pill.
       expect(card().querySelector('.animate-ping')).toBeNull();
     });
 
     it('is not dimmed otherwise', () => {
       renderCard({ now: DURING });
-      expect(card().className).not.toContain('opacity-60');
+      expect(card().dataset['likelyOver']).toBeUndefined();
       expect(card().querySelector('.animate-ping')).not.toBeNull();
     });
   });

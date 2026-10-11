@@ -48,6 +48,7 @@ const TEXT_PAIRS: [string, string][] = [
   ['now', 'bg'],
   ['warn', 'warn-bg'],
   ['warn', 'surface'],
+  ['warn', 'sunken'],
   ['amber', 'surface'],
   ['amber', 'bg'],
   ['info', 'surface'],

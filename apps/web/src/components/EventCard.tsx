@@ -86,9 +86,12 @@ export function DietaryChips({
 /** The food line: an icon and what's on offer. Null when the listing named neither food nor meal. */
 export function FoodLine({
   event,
+  muted = false,
   className,
 }: {
   event: Pick<FoodEvent, 'foodItems' | 'mealType'>;
+  /** Grey instead of the food colour, for an event that is likely over. */
+  muted?: boolean;
   className?: string;
 }) {
   // Only what the classifier extracted. No meal is ever guessed from the time of day.
@@ -100,7 +103,13 @@ export function FoodLine({
         : null;
   if (text === null) return null;
   return (
-    <p className={cx('flex items-start gap-2 font-semibold text-food', className)}>
+    <p
+      className={cx(
+        'flex items-start gap-2 font-semibold',
+        muted ? 'text-ink-2' : 'text-food',
+        className,
+      )}
+    >
       <MealIcon kind={foodIconKind(event)} className="mt-[0.15em] size-[1.1em] shrink-0" />
       <span>
         <span className="sr-only">Food: </span>
@@ -134,14 +143,16 @@ export const EventCard = memo(function EventCard({
       aria-labelledby={titleId}
       data-event-id={event.id}
       data-highlighted={highlighted || undefined}
+      data-likely-over={event.likelyGone || undefined}
       onMouseEnter={enter}
       onMouseLeave={leave}
       className={cx(
-        'relative scroll-mt-14 rounded-card border bg-surface p-4 shadow-card transition-[transform,box-shadow,border-color] duration-150',
+        'relative scroll-mt-14 rounded-card border p-4 transition-[transform,box-shadow,border-color] duration-150',
         'hover:-translate-y-0.5 hover:shadow-lift',
         'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus',
-        // Likely over: still listed, visibly set back.
-        event.likelyGone && 'opacity-60',
+        // Likely over: still listed, visibly set back. Flattened and greyed with tokens rather
+        // than faded with opacity, which would drop its text below AA contrast.
+        event.likelyGone ? 'bg-sunken shadow-none' : 'bg-surface shadow-card',
         selected
           ? 'border-ink ring-2 ring-maize'
           : highlighted
@@ -161,7 +172,10 @@ export const EventCard = memo(function EventCard({
 
       <h3
         id={titleId}
-        className="mt-2.5 line-clamp-2 font-sans text-[1.0625rem] leading-snug font-semibold text-ink"
+        className={cx(
+          'mt-2.5 line-clamp-2 font-sans text-[1.0625rem] leading-snug font-semibold',
+          event.likelyGone ? 'text-ink-2' : 'text-ink',
+        )}
       >
         <Link
           to={href}
@@ -174,7 +188,11 @@ export const EventCard = memo(function EventCard({
         </Link>
       </h3>
 
-      <FoodLine event={event} className="mt-1.5 text-[0.9375rem] leading-snug" />
+      <FoodLine
+        event={event}
+        muted={event.likelyGone}
+        className="mt-1.5 text-[0.9375rem] leading-snug"
+      />
 
       {event.dietary.length > 0 && (
         <div className="mt-2">
