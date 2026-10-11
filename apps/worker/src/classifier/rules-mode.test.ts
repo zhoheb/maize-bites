@@ -210,15 +210,14 @@ describe('decideRulesMode: extracted details', () => {
     expect(decide('Chess club').foodItems).toEqual([]);
   });
 
-  it('reads the meal from the text first, then from the local start time', () => {
+  it('reads the meal from the text only, never from the start time', () => {
     const at = (iso: string) => ({ startsAt: new Date(iso) });
     expect(decide('Kickoff', 'Lunch provided', at('2026-10-09T22:00:00Z')).mealType).toBe('lunch');
     expect(decide('Kickoff', 'Free brunch', at('2026-10-09T19:00:00Z')).mealType).toBe('breakfast');
-    // No meal named: 8:30 AM, 12:15 PM, 6:00 PM, and 3:00 PM in Ann Arbor.
-    expect(decide('Kickoff', 'Free bagels', at('2026-10-09T12:30:00Z')).mealType).toBe('breakfast');
-    expect(decide('Kickoff', 'Free pizza', at('2026-10-09T16:15:00Z')).mealType).toBe('lunch');
-    expect(decide('Kickoff', 'Free pizza', at('2026-10-09T22:00:00Z')).mealType).toBe('dinner');
-    expect(decide('Kickoff', 'Free pizza', at('2026-10-09T19:00:00Z')).mealType).toBeNull();
+    // No meal named, at 8:30 AM, 12:15 PM, and 6:00 PM in Ann Arbor: still no meal.
+    expect(decide('Kickoff', 'Free bagels', at('2026-10-09T12:30:00Z')).mealType).toBeNull();
+    expect(decide('Kickoff', 'Free pizza', at('2026-10-09T16:15:00Z')).mealType).toBeNull();
+    expect(decide('Kickoff', 'Free pizza', at('2026-10-09T22:00:00Z')).mealType).toBeNull();
   });
 
   it('picks up dietary tags', () => {

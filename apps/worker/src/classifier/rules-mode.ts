@@ -1,10 +1,4 @@
-import {
-  CAMPUS_TIME_ZONE,
-  wallTimeOf,
-  type Audience,
-  type DietaryTag,
-  type MealType,
-} from '@maize-bites/shared';
+import type { Audience, DietaryTag, MealType } from '@maize-bites/shared';
 import type { ClassifierInput } from './input.js';
 import {
   DEFAULT_RULES,
@@ -132,11 +126,13 @@ function excerpt(text: string, from: number, to: number, context: number): strin
   return `${before}${oneLine(text.slice(start, end))}${after}`;
 }
 
-function mealTypeOf(text: string, startsAt: Date, rules: CompiledRulesMode): MealType | null {
+/**
+ * The meal the listing names, or null. The start time is never used to guess one: a noon event
+ * with cookies is not "lunch", and the site shows a meal only when the listing stated it.
+ */
+function mealTypeOf(text: string, rules: CompiledRulesMode): MealType | null {
   for (const [meal, words] of rules.mealWords) if (hits(words, text).length > 0) return meal;
-  const local = wallTimeOf(startsAt, CAMPUS_TIME_ZONE);
-  const hour = local.hour + local.minute / 60;
-  return rules.config.mealHours.find(([, from, to]) => hour >= from && hour < to)?.[0] ?? null;
+  return null;
 }
 
 /** The final free-food verdict for one event when the rules are the only judge. */
@@ -154,7 +150,7 @@ export function decideRulesMode(
   const audience: Audience = any(rules.members) ? 'members' : any(rules.rsvp) ? 'rsvp' : 'open';
   const details = {
     foodItems: specific.length > 0 ? specific : named,
-    mealType: mealTypeOf(text, input.startsAt, rules),
+    mealType: mealTypeOf(text, rules),
     dietary: rules.dietary.filter(([, phrases]) => any(phrases)).map(([tag]) => tag),
     audience,
   };

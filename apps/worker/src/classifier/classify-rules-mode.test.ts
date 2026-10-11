@@ -97,7 +97,7 @@ describe('classifyPendingEvents in rules mode', () => {
         hasFreeFood: true,
         contentHash: pizza.contentHash,
         foodItems: ['pizza'],
-        mealType: 'breakfast', // no meal named; the event starts at 10 AM
+        mealType: null, // no meal named, and the 10 AM start is not used to guess one
         dietary: [],
         audience: 'open',
         evidence: 'Robotics build night Free pizza and pop while we sort parts.',
@@ -131,7 +131,7 @@ describe('classifyPendingEvents in rules mode', () => {
     expect(active).toMatchObject({
       hasFreeFood: true,
       evidence: 'tag: Free Food',
-      mealType: 'lunch',
+      mealType: null,
       dietary: ['vegan', 'halal'],
       audience: 'members',
     });

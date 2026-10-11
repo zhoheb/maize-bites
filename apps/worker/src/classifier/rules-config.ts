@@ -154,10 +154,11 @@ export interface RulesModeConfig {
   >;
   membersPhrases: readonly string[];
   rsvpPhrases: readonly string[];
-  /** A meal named in the text decides the meal type. First match in this order wins. */
+  /**
+   * A meal named in the text decides the meal type. First match in this order wins. With none
+   * named the meal type stays null; it is never inferred from the start time.
+   */
   mealWords: readonly (readonly ['breakfast' | 'lunch' | 'dinner', readonly string[]])[];
-  /** Otherwise the local start hour does, when it falls in one of these [from, to) ranges. */
-  mealHours: readonly (readonly ['breakfast' | 'lunch' | 'dinner', number, number])[];
   confidence: { perk: number; strong: number; negative: number };
   /** Characters of the listing kept on each side of the matched phrase in `evidence`. */
   evidenceContextChars: number;
@@ -386,11 +387,6 @@ export const RULES_MODE: RulesModeConfig = {
     ['breakfast', ['breakfast', 'brunch']],
     ['lunch', ['lunch', 'luncheon']],
     ['dinner', ['dinner', 'supper']],
-  ],
-  mealHours: [
-    ['breakfast', 7, 10.5],
-    ['lunch', 11, 14],
-    ['dinner', 17, 20.5],
   ],
 
   confidence: { perk: 0.85, strong: 0.75, negative: 0.2 },
