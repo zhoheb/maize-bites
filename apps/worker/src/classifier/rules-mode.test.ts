@@ -220,6 +220,31 @@ describe('decideRulesMode: extracted details', () => {
     expect(decide('Kickoff', 'Free pizza', at('2026-10-09T22:00:00Z')).mealType).toBeNull();
   });
 
+  it('finds the lunch in a workshop listing whose title says nothing about food', () => {
+    // The real "optiMize Social Innovation Challenge: Workshop 2" listing. Its card showed
+    // "Lunch", which looked like a default. It isn't: the description promises lunch, and that
+    // sentence is the evidence. A noon start alone would give no meal (see the test above).
+    const verdict = decide(
+      'optiMize Social Innovation Challenge: Workshop 2',
+      [
+        'Workshop #2 will focus on exploring the problem you wish to address.',
+        'When: Sunday, October 11 from 11:30 am to 3:15 pm EST',
+        'Where: Central Campus Classroom Building (CCCB) - room 0460',
+        'Lunch will be provided along with the opportunity to meet lots of different people!',
+      ].join('\n\n'),
+      { startsAt: new Date('2026-10-11T15:15:00Z') },
+    );
+    expect(verdict).toMatchObject({ hasFreeFood: true, foodItems: ['lunch'], mealType: 'lunch' });
+    expect(verdict.evidence).toContain('Lunch will be provided');
+
+    const noFood = decide(
+      'optiMize Social Innovation Challenge: Workshop 2',
+      'Workshop #2 will focus on exploring the problem you wish to address.',
+      { startsAt: new Date('2026-10-11T15:15:00Z') },
+    );
+    expect(noFood).toMatchObject({ hasFreeFood: false, mealType: null });
+  });
+
   it('picks up dietary tags', () => {
     expect(
       decide('Dinner', 'Free food. Vegan, halal, and gluten-free options; kosher on request.')
