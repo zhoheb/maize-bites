@@ -18,8 +18,8 @@ web (React SPA) ──/api proxy──▶ api (Express) ──┐
 ## Layout
 
 ```
-apps/web        React + Vite + Tailwind v4, TanStack Query, React Router, MapLibre (OpenFreeMap tiles), PWA.
-                src/{api,components,hooks,lib,pages,sw}; scripts/generate-icons.js writes public/icons
+apps/web        React + Vite + Tailwind v4, TanStack Query, React Router, Radix, MapLibre (OpenFreeMap tiles), PWA.
+                src/{api,components,components/ui,hooks,lib,pages,sw}; scripts/ (generate-icons, generate-og, screenshots)
 apps/api        Express 5. createApp({ db, logger, webOrigin }) in app.ts; routes/ per resource (index.ts mounts
                 /api); errors.ts (HttpError + error format); serializers.ts; ics.ts; test/seed.ts (API fixtures)
 apps/worker     node-cron scheduler.ts, jobs/ (ingest, housekeeping, index.ts wires them),
@@ -94,9 +94,16 @@ pnpm --filter @maize-bites/api test   # target a single package
 - **Web:**
   - Home page state (tab, filters, selected event, list/map view) lives in the URL (`lib/filters.ts`, `hooks/useHomeParams.ts`).
   - Validate API responses with shared schemas in `api/`.
-  - Keep maize as a background behind blue text, never as text on white (contrast).
-  - `EventMap` is lazy-loaded, and MapLibre's worker is bundled explicitly (`?worker&url`); don't remove that.
-  - The service worker (`src/sw/sw.ts`, injectManifest) precaches the shell only and never caches `/api`.
+  - Colours, type, radius and shadows are tokens in `src/index.css` (`bg-page`, `bg-surface`, `text-ink`, `text-ink-2`, `border-line`, `bg-maize text-on-maize`, ...). Use them, not raw palette classes, so dark mode works. `lib/tokens.test.ts` checks every text/background pair for WCAG AA; add new pairs there.
+  - Keep maize as a background behind navy text, never as text on a light surface (contrast).
+  - Build from `components/ui/` (Button, Chip, Pill, Badge, Segmented, Toggle, Menu, Drawer, Sheet, Skeleton). A file that exports a component exports nothing else (fast refresh lint), so helpers live in `lib/`.
+  - Urgency drives the list: `lib/status.ts` (now / soon / later / ended and the pill text), `lib/grouping.ts`, `lib/badges.ts` (badges only for exceptions; never "Open to all"). Show a meal type only when the classifier extracted one.
+  - Components that show a time read the shared clock (`useNow`) themselves; don't pass `now` down through the list.
+  - Keep the first bundle small: pages other than Home are lazy (`pages/lazy.ts`), `motion` is only in the lazy drawer, and the map starts on idle. `index.html` holds a static header and preloads the Now tab's requests; keep those URLs in step with `api/events.ts`.
+  - The phone bottom sheet is a plain region, not a dialog, so the map behind it stays reachable.
+  - `EventMap` and `MiniMap` are lazy-loaded and import MapLibre from `lib/maplibre.ts`, which bundles its worker explicitly (`?worker&url`); don't remove that. The basemap is `lib/map-style.ts` over OpenFreeMap tiles.
+  - The service worker (`src/sw/sw.ts`, injectManifest) precaches the shell only and never caches `/api`. Offline, Home shows the last list saved in `localStorage` (`lib/offline-cache.ts`) under a banner.
+  - `pnpm --filter @maize-bites/web screenshots` captures Home, the drawer and About with the locally installed Chromium (site running, demo seed loaded).
 - **Auth:**
   - Magic links go only to @umich.edu (`umichEmailSchema`).
   - Tokens and sessions are 32 random bytes; only SHA-256 hashes are stored.

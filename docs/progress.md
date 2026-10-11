@@ -224,6 +224,43 @@ Ten published events (all `source: happening`):
 | Mon 12:00 PM | Midterm Study Hall at the DSI                 | Mason Hall                        | "Snacks and drinks will be provided!"        |
 | Mon 3:00 PM  | LSA@Play: Mystery Book Match                  | no pin (LSA Building)             | "there's free food and LSA swag, too"        |
 
+### UI redesign (`ui-redesign`, not merged)
+
+Branched from `main` in a separate worktree (`../FoodTracker-ui-redesign`), so `ml-classifier`
+and its uncommitted `ml/` work were never touched. Lint, typecheck, `pnpm test` (979 tests) and
+`pnpm test:pg` for db and api pass. Screenshots: `docs/screenshots/ui-redesign/` (`before-*`
+and `after-*`, 1440×900 and 390×844, light and dark).
+
+- [x] Tokens in `apps/web/src/index.css` (Tailwind v4 `@theme`): navy ink, maize as the one
+      accent, warm off-white page, one green, one coral. Dark mode by system setting plus a
+      header toggle. `lib/tokens.test.ts` reads the CSS and fails below WCAG AA.
+- [x] Self-hosted Inter and Bricolage Grotesque, Latin subsets preloaded and precached.
+- [x] `components/ui/`: Button, Chip, Pill, Badge, Segmented, Toggle, Menu, Drawer, Sheet,
+      Skeleton (Radix under the interactive ones).
+- [x] Event card: status pill, title, food line with a meal icon, dietary chips, meta, and
+      badges only for Members only, RSVP required, Likely over.
+- [x] Filters in one row (pill menus, switch, search) with removable chips; a full-screen
+      filter sheet with "Show N events" on phones.
+- [x] List grouped under sticky headers: Happening now, Starting soon, Later today, then days.
+- [x] Map: our own light and dark basemap over the same OpenFreeMap tiles, status pins with
+      meal icons, clusters, popovers, Fit results, Near me (asks only when pressed).
+- [x] Card and pin are linked both ways (hover, select, scroll into view); `j`/`k`, Enter,
+      Esc and `/` work from the keyboard.
+- [x] Phones: full-screen map with a three-height bottom sheet, and a list-only view.
+- [x] Detail drawer with When, Where (mini map, directions), Who it's for, What's there,
+      Source, crowd buttons with optimistic counts and "last report", and Share.
+- [x] Skeletons, empty states with a next step, error with retry, offline banner.
+- [x] Alerts, Share, About (three-step "How it works"), Sign in and Admin restyled.
+- [x] New favicon, app icons and Open Graph image.
+- [x] Lighthouse mobile on the production build, landing view: performance 92, accessibility
+      100, layout shift 0.002 (was 49 before the performance pass). The This Week tab scores
+      about 82: its request carries a timestamp, so it can't be started early from the HTML.
+- [ ] `/admin/label` is on `ml-classifier`, not `main`, so it is not restyled. The old colour
+      name `michigan-blue` still resolves, so it won't break, but it will look out of place in
+      dark mode until its classes are migrated.
+- [ ] Not checked in a real browser by a person: drag feel of the sheet on a touch device,
+      Near me with real location permission, the system share sheet, and installing the PWA.
+
 ### Seeing the site
 
 - [x] Maize Pages ingest into the local db (27 events; see Part 2)
@@ -400,6 +437,8 @@ email = '...'`. There is no UI for it, on purpose.
 8. **Meal type:** a meal named in the text wins ("lunch provided" at 6 PM is lunch); otherwise
    the local start hour decides, and outside meal hours it is null. You asked for time of day;
    I put the named meal first because it is the more reliable signal.
+   **Reversed on `ui-redesign`:** the start hour is no longer used at all (see UI redesign,
+   decision 1).
 9. **Tips in rules mode** stay published whatever the rules find; the rules only add food
    items, dietary tags, and audience.
 10. **Cross-posted duplicates.** "Rebuilding Democracy" was on both sites with no import
@@ -459,7 +498,51 @@ email = '...'`. There is no UI for it, on purpose.
    only works across sources.
 10. **Screenshot again with system Chrome**, not Playwright (the package is not installed).
 
+### UI redesign
+
+1. **The "Lunch" bug was in the worker, not the UI.** Rules mode guessed a meal from the start
+   hour (decision 8 under Rules mode, which you had asked for). It now reads the meal only from
+   the listing, so most events have none. Locally 66 of 90 published rules-mode events carried
+   a meal type before and 27 do after. The web app never infers one either.
+2. **One additive API field:** `lastReportAt` on the event detail and report responses.
+3. **Search runs in the browser** over loaded events, and the page size went from 30 to the
+   API's maximum of 100. Past 100 events, search covers only the pages loaded so far.
+4. **Offline:** the service worker still never caches `/api`. The last list per tab is saved in
+   `localStorage` and shown only when the request can't be made, under a banner with its time.
+5. **vaul was dropped.** Its non-modal mode still marks the rest of the page `aria-hidden` and
+   traps focus, which would hide the map and filters from screen readers for as long as the
+   sheet is up. The sheet is hand-written instead: a plain region, draggable by its header,
+   and the handle is a button (arrow keys step the height).
+6. **Motion is used only for the detail drawer.** List cards animate in with CSS and the sheet
+   with a CSS transition, so the animation library stays out of the first bundle. There is no
+   exit animation on cards.
+7. **"Likely over" cards are greyed with tokens, not faded.** At 60% opacity their text failed
+   AA contrast.
+8. **Pin click and card click do different things.** A pin highlights and scrolls to its card
+   and shows a popover with a Details button; a card opens the details. If a pin opened the
+   drawer at once, "scrolls to and highlights its card" would never be seen.
+9. **Events reported likely over sort last in their group** and don't count toward the
+   "N spots right now" headline.
+10. **The map loads after the list**, when the browser is idle (2 s at most). On phones the
+    default view now includes the map, which the old default did not.
+11. **Empty-state hints** ("Lunch rush usually starts around 11:30") are fixed copy keyed to
+    the time of day, not computed from data.
+12. **Walking time** is straight-line distance times 1.25 at 80 m per minute, shown as an
+    estimate. The position stays in the page and is sent nowhere.
+13. **`VITE_MAP_STYLE_URL` is now optional** and replaces the built-in basemap in both themes
+    when set.
+14. **The demo seed has 17 events** and creates three `demo-reporter-N@umich.edu` users for the
+    likely-over one; `--clear` removes them.
+
 ## Before deploying
+
+After `ui-redesign` merges:
+
+- Run `pnpm ingest:once --reclassify` against production once, so stored rules-mode verdicts
+  lose their guessed meal types.
+- `og:image` in `apps/web/index.html` is the relative `/og.png`. Most link previews need an
+  absolute URL; set it to the production origin once that is fixed.
+- Migrate `/admin/label` to the new colour classes after `ml-classifier` merges.
 
 - Set `UMICH_INTEGRATION_TOKEN` and `PUBLIC_SITE_URL` in the Render environment for the worker
   (both are `sync: false` in `render.yaml`, so Render will ask for them). The token is a
