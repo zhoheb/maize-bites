@@ -9,7 +9,7 @@ import {
 import { and, eq, inArray, like } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { upsertEvent } from '../queries/events.js';
-import { buildings, classifications, events } from '../schema.js';
+import { buildings, classifications, events, reports, users } from '../schema.js';
 
 // Demo data for looking at the site locally when there are no published events (for example
 // with no ANTHROPIC_API_KEY, so nothing from a feed is ever confirmed). Every row is marked:
@@ -17,6 +17,8 @@ import { buildings, classifications, events } from '../schema.js';
 
 export const DEMO_TITLE_PREFIX = '[demo] ';
 const DEMO_ID_PREFIX = 'demo-';
+/** Stand-in accounts whose only purpose is to have reported a demo event's food gone. */
+const DEMO_REPORTERS = [1, 2, 3].map((n) => `demo-reporter-${n}@umich.edu`);
 
 /** Throws unless this is plainly a local development database. */
 export function assertDemoSeedAllowed(env: {
@@ -48,6 +50,8 @@ interface DemoSpec {
   day?: number;
   hour?: number;
   durationMinutes: number;
+  /** Seed three "food's gone" reports, so the event shows as likely over. */
+  likelyOver?: boolean;
 }
 
 const SPECS: DemoSpec[] = [
@@ -76,6 +80,33 @@ const SPECS: DemoSpec[] = [
     dietary: ['vegetarian'],
     audience: 'open',
     startsInMinutes: -10,
+    durationMinutes: 90,
+  },
+  {
+    title: 'Cookies after the career fair',
+    description: 'A few trays of cookies and lemonade left in the ballroom lobby.',
+    building: 'Michigan Union',
+    room: 'Rogel Ballroom lobby',
+    sponsor: 'University Career Center',
+    foodItems: ['cookies', 'lemonade'],
+    mealType: 'snacks',
+    dietary: ['vegetarian'],
+    audience: 'open',
+    startsInMinutes: -45,
+    durationMinutes: 75,
+    likelyOver: true,
+  },
+  {
+    title: 'Tacos before the watch party',
+    description: 'Taco bar opens at the start. Corn tortillas, so gluten-free friendly.',
+    building: 'Duderstadt Center',
+    room: 'Connector',
+    sponsor: 'North Campus Residence Hall Association',
+    foodItems: ['tacos', 'chips and salsa'],
+    mealType: 'dinner',
+    dietary: ['gluten_free'],
+    audience: 'open',
+    startsInMinutes: 35,
     durationMinutes: 90,
   },
   // Later today.
@@ -288,8 +319,8 @@ export interface DemoEvent extends DemoSpec {
 }
 
 /**
- * The demo events with times placed relative to `now`: two live, the rest later today and
- * through the week. A "today" slot that has already ended moves to the same time tomorrow, so
+ * The demo events with times placed relative to `now`: three live (one of them likely over),
+ * one starting within the hour, the rest later today and through the week. A "today" slot that has already ended moves to the same time tomorrow, so
  * the list is the same size whatever time of day the seed runs.
  */
 export function buildDemoEvents(now: Date): DemoEvent[] {
@@ -309,9 +340,13 @@ const isDemoEvent = and(
   like(events.sourceEventId, `${DEMO_ID_PREFIX}%`),
 );
 
-/** Removes every demo event (and, by cascade, its classifications and reports). */
+/**
+ * Removes every demo event (and, by cascade, its classifications and reports) and the demo
+ * reporter accounts.
+ */
 export async function clearDemoEvents(db: Database): Promise<number> {
   const deleted = await db.delete(events).where(isDemoEvent).returning({ id: events.id });
+  await db.delete(users).where(inArray(users.email, DEMO_REPORTERS));
   return deleted.length;
 }
 
@@ -368,6 +403,27 @@ export async function seedDemoEvents(db: Database, now: Date = new Date()): Prom
       evidence: 'Demo data',
       createdAt: now,
     });
+
+    // Reports are replaced on each run too, so "likely over" (three in the last hour) holds.
+    await db.delete(reports).where(eq(reports.eventId, event.id));
+    if (d.likelyOver) {
+      await db
+        .insert(users)
+        .values(DEMO_REPORTERS.map((email) => ({ email })))
+        .onConflictDoNothing({ target: users.email });
+      const reporters = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(inArray(users.email, DEMO_REPORTERS));
+      await db.insert(reports).values(
+        reporters.map((reporter) => ({
+          eventId: event.id,
+          userId: reporter.id,
+          kind: 'food_gone' as const,
+          createdAt: now,
+        })),
+      );
+    }
   }
   return demo.length;
 }

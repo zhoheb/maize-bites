@@ -75,7 +75,7 @@ Events are published only after the LLM confirms them, which needs `ANTHROPIC_AP
 a key, load sample data instead:
 
 ```sh
-pnpm db:seed:demo       # about 15 clearly labelled "[demo]" events for today and this week
+pnpm db:seed:demo       # about 17 clearly labelled "[demo]" events for today and this week
 ```
 
 Sign-in is by emailed link. Without `RESEND_API_KEY` the link is printed in the API's log; click

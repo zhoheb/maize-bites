@@ -50,7 +50,7 @@ pnpm db:generate       # after editing packages/db/src/schema.ts; commit the gen
 pnpm ingest:once        # one ingestion pass over the enabled sources (needs INGEST_CONTACT_EMAIL; obeys the per-source guard)
 pnpm --filter worker eval  # score rules vs rules+LLM on eval/labeled.json (LLM part costs money; --rules-only, --max-llm-calls N, --mode rules)
 pnpm db:seed           # upsert ~50 UMich buildings (idempotent); run after a fresh migrate
-pnpm db:seed:demo      # 15 "[demo]" events for looking at the site locally (--clear removes them); refuses production
+pnpm db:seed:demo      # 17 "[demo]" events covering every state (live, soon, later, members, RSVP, likely over); --clear removes them; refuses production
 pnpm db:migrate | db:studio | db:up | db:down
 pnpm --filter @maize-bites/api test   # target a single package
 ```
