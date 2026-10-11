@@ -38,6 +38,12 @@ export function formatLocation(
   return event.locationName;
 }
 
+/** "Pizza, salad, cookies": the items as the classifier gave them, sentence-cased. */
+export function formatFood(items: readonly string[]): string {
+  const text = items.join(', ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -87,9 +93,10 @@ export function formatRelative(date: Date, now: Date): string {
   return `${formatDuration(ms)} ago`;
 }
 
-/** Walking/transit directions in the user's maps app. */
+/** Walking directions in Apple Maps on Apple devices (`apple`), Google Maps elsewhere. */
 export function directionsUrl(
   event: Pick<FoodEvent, 'lat' | 'lng' | 'building' | 'locationName'>,
+  apple = false,
 ): string | null {
   const destination =
     event.lat !== null && event.lng !== null
@@ -98,5 +105,9 @@ export function directionsUrl(
         ? `${event.building?.name ?? event.locationName ?? ''}, Ann Arbor, MI`
         : null;
   if (destination === null) return null;
+  if (apple) return `https://maps.apple.com/?daddr=${encodeURIComponent(destination)}&dirflg=w`;
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=walking`;
 }
+
+/** The shareable address of an event: its own page, not the drawer state of someone's list. */
+export const eventUrl = (id: string) => `${window.location.origin}/events/${id}`;
