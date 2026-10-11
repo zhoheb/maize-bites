@@ -1,24 +1,29 @@
-# Render blueprint: the API (web service) and the worker (background service), each built from
-# its Dockerfile. Postgres lives on Neon; paste its connection string into DATABASE_URL.
-# Nothing here deploys by itself: create the blueprint in Render when you are ready.
+# Render blueprint: the API, as a free Docker web service. Postgres lives on Neon; paste its
+# connection string into DATABASE_URL. The web app is on Vercel (apps/web/vercel.json).
 # Values marked `sync: false` are secrets or per-environment settings you enter in the dashboard.
+#
+# There is no worker service. Free plans have no background workers or cron jobs, so ingestion,
+# the digest and cleanup run as scheduled GitHub Actions (.github/workflows/).
+#
+# What the free plan means for the API:
+# - It sleeps after 15 minutes without a request and takes about a minute to wake. The web app
+#   waits that out with retries and says what is happening.
+# - Pre-deploy commands are for paid services only, so migrations are applied by
+#   .github/workflows/migrate.yml, which then triggers the deploy. Auto-deploy stays off here so
+#   that a push can't deploy the API ahead of its migration.
 services:
   - type: web
     name: maize-bites-api
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     autoDeploy: false
     healthCheckPath: /api/health
-    # Apply pending migrations before each new version takes traffic.
-    preDeployCommand: node node_modules/@maize-bites/db/dist/migrate.js
     envVars:
+      # Render sets PORT itself; the API listens on it (API_PORT is only the local default).
       - key: NODE_ENV
         value: production
-      # Render routes traffic to this port.
-      - key: API_PORT
-        value: 10000
       - key: LOG_LEVEL
         value: info
       # Vercel's rewrite and Render's load balancer both sit in front of the API.
@@ -26,7 +31,7 @@ services:
         value: 2
       - key: DATABASE_URL
         sync: false
-      # The web app's origin, e.g. https://maizebites.vercel.app (no trailing slash).
+      # The web app's origin, e.g. https://maizebites.zachhoheb.dev (no trailing slash).
       - key: WEB_ORIGIN
         sync: false
       - key: RESEND_API_KEY
@@ -34,51 +39,4 @@ services:
       - key: EMAIL_FROM
         sync: false
       - key: VAPID_PUBLIC_KEY
-        sync: false
-
-  - type: worker
-    name: maize-bites-worker
-    runtime: docker
-    dockerfilePath: ./apps/worker/Dockerfile
-    dockerContext: .
-    plan: starter
-    autoDeploy: false
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: LOG_LEVEL
-        value: info
-      - key: HAPPENING_ENABLED
-        value: true
-      - key: MAIZEPAGES_ENABLED
-        value: false
-      - key: LLM_MAX_CALLS_PER_RUN
-        value: 100
-      - key: EVENT_RETENTION_DAYS
-        value: 30
-      - key: PRUNE_INTERVAL_MINUTES
-        value: 60
-      - key: DATABASE_URL
-        sync: false
-      - key: WEB_ORIGIN
-        sync: false
-      - key: INGEST_CONTACT_EMAIL
-        sync: false
-      # Secret: the events.umich.edu integration token (Student Life Technology Solutions).
-      - key: UMICH_INTEGRATION_TOKEN
-        sync: false
-      # The public site origin sent with the token, e.g. https://maizebites.zachhoheb.dev
-      - key: PUBLIC_SITE_URL
-        sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-      - key: VAPID_PUBLIC_KEY
-        sync: false
-      - key: VAPID_PRIVATE_KEY
-        sync: false
-      - key: VAPID_SUBJECT
         sync: false

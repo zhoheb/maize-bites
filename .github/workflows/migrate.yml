@@ -1,0 +1,48 @@
+name: Migrate and deploy
+
+# Applies pending database migrations on every push to main, then asks Render to deploy the API.
+#
+# Render runs a pre-deploy command only for paid services, so on the free plan migrations can't
+# ride along with the deploy. Doing both here keeps them in order: the schema is updated first,
+# and the API that needs it is deployed only if that worked. For this, auto-deploy is off in
+# render.yaml; this workflow is what deploys the API.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One at a time, in push order.
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Optional. Render → the API service → Settings → Deploy Hook. It is a secret: anyone with
+      # the URL can trigger a deploy.
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          package: '@maize-bites/db'
+
+      # Idempotent: with nothing pending it only reports that the database is up to date.
+      - name: Apply migrations
+        run: pnpm --filter @maize-bites/db db:migrate:run
+
+      - name: Deploy the API on Render
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL" --output /dev/null
+
+      - name: No deploy hook set
+        if: env.RENDER_DEPLOY_HOOK_URL == ''
+        run: echo "RENDER_DEPLOY_HOOK_URL is not set, so the API was not deployed. Deploy it from the Render dashboard, or add the secret."

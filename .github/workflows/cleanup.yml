@@ -1,0 +1,33 @@
+name: Cleanup
+
+# Daily housekeeping: deletes expired sessions and sign-in links, and events that ended more
+# than EVENT_RETENTION_DAYS ago. `pnpm cleanup:once` is the same thing locally.
+
+on:
+  schedule:
+    # 08:47 UTC: 4:47 AM in Ann Arbor in summer, 3:47 AM in winter. The hour doesn't matter.
+    - cron: '47 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: cleanup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+      EVENT_RETENTION_DAYS: ${{ vars.EVENT_RETENTION_DAYS || '30' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          package: '@maize-bites/worker'
+      - run: pnpm cleanup:once

@@ -1,0 +1,52 @@
+name: Ingest
+
+# Fetches the event feeds, classifies what changed, and sends instant alerts: one pass, then it
+# exits. This replaces the long-running worker's hourly job. `pnpm ingest:once` is the same thing
+# locally.
+
+on:
+  schedule:
+    # Every 3 hours at :17 UTC. Off the top of the hour, when GitHub's scheduler is busiest and
+    # most likely to start runs late or drop them.
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+# Never two at once. A run that is still going when the next is due makes the next one wait.
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: production
+      # Secrets (Settings → Secrets and variables → Actions → Secrets).
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      UMICH_INTEGRATION_TOKEN: ${{ secrets.UMICH_INTEGRATION_TOKEN }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Plain settings (the Variables tab). The first three have no default and must be set.
+      WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      INGEST_CONTACT_EMAIL: ${{ vars.INGEST_CONTACT_EMAIL }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'Maize Bites <onboarding@resend.dev>' }}
+      VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+      VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+      HAPPENING_ENABLED: ${{ vars.HAPPENING_ENABLED || 'true' }}
+      MAIZEPAGES_ENABLED: ${{ vars.MAIZEPAGES_ENABLED || 'false' }}
+      # "rules" costs nothing. "llm" needs ANTHROPIC_API_KEY and is billed per call.
+      CLASSIFIER_MODE: ${{ vars.CLASSIFIER_MODE || 'rules' }}
+      LLM_MAX_CALLS_PER_RUN: ${{ vars.LLM_MAX_CALLS_PER_RUN || '100' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          package: '@maize-bites/worker'
+      # Exits 1 if a source did not complete, 2 if nothing is configured to be fetched.
+      - run: pnpm ingest:once

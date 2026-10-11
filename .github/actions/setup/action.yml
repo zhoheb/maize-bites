@@ -1,0 +1,26 @@
+name: Set up pnpm and install
+description: >
+  Installs Node and pnpm, restores the pnpm store cache, and installs dependencies for one
+  workspace package and the workspace packages it depends on. Run actions/checkout first.
+
+inputs:
+  package:
+    description: The workspace package to install for, e.g. "@maize-bites/worker".
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Reads the pnpm version from "packageManager" in package.json.
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    # Only this package and what it imports. The jobs run TypeScript directly with tsx (through
+    # the workspace's source export condition), so there is no build step.
+    - name: Install
+      shell: bash
+      run: pnpm install --frozen-lockfile --filter "${{ inputs.package }}..."

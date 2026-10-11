@@ -1,0 +1,45 @@
+name: Digest
+
+# Sends the morning digest at 7:30 AM in Ann Arbor. `pnpm digest:once` is the same thing locally.
+
+on:
+  schedule:
+    # GitHub's cron is UTC and knows nothing of daylight time. 7:30 AM America/Detroit is
+    # 11:30 UTC from March to November (EDT) and 12:30 UTC the rest of the year (EST). Both are
+    # scheduled, and the job itself stands down on whichever is not 7:30 today
+    # (apps/worker/src/jobs/once.ts). It decides from the schedule that fired, not the clock, so
+    # a run GitHub starts late still sends.
+    - cron: '30 11 * * *'
+    - cron: '30 12 * * *'
+  # A manual run always sends. It is safe to repeat: events already sent are not sent again.
+  workflow_dispatch:
+
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: production
+      # Empty on a manual run.
+      DIGEST_CRON: ${{ github.event.schedule }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'Maize Bites <onboarding@resend.dev>' }}
+      VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+      VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          package: '@maize-bites/worker'
+      # Exits 1 if any message failed to send.
+      - run: pnpm digest:once
