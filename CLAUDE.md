@@ -94,16 +94,18 @@ pnpm --filter @maize-bites/api test   # target a single package
 - **Web:**
   - Home page state (tab, filters, selected event, list/map view) lives in the URL (`lib/filters.ts`, `hooks/useHomeParams.ts`).
   - Validate API responses with shared schemas in `api/`.
-  - Colours, type, radius and shadows are tokens in `src/index.css` (`bg-page`, `bg-surface`, `text-ink`, `text-ink-2`, `border-line`, `bg-maize text-on-maize`, ...). Use them, not raw palette classes, so dark mode works. `lib/tokens.test.ts` checks every text/background pair for WCAG AA; add new pairs there.
-  - Keep maize as a background behind navy text, never as text on a light surface (contrast).
-  - Build from `components/ui/` (Button, Chip, Pill, Badge, Segmented, Toggle, Menu, Drawer, Sheet, Skeleton). A file that exports a component exports nothing else (fast refresh lint), so helpers live in `lib/`.
-  - Urgency drives the list: `lib/status.ts` (now / soon / later / ended and the pill text), `lib/grouping.ts`, `lib/badges.ts` (badges only for exceptions; never "Open to all"). Show a meal type only when the classifier extracted one.
+  - Colours, type, radius and shadows are tokens in `src/index.css` (`bg-page`, `bg-panel`, `bg-card`, `bg-raised`, `bg-sunken`, `text-ink`, `text-ink-2`, `text-ink-3`, `border-line`, `now`/`soon` with `-soft` and `-ink`, `members`, `rsvp`, `danger`, `meal-*`). Use them, not raw palette classes, so dark mode works. `lib/tokens.test.ts` checks every text/background pair for WCAG AA; add new pairs there.
+  - Maize is for map pins, the selected card or row, the nav underline and the logo, and nothing else. Active controls use `bg-active`/`bg-primary` (ink). The token test lists the files allowed to name maize.
+  - Build from `components/ui/` (Button, IconButton, Segmented, Toggle, DropdownPill, Chip, Badge, StatusPill, MealTile, ProgressBar, SectionHeader, Skeleton, Drawer, Sheet). A file that exports a component exports nothing else (fast refresh lint), so helpers live in `lib/`.
+  - The list is an agenda (`EventList`): `NowCard` for events that are live or start within 30 minutes (`isUrgent`), `AgendaRow` for the rest and for anything likely over. Each event shows its time once. `lib/status.ts` has the time logic, `lib/grouping.ts` the sections, `lib/hero.ts` the headline (computed from the list shown) and data freshness, `lib/badges.ts` the exception badges (never "Open to all").
+  - Show food only from extracted `foodItems` or the classifier's `mealType` (`foodText`); with neither, show nothing.
+  - `[demo]` events are hidden unless `VITE_SHOW_DEMO=true`.
   - Components that show a time read the shared clock (`useNow`) themselves; don't pass `now` down through the list.
   - Keep the first bundle small: pages other than Home are lazy (`pages/lazy.ts`), `motion` is only in the lazy drawer, and the map starts on idle. `index.html` holds a static header and preloads the Now tab's requests; keep those URLs in step with `api/events.ts`.
   - The phone bottom sheet is a plain region, not a dialog, so the map behind it stays reachable.
   - `EventMap` and `MiniMap` are lazy-loaded and import MapLibre from `lib/maplibre.ts`, which bundles its worker explicitly (`?worker&url`); don't remove that. The basemap is `lib/map-style.ts` over OpenFreeMap tiles.
   - The service worker (`src/sw/sw.ts`, injectManifest) precaches the shell only and never caches `/api`. Offline, Home shows the last list saved in `localStorage` (`lib/offline-cache.ts`) under a banner.
-  - `pnpm --filter @maize-bites/web screenshots` captures Home, the drawer and About with the locally installed Chromium (site running, demo seed loaded).
+  - `pnpm --filter @maize-bites/web screenshots` captures the review set (three sizes, light and dark, drawer, peek card, sheet) with the locally installed Chromium. It needs `pnpm db:seed:demo` and the site started with `VITE_SHOW_DEMO=true pnpm dev`.
 - **Auth:**
   - Magic links go only to @umich.edu (`umichEmailSchema`).
   - Tokens and sessions are 32 random bytes; only SHA-256 hashes are stored.

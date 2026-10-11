@@ -15,7 +15,7 @@ const STAGGER_MS = 30;
  * Section headers stick on a solid background the full width of the column, so rows pass under
  * them cleanly. The colour is whatever surface the list sits on (the page, or the phone sheet).
  */
-const HEADER = 'sticky z-10 -mx-4 bg-(--list-bg,var(--bg)) px-4 pt-3 pb-2 lg:-mx-5 lg:px-5';
+const HEADER = 'sticky z-10 -mx-4 bg-(--list-bg,var(--bg)) px-4 pt-3 pb-1.5 lg:-mx-5 lg:px-5';
 
 /**
  * The agenda: events under sticky time headers (Happening now, Starting soon, Later today,
@@ -86,7 +86,7 @@ export function EventList({
               {group.label}
             </SectionHeader>
             {urgent.length > 0 && (
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {urgent.map((event) => {
                   const { props, delay } = card(event);
                   return (
@@ -101,7 +101,7 @@ export function EventList({
               <ul
                 className={cx(
                   'divide-y divide-line overflow-hidden rounded-card border border-line bg-card shadow-card',
-                  urgent.length > 0 && 'mt-2.5',
+                  urgent.length > 0 && 'mt-2',
                 )}
               >
                 {rest.map((event) => {
@@ -110,7 +110,7 @@ export function EventList({
                     // The browser skips laying out rows that are off screen.
                     <li
                       key={event.id}
-                      className="animate-enter [contain-intrinsic-size:auto_4.5rem] [content-visibility:auto]"
+                      className="animate-enter [contain-intrinsic-size:auto_4.25rem] [content-visibility:auto]"
                       style={delay}
                     >
                       <AgendaRow {...props} />

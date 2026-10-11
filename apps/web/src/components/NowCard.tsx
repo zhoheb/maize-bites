@@ -92,9 +92,14 @@ export const NowCard = memo(function NowCard({
     >
       <AccentBar event={event} now={now} />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
         <EventStatusPill event={event} now={now} muted={gone} />
-        <EventCountdown event={event} now={now} className="text-[0.8125rem] text-ink-2" />
+        <ExceptionBadges event={event} className="flex-nowrap" />
+        <EventCountdown
+          event={event}
+          now={now}
+          className="ml-auto shrink-0 text-[0.8125rem] text-ink-2"
+        />
       </div>
 
       <h3
@@ -160,7 +165,6 @@ export const NowCard = memo(function NowCard({
             </span>
           )}
         </p>
-        <ExceptionBadges event={event} className="shrink-0 flex-nowrap" />
       </div>
     </article>
   );

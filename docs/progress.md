@@ -224,7 +224,7 @@ Ten published events (all `source: happening`):
 | Mon 12:00 PM | Midterm Study Hall at the DSI                 | Mason Hall                        | "Snacks and drinks will be provided!"        |
 | Mon 3:00 PM  | LSA@Play: Mystery Book Match                  | no pin (LSA Building)             | "there's free food and LSA swag, too"        |
 
-### UI redesign (`ui-redesign`, not merged)
+### UI redesign (`ui-redesign`, merged to `main` as part of `ui-v3`)
 
 Branched from `main` in a separate worktree (`../FoodTracker-ui-redesign`), so `ml-classifier`
 and its uncommitted `ml/` work were never touched. Lint, typecheck, `pnpm test` (979 tests) and
@@ -260,6 +260,41 @@ and `after-*`, 1440×900 and 390×844, light and dark).
       dark mode until its classes are migrated.
 - [ ] Not checked in a real browser by a person: drag feel of the sheet on a touch device,
       Near me with real location permission, the system share sheet, and installing the PWA.
+
+### UI v3 (`ui-v3`, built on `ui-redesign`)
+
+Lint, typecheck and `pnpm test` pass. Screenshots and the graded review are in
+`docs/screenshots/ui-v3/` (`REVIEW.md` has the grades and the Lighthouse numbers).
+
+- [x] Tokens replaced with the "campus field guide" palette: paper page, white panels and
+      cards in light; five surfaces stepping up in lightness in dark. Light is the default.
+- [x] Maize only on pins, the selected card or row, the nav underline and the logo. Active
+      controls are ink. A test fails if any other component names maize.
+- [x] The list is an agenda: NowCard (status, time left, progress bar) for events that are live
+      or start within 30 minutes; a compact time-rail AgendaRow for the rest, in one panel per
+      section. Each event shows its time once.
+- [x] Headline computed from the list on screen ("3 spots with free food right now",
+      "5 spots today", "72 spots this week", or "Nothing right now — next up: …").
+- [x] Freshness dot by age: green under 15 minutes, amber under 2 hours, grey beyond.
+- [x] "Open to all" is a switch only, with no chip.
+- [x] Map: v3 basemap colours, pins sized by urgency (30/26/22px), maize-soft clusters, one
+      toolbar (Near me, Fit results, zoom), a peek card with Directions and Details, and
+      "Search this area" after the map is moved.
+- [x] Fixed 520px list beside an edge-to-edge map; the list casts a shadow onto it.
+- [x] Phones: the sheet's header holds the headline and the time control; peek shows the first
+      card; search is behind an icon.
+- [x] Detail drawer at 440px with a progress bar when live and a "Live reports" section.
+- [x] `VITE_SHOW_DEMO` (default false) hides `[demo]` events; the demo seed has 20 events
+      covering every state.
+- [x] Typographic empty states, a slim offline banner, skeletons shaped like each card type.
+- [x] Form pages on a centred 560px panel; About's steps use the meal-tile style.
+- [x] "optiMize … Workshop 2" showing Lunch: investigated, not a bug (decision 1 below).
+- [ ] Checklist items graded Partial or Fail in `REVIEW.md`: seven events above the fold with
+      several live, the dark map's separation from the page, early truncation beside a badge.
+- [ ] Not built: crowd signals on the NowCard ("3 still food · 8m ago"), Tooltip and Popover
+      components, motion/react for row entrance and the sheet (decisions 5, 8 and 9).
+- [ ] Not looked at in a browser: Alerts, Share, Sign in and Admin (they need a signed-in
+      session). Their classes were migrated and their tests pass.
 
 ### Seeing the site
 
@@ -533,6 +568,45 @@ email = '...'`. There is no UI for it, on purpose.
     when set.
 14. **The demo seed has 17 events** and creates three `demo-reporter-N@umich.edu` users for the
     likely-over one; `--clear` removes them.
+
+### UI v3
+
+1. **"Lunch" on the optiMize workshop is correct.** Its description says "Lunch will be
+   provided", and that sentence is the stored evidence. Nothing defaults to a meal: the
+   time-of-day guess was removed on `ui-redesign`, and the serializer and UI have no fallback.
+   What made it look like a default was the bare word, so a food line that is only a meal word
+   now reads "Lunch provided". A classifier test pins the real listing text.
+2. **Status is green and amber, not maize.** The brief says maize is for "now/soon status" but
+   also defines `--now` green and `--soon` amber and uses them for the accent bar and progress
+   bar. I used the status tokens for status and kept maize for pins, selection, the nav
+   underline and the logo.
+3. **Five token values are darker (or lighter in dark mode) than the brief's**, because the
+   brief's failed its own AA rule: `--ink-3` (`#8A94A6` is 2.9:1 on the page) is `#5C6678`
+   light and `#8E9AAB` dark; status text uses new `--now-ink` and `--soon-ink`; `--members` is
+   `#A34A06`. `--now`, `--soon` and `--over` keep the brief's values for dots, bars and pins.
+4. **No vaul.** As on `ui-redesign`: it hides the rest of the page from screen readers even in
+   non-modal mode. The sheet is hand-written.
+5. **Animation is CSS except for the drawer.** Row entrance (8px rise, 30ms stagger, first
+   eight rows), the countdown crossfade and the sheet use CSS; the drawer uses motion/react
+   with the spring you specified. Putting motion in the first bundle was part of what took
+   Lighthouse from 49 to 92 on `ui-redesign`.
+6. **Likely-over events are rows, not NowCards,** even while live, and they don't count in the
+   headline. So "Happening now · 4" can sit under "3 spots with free food right now".
+7. **"Search this area" filters in the browser** to events whose pin is inside the visible map,
+   shown as a removable "Map area" chip. Events with no map location drop out while it is on.
+8. **No crowd signal on the NowCard beyond "Likely over".** "3 still food · 8m ago" needs
+   report counts on the list endpoint, which only carries `likelyGone` today. The drawer has
+   the counts and the last report time.
+9. **Tooltip and Popover components were not created.** Row titles use the native `title`
+   attribute and the map's peek card is a MapLibre popup, so nothing would have used them.
+10. **Demo events are filtered in the browser** by their `[demo]` title prefix, as the brief
+    asked. They are still in API responses, so a page can show fewer than its page size.
+11. **The headline counts "spots"** ("5 spots today") where the brief had "7 today", to keep
+    the three ranges parallel.
+12. **Phone search is behind an icon** in the sheet header, so the peek can show the first
+    card. `/` opens it.
+13. **`main` was fast-forwarded locally and not pushed.** `render.yaml` and `vercel.json`
+    suggest a push deploys, and nothing here has been checked against production data.
 
 ## Before deploying
 

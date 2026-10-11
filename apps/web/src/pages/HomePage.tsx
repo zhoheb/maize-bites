@@ -369,7 +369,7 @@ export function HomePage() {
           <section
             ref={listRef}
             aria-label="Event list"
-            className="overflow-y-auto overscroll-contain px-5 pb-6"
+            className="relative z-[1] overflow-y-auto overscroll-contain border-r border-line bg-page px-5 pb-6 shadow-edge"
           >
             {results}
             <SiteCredit className="mt-8" />

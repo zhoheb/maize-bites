@@ -43,7 +43,7 @@ export const AgendaRow = memo(function AgendaRow({
       onMouseEnter={enter}
       onMouseLeave={leave}
       className={cx(
-        'group relative flex min-h-[4.5rem] items-center gap-3 py-2.5 pr-6 pl-4 transition-colors',
+        'group relative flex min-h-[4.25rem] items-center gap-3 py-2 pr-7 pl-4 transition-colors',
         'focus-within:z-[1] focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-focus',
         selected
           ? 'bg-maize-soft shadow-[inset_3px_0_0_var(--maize)]'
@@ -73,24 +73,28 @@ export const AgendaRow = memo(function AgendaRow({
       <MealTile kind={foodIconKind(event)} muted={gone} />
 
       <div className="min-w-0 flex-1">
-        <h3
-          id={titleId}
-          className={cx(
-            'truncate text-base leading-[1.375rem] font-semibold',
-            gone ? 'text-ink-2' : 'text-ink',
-          )}
-        >
-          <Link
-            to={href}
-            title={event.title}
-            onFocus={enter}
-            onBlur={leave}
-            aria-current={selected ? 'true' : undefined}
-            className="outline-none after:absolute after:inset-0"
+        {/* The title takes what room there is; an exception badge sits at its right. */}
+        <div className="flex items-center gap-2">
+          <h3
+            id={titleId}
+            className={cx(
+              'min-w-0 flex-1 truncate text-base leading-[1.375rem] font-semibold',
+              gone ? 'text-ink-2' : 'text-ink',
+            )}
           >
-            {event.title}
-          </Link>
-        </h3>
+            <Link
+              to={href}
+              title={event.title}
+              onFocus={enter}
+              onBlur={leave}
+              aria-current={selected ? 'true' : undefined}
+              className="outline-none after:absolute after:inset-0"
+            >
+              {event.title}
+            </Link>
+          </h3>
+          <ExceptionBadges event={event} short className="shrink-0 flex-nowrap" />
+        </div>
         {/* One line: food, then place, then what fits of the dietary labels and walk time. */}
         <div className="flex items-center gap-2.5 text-sm leading-5">
           <p className="min-w-0 truncate">
@@ -122,7 +126,6 @@ export const AgendaRow = memo(function AgendaRow({
         </div>
       </div>
 
-      <ExceptionBadges event={event} short className="shrink-0 flex-col items-end" />
       <ChevronRight
         aria-hidden="true"
         className="absolute top-1/2 right-1.5 size-4 -translate-y-1/2 text-ink-3 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
@@ -135,7 +138,7 @@ export const AgendaRow = memo(function AgendaRow({
 /** The same height as an AgendaRow, so nothing moves when the data arrives. */
 export function AgendaRowSkeleton() {
   return (
-    <div aria-hidden="true" className="flex min-h-[4.5rem] items-center gap-3 py-2.5 pr-3 pl-4">
+    <div aria-hidden="true" className="flex min-h-[4.25rem] items-center gap-3 py-2 pr-7 pl-4">
       <div className="w-[4.25rem] shrink-0 space-y-1.5">
         <Skeleton className="h-4 w-11" />
         <Skeleton className="h-3 w-8" />
