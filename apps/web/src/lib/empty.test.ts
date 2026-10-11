@@ -7,9 +7,9 @@ const at = (hourLocal: number) => new Date(Date.UTC(2026, 9, 1, hourLocal + 4, 0
 describe('emptyCopy', () => {
   it('points the Now tab at later today, with a hint for the time of day', () => {
     expect(emptyCopy('now', at(9))).toEqual({
-      title: 'No free food right now.',
-      hint: 'Lunch rush usually starts around 11:30.',
-      next: { tab: 'today', label: 'See later today' },
+      title: 'Quiet right now.',
+      hint: 'Lunch usually picks up around 11:30.',
+      next: { tab: 'today', label: 'See today' },
     });
     expect(emptyCopy('now', at(14)).hint).toMatch(/around 5/);
     expect(emptyCopy('now', at(22)).hint).toMatch(/late/);

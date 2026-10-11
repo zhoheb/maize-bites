@@ -3,6 +3,23 @@ export interface LatLng {
   lng: number;
 }
 
+/** A rectangle on the map, in degrees. */
+export interface Bbox {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+export function inBbox(point: LatLng, box: Bbox): boolean {
+  return (
+    point.lng >= box.west &&
+    point.lng <= box.east &&
+    point.lat >= box.south &&
+    point.lat <= box.north
+  );
+}
+
 const EARTH_RADIUS_M = 6_371_000;
 const rad = (deg: number) => (deg * Math.PI) / 180;
 

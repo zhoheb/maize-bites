@@ -21,7 +21,8 @@ export default function MiniMap({ at, label }: { at: LatLng; label: string }) {
       attributionControl: { compact: true },
     });
     const pin = document.createElement('div');
-    pin.className = 'map-pin is-selected';
+    pin.className = 'map-pin';
+    pin.dataset['status'] = 'soon';
     pin.appendChild(Object.assign(document.createElement('span'), { className: 'map-pin-body' }));
     new maplibregl.Marker({ element: pin }).setLngLat([at.lng, at.lat]).addTo(m);
     return () => {

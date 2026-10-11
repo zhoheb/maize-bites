@@ -8,9 +8,6 @@ export type TimeStatus = 'now' | 'soon' | 'later' | 'ended';
 
 /** "Starting soon" means within this long. */
 export const SOON_MS = 2 * 60 * 60 * 1000;
-/** A live event this close to its end is called out as ending soon. */
-export const ENDING_SOON_MS = 15 * 60 * 1000;
-
 const MINUTE = 60_000;
 
 type Timed = Pick<FoodEvent, 'startsAt' | 'endsAt'>;
@@ -70,15 +67,13 @@ export function dayLabel(date: Date, now: Date): string {
 
 export interface StatusPill {
   status: TimeStatus;
-  /** A live event in its last minutes. */
-  endingSoon: boolean;
+  /** "Happening now", "Starts in 40 min", "Today 5:30 PM", "Ended". */
   text: string;
+  /** For a live event, how long is left: "ends in 25 min". Null otherwise. */
+  countdown: string | null;
 }
 
-/**
- * The pill at the top of a card: "Happening now · ends in 25 min", "Starts in 40 min",
- * "Today 5:30 PM", "Ended".
- */
+/** The status label for an event, and for a live one the time left. */
 export function statusPill(event: Timed, now: Date): StatusPill {
   const status = timeStatus(event, now);
   const start = new Date(event.startsAt);
@@ -86,32 +81,80 @@ export function statusPill(event: Timed, now: Date): StatusPill {
   switch (status) {
     case 'now': {
       const left = effectiveEnd(event).getTime() - t;
-      const endingSoon = left <= ENDING_SOON_MS;
-      const text =
-        left < MINUTE
-          ? 'Ending now'
-          : endingSoon
-            ? `Ending soon · ${formatDuration(left)} left`
-            : `Happening now · ends in ${formatDuration(left)}`;
-      return { status, endingSoon, text };
+      return {
+        status,
+        text: 'Happening now',
+        countdown: left < MINUTE ? 'ending now' : `ends in ${formatDuration(left)}`,
+      };
     }
     case 'soon': {
       const wait = start.getTime() - t;
       return {
         status,
-        endingSoon: false,
         text: wait < MINUTE ? 'Starting now' : `Starts in ${formatDuration(wait)}`,
+        countdown: null,
       };
     }
     case 'later':
       return {
         status,
-        endingSoon: false,
         text: `${dayLabel(start, now)} ${timeFormat.format(start)}`,
+        countdown: null,
       };
     case 'ended':
-      return { status, endingSoon: false, text: 'Ended' };
+      return { status, text: 'Ended', countdown: null };
   }
+}
+
+/** The status in one phrase, for places with no room for two parts (pin labels). */
+export function statusPhrase(event: Timed, now: Date): string {
+  const { text, countdown } = statusPill(event, now);
+  return countdown ? `${text}, ${countdown}` : text;
+}
+
+/** Events live now, or starting within this long, get the prominent card. */
+export const URGENT_SOON_MS = 30 * 60 * 1000;
+
+/** True for the events that should stand out: happening now, or about to start. */
+export function isUrgent(event: Timed, now: Date): boolean {
+  const status = timeStatus(event, now);
+  if (status === 'now') return true;
+  return status === 'soon' && new Date(event.startsAt).getTime() - now.getTime() <= URGENT_SOON_MS;
+}
+
+/** From this fraction of the way through, a live event is in its closing stretch. */
+export const CLOSING_FRACTION = 0.8;
+
+/** How far through an event we are, from 0 (not started) to 1 (over). */
+export function progress(event: Timed, now: Date): number {
+  const start = new Date(event.startsAt).getTime();
+  const end = effectiveEnd(event).getTime();
+  if (end <= start) return 1;
+  return Math.min(1, Math.max(0, (now.getTime() - start) / (end - start)));
+}
+
+export interface RailTime {
+  /** "5:30" */
+  clock: string;
+  /** "PM" */
+  period: string;
+  /** The end as a bare clock time, "7:00", or null when the listing gives none. */
+  end: string | null;
+}
+
+const split = (date: Date): [string, string] => {
+  const [clock = '', period = ''] = timeFormat.format(date).split(/\s/);
+  return [clock, period];
+};
+
+/** An event's times in the pieces the agenda's time rail sets in different sizes. */
+export function railTime(event: Timed): RailTime {
+  const [clock, period] = split(new Date(event.startsAt));
+  return {
+    clock,
+    period,
+    end: event.endsAt === null ? null : split(new Date(event.endsAt))[0],
+  };
 }
 
 /** "5:30 – 7:00 PM", or "5:30 PM" when the listing gives no end. */

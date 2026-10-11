@@ -5,6 +5,7 @@ import {
   ExternalLink,
   MapPin,
   Navigation,
+  Radio,
   ScrollText,
   Users,
   Utensils,
@@ -14,17 +15,24 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { ApiRequestError } from '../api/client';
 import { icsUrl } from '../api/events';
 import { useEventDetail } from '../api/queries';
-import { EXCEPTION_LABELS, exceptionBadges } from '../lib/badges';
-import { directionsUrl, formatLocation, formatTimeRange } from '../lib/format';
-import { CAMPUS_LABELS } from '../lib/labels';
-import { DietaryChips, FoodLine } from './EventCard';
+import { foodIconKind } from '../lib/food-icons';
+import {
+  directionsUrl,
+  foodText,
+  formatLocation,
+  formatTimeRange,
+  isApplePlatform,
+} from '../lib/format';
+import { CAMPUS_LABELS, MEAL_LABELS } from '../lib/labels';
+import { DietLabels, ExceptionBadges } from './EventBits';
+import { EventCountdown, EventProgress, EventStatusPill } from './EventStatus';
 import { MapBoundary } from './MapBoundary';
 import { ReportButtons } from './ReportButtons';
 import { EmptyState, ErrorState } from './States';
-import { StatusPill } from './StatusPill';
-import { Badge } from './ui/Badge';
 import { buttonClass } from './ui/button-class';
 import { cx } from './ui/cx';
+import { MealTile } from './ui/MealTile';
+import { SectionHeader } from './ui/SectionHeader';
 import { Skeleton } from './ui/Skeleton';
 
 const MiniMap = lazy(() => import('./MiniMap'));
@@ -46,9 +54,6 @@ const AUDIENCE_TEXT: Record<Audience, string> = {
   members: "For members of the host group. Please don't crash it for the food.",
   rsvp: 'You need to RSVP or register first. Check the listing for how.',
 };
-
-/** Apple Maps where it's the native choice; Google Maps everywhere else. */
-const isApple = () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
 function DetailsSkeleton() {
   return (
@@ -73,11 +78,11 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="grid grid-cols-[1.25rem_1fr] gap-x-3 border-t border-line py-4">
-      <Icon aria-hidden="true" className="mt-0.5 size-4.5 text-ink-3" />
+    <section className="grid grid-cols-[1.125rem_1fr] gap-x-3 border-t border-line py-4">
+      <Icon aria-hidden="true" className="mt-px size-[1.125rem] text-ink-3" strokeWidth={1.75} />
       <div className="min-w-0">
-        <h3 className="text-xs font-semibold tracking-wider text-ink-2 uppercase">{title}</h3>
-        <div className="mt-1.5 space-y-2.5 text-[0.9375rem] text-ink">{children}</div>
+        <SectionHeader as="h3">{title}</SectionHeader>
+        <div className="mt-2 space-y-2.5 text-sm leading-5 text-ink">{children}</div>
       </div>
     </section>
   );
@@ -116,36 +121,41 @@ export function EventDetails({
   const event = query.data;
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const location = formatLocation(event);
-  const directions = directionsUrl(event, isApple());
-  const badges = exceptionBadges(event);
-  const hasFood = event.foodItems.length > 0 || event.mealType !== null;
+  const directions = directionsUrl(event, isApplePlatform());
+  const food = foodText(event, MEAL_LABELS);
+  const foodLine = food && (
+    <p className="flex items-center gap-2 font-medium text-ink">
+      <MealTile kind={foodIconKind(event)} size="sm" muted={event.likelyGone} />
+      <span>
+        <span className="sr-only">Food: </span>
+        {food}
+      </span>
+    </p>
+  );
 
   return (
     <article>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusPill event={event} muted={event.likelyGone} />
-        {badges.map((badge) => (
-          <Badge
-            key={badge}
-            tone={badge === 'gone' ? 'warn' : badge === 'members' ? 'amber' : 'info'}
-          >
-            {EXCEPTION_LABELS[badge]}
-          </Badge>
-        ))}
+        <EventStatusPill event={event} muted={event.likelyGone} />
+        <EventCountdown event={event} className="text-[0.8125rem] text-ink-2" />
+        <ExceptionBadges event={event} className="ml-auto" />
       </div>
       <Heading
         id={titleId}
         className={cx(
-          'mt-3 text-[1.625rem] leading-tight font-bold',
+          'mt-3 text-[1.375rem] leading-7 font-semibold text-balance',
           event.likelyGone ? 'text-ink-2' : 'text-ink',
         )}
       >
         {event.title}
       </Heading>
-      <FoodLine event={event} className="mt-2 text-lg leading-snug" />
+      {foodLine && <div className="mt-2 text-base">{foodLine}</div>}
+      <div className="mt-3 empty:hidden">
+        <EventProgress event={event} muted={event.likelyGone} />
+      </div>
 
       {event.likelyGone && (
-        <p className="mt-4 rounded-card bg-warn-bg px-3.5 py-2.5 text-sm font-medium text-warn">
+        <p className="mt-4 rounded-card bg-sunken px-3.5 py-2.5 text-sm font-medium text-ink-2">
           {event.reportCounts.food_gone} people reported the food is gone.
         </p>
       )}
@@ -177,7 +187,7 @@ export function EventDetails({
             <p className="text-ink-2">The listing doesn't give a location.</p>
           )}
           {event.lat !== null && event.lng !== null && (
-            <div className="h-36 overflow-hidden rounded-card border border-line">
+            <div className="h-32 overflow-hidden rounded-card border border-line">
               <MapBoundary>
                 <Suspense fallback={<Skeleton className="h-full w-full rounded-none" />}>
                   <MiniMap
@@ -211,21 +221,19 @@ export function EventDetails({
         </Section>
 
         <Section icon={Utensils} title="What's there">
-          {hasFood ? (
-            <FoodLine event={event} />
-          ) : (
+          {foodLine ?? (
             <p className="text-ink-2">The listing mentions free food without saying what.</p>
           )}
-          <DietaryChips tags={event.dietary} long />
+          <DietLabels tags={event.dietary} long className="text-[0.8125rem]" />
           <p className="text-xs text-ink-3">
             Dietary details come from the listing and may be incomplete. Confirm with the host if
             you have allergies.
           </p>
         </Section>
 
-        <div className="border-t border-line py-4">
+        <Section icon={Radio} title="Live reports">
           <ReportButtons event={event} />
-        </div>
+        </Section>
 
         {event.description && (
           <Section icon={ScrollText} title="About this event">

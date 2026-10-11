@@ -46,11 +46,11 @@ export function ReportButtons({
   };
 
   return (
-    <section aria-labelledby="report-heading">
+    <div>
       <div className="flex items-baseline justify-between gap-3">
-        <h3 id="report-heading" className="text-sm font-semibold text-ink">
+        <p id="report-heading" className="font-medium text-ink">
           Is there still food?
-        </h3>
+        </p>
         {event.lastReportAt && (
           <p className="tabular text-xs text-ink-3">
             Last report{' '}
@@ -60,7 +60,7 @@ export function ReportButtons({
           </p>
         )}
       </div>
-      <div className="mt-2.5 grid grid-cols-2 gap-2">
+      <div role="group" aria-labelledby="report-heading" className="mt-2.5 grid grid-cols-2 gap-2">
         {SIGNALS.map(({ kind, label, Icon }) => {
           const count = event.reportCounts[kind];
           const pressed = sent === kind;
@@ -78,9 +78,9 @@ export function ReportButtons({
                 'flex min-h-12 items-center justify-between gap-2 rounded-card border px-3.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
                 pressed
                   ? kind === 'still_food'
-                    ? 'border-now/40 bg-now-bg text-now'
-                    : 'border-warn/40 bg-warn-bg text-warn'
-                  : 'border-line-strong bg-surface text-ink hover:bg-sunken',
+                    ? 'border-now bg-now-soft text-now-ink'
+                    : 'border-line-strong bg-sunken text-ink'
+                  : 'border-line-strong bg-card text-ink hover:bg-sunken',
               )}
             >
               <span className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export function ReportButtons({
               onClick={() => {
                 send(kind);
               }}
-              className="tabular min-h-8 rounded-full border border-line px-2.5 font-medium text-ink hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 aria-pressed:border-amber-line aria-pressed:text-amber"
+              className="tabular min-h-8 rounded-full border border-line px-2.5 font-medium text-ink hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 aria-pressed:border-ink aria-pressed:font-semibold"
             >
               {label} · {count}
             </button>
@@ -125,12 +125,12 @@ export function ReportButtons({
         {signedIn && sent !== null && report.isSuccess && 'Thanks, your report was counted.'}
       </p>
       {report.isError && (
-        <p role="alert" className="mt-1 text-sm font-medium text-warn">
+        <p role="alert" className="mt-1 text-sm font-medium text-danger">
           {report.error instanceof ApiRequestError && report.error.status === 429
             ? 'You are reporting too fast. Try again in a bit.'
             : "Couldn't send your report. Try again."}
         </p>
       )}
-    </section>
+    </div>
   );
 }

@@ -1,16 +1,15 @@
-/** The bite mark: a maize circle with a bite taken out, on a navy tile. Decorative. */
+/** The bite mark: a maize circle with a bite taken out, and a crumb. Decorative. */
 export function Logo({ className }: { className?: string }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 100 100" className={className}>
-      <rect width="100" height="100" rx="26" className="fill-[#0b1f3a] dark:fill-[#081830]" />
       <mask id="logo-bite">
         <rect width="100" height="100" fill="#fff" />
-        <circle cx="76" cy="29" r="13" fill="#000" />
-        <circle cx="62" cy="20" r="8" fill="#000" />
-        <circle cx="85" cy="43" r="8" fill="#000" />
+        <circle cx="80" cy="24" r="17" fill="#000" />
+        <circle cx="61" cy="12" r="10" fill="#000" />
+        <circle cx="92" cy="43" r="10" fill="#000" />
       </mask>
-      <circle cx="50" cy="53" r="30" fill="#ffcb05" mask="url(#logo-bite)" />
-      <circle cx="80" cy="18" r="3.5" fill="#ffcb05" />
+      <circle cx="46" cy="54" r="42" className="fill-maize" mask="url(#logo-bite)" />
+      <circle cx="87" cy="10" r="5" className="fill-maize" />
     </svg>
   );
 }

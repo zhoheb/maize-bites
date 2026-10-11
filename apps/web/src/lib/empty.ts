@@ -16,14 +16,14 @@ export interface EmptyCopy {
 export function emptyCopy(tab: Tab, now: Date): EmptyCopy {
   if (tab === 'week') {
     return {
-      title: 'No free food found this week yet.',
+      title: 'Nothing this week yet.',
       hint: 'New listings arrive every hour. Alerts will tell you the moment one does.',
       next: null,
     };
   }
   if (tab === 'today') {
     return {
-      title: 'No more free food today.',
+      title: 'Nothing more today.',
       hint: "Tomorrow's lineup is usually posted by now.",
       next: { tab: 'week', label: 'See this week' },
     };
@@ -32,15 +32,11 @@ export function emptyCopy(tab: Tab, now: Date): EmptyCopy {
   const t = hour + minute / 60;
   const hint =
     t < 11
-      ? 'Lunch rush usually starts around 11:30.'
+      ? 'Lunch usually picks up around 11:30.'
       : t < 16.5
         ? 'Things usually pick up again around 5, when evening meetings start.'
         : t < 21
           ? 'Evening events wind down around 9.'
           : "It's late. Most events are done for the day.";
-  return {
-    title: 'No free food right now.',
-    hint,
-    next: { tab: 'today', label: 'See later today' },
-  };
+  return { title: 'Quiet right now.', hint, next: { tab: 'today', label: 'See today' } };
 }

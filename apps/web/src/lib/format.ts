@@ -38,10 +38,29 @@ export function formatLocation(
   return event.locationName;
 }
 
-/** "Pizza, salad, cookies": the items as the classifier gave them, sentence-cased. */
+const MEAL_WORDS = new Set(['breakfast', 'brunch', 'lunch', 'luncheon', 'dinner', 'supper']);
+
+/**
+ * "Pizza, salad, cookies": the items as the classifier gave them, sentence-cased. When all the
+ * listing said was that a meal is served ("Lunch will be provided"), say that in full, so a
+ * bare "Lunch" doesn't read like a category we assigned.
+ */
 export function formatFood(items: readonly string[]): string {
   const text = items.join(', ');
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  const cased = text.charAt(0).toUpperCase() + text.slice(1);
+  return items.every((item) => MEAL_WORDS.has(item.toLowerCase())) ? `${cased} provided` : cased;
+}
+
+/**
+ * What an event's food line says: the extracted items, else the meal the classifier named,
+ * else nothing. A meal is never inferred here from the time of day or anything else.
+ */
+export function foodText(
+  event: Pick<FoodEvent, 'foodItems' | 'mealType'>,
+  mealLabels: Record<NonNullable<FoodEvent['mealType']>, string>,
+): string | null {
+  if (event.foodItems.length > 0) return formatFood(event.foodItems);
+  return event.mealType ? mealLabels[event.mealType] : null;
 }
 
 const MINUTE = 60_000;
@@ -111,3 +130,6 @@ export function directionsUrl(
 
 /** The shareable address of an event: its own page, not the drawer state of someone's list. */
 export const eventUrl = (id: string) => `${window.location.origin}/events/${id}`;
+
+/** Apple Maps is the native choice on Apple devices; Google Maps everywhere else. */
+export const isApplePlatform = () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);

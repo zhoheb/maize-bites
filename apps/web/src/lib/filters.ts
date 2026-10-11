@@ -97,7 +97,10 @@ export interface FilterChip {
   without: Filters;
 }
 
-/** One removable chip per active filter, in the order of the filter row. */
+/**
+ * One removable chip per dropdown choice, in the order of the filter row. "Open to all" has no
+ * chip: its switch already shows that it is on.
+ */
 export function activeFilterChips(
   filters: Filters,
   labels: {
@@ -125,9 +128,6 @@ export function activeFilterChips(
             without: { ...filters, mealType: null },
           },
         ]
-      : []),
-    ...(filters.openOnly
-      ? [{ key: 'open', label: 'Open to all', without: { ...filters, openOnly: false } }]
       : []),
   ];
 }

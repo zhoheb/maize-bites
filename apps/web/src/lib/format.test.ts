@@ -3,11 +3,14 @@ import { makeEvent } from '../test/fixtures';
 import {
   countdown,
   directionsUrl,
+  foodText,
   formatDuration,
+  formatFood,
   formatLocation,
   formatRelative,
   formatTimeRange,
 } from './format';
+import { MEAL_LABELS } from './labels';
 
 describe('formatLocation', () => {
   it('uses the resolved building and room', () => {
@@ -108,5 +111,26 @@ describe('directionsUrl', () => {
     expect(
       directionsUrl(makeEvent({ lat: null, lng: null, building: null, locationName: null })),
     ).toBeNull();
+  });
+});
+
+describe('food line', () => {
+  it('sentence-cases the extracted items', () => {
+    expect(formatFood(['pizza', 'wings', 'cookies'])).toBe('Pizza, wings, cookies');
+  });
+
+  it('says "provided" when all the listing named was a meal', () => {
+    // "Lunch will be provided" is extracted as the single item "lunch". A bare "Lunch" on the
+    // card read like a category we had assigned, so it is spelled out.
+    expect(formatFood(['lunch'])).toBe('Lunch provided');
+    expect(formatFood(['breakfast', 'lunch'])).toBe('Breakfast, lunch provided');
+    expect(formatFood(['lunch', 'cookies'])).toBe('Lunch, cookies');
+  });
+
+  it('shows items, else the meal the classifier named, else nothing at all', () => {
+    expect(foodText({ foodItems: ['bagels'], mealType: 'breakfast' }, MEAL_LABELS)).toBe('Bagels');
+    expect(foodText({ foodItems: [], mealType: 'dinner' }, MEAL_LABELS)).toBe('Dinner');
+    // No items and no meal: there is no fallback, whatever time the event is.
+    expect(foodText({ foodItems: [], mealType: null }, MEAL_LABELS)).toBeNull();
   });
 });

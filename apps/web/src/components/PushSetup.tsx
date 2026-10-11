@@ -118,7 +118,7 @@ export function PushSetup({ onChange }: { onChange: (enabled: boolean) => void }
             {status === 'working' ? 'Turning on…' : 'Turn on push for this device'}
           </button>
           {status === 'error' && (
-            <p role="alert" className="font-medium text-warn">
+            <p role="alert" className="font-medium text-danger">
               Something went wrong turning on push. Try again.
             </p>
           )}

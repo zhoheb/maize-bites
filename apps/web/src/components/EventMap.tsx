@@ -1,6 +1,6 @@
 import type { FoodEvent } from '@maize-bites/shared';
-import { LocateFixed, Maximize } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { LocateFixed, Maximize, Minus, Plus, Search, type LucideIcon } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import Supercluster from 'supercluster';
@@ -9,34 +9,42 @@ import type { NearMeState } from '../hooks/useNearMe';
 import { useNow } from '../hooks/useNow';
 import { useTheme } from '../hooks/useTheme';
 import { FOOD_ICONS, foodIconKind, type FoodIconKind } from '../lib/food-icons';
-import { formatFood } from '../lib/format';
-import type { LatLng } from '../lib/geo';
+import { directionsUrl, foodText, formatLocation, isApplePlatform } from '../lib/format';
+import type { Bbox, LatLng } from '../lib/geo';
+import { MEAL_LABELS } from '../lib/labels';
 import { mapBackground, mapStyle } from '../lib/map-style';
 import { maplibregl } from '../lib/maplibre';
 import { isLocated, pinLabel, type LocatedEvent } from '../lib/pins';
-import { statusPill, timeStatus, type TimeStatus } from '../lib/status';
+import { statusPhrase, timeStatus, type TimeStatus } from '../lib/status';
 import { buttonClass } from './ui/button-class';
+import { cx } from './ui/cx';
 
 export interface EventMapProps {
   events: FoodEvent[];
   /** Hovered in the list: its pin grows. */
   hoveredId: string | null;
-  /** The current event (picked on the map or with j/k): its pin is selected and gets a popover. */
+  /** The current event (picked on the map or with j/k): its pin is selected and gets a card. */
   focusedId: string | null;
   onHover: (id: string | null) => void;
   onFocus: (id: string | null) => void;
-  /** "Details" in the popover. */
+  /** "Details" in the peek card. */
   onOpen: (id: string) => void;
   /** Screen space covered by a drawer or sheet, so pins are centred in what's visible. */
-  inset?: { right?: number; bottom?: number; top?: number };
+  inset?: { right?: number; bottom?: number };
   userLocation?: LatLng | null;
   nearMe?: NearMeState;
   onNearMe?: () => void;
+  /** Called with the visible bounds when the user presses "Search this area". */
+  onSearchArea?: (bounds: Bbox) => void;
+  /** The list is limited to an area: don't refit the view when results change. */
+  areaActive?: boolean;
+  /** Show the peek card over the focused pin. Off while the details are open over the map. */
+  peek?: boolean;
 }
 
 const MAX_ZOOM = 19;
 /** Pins closer than this many pixels merge into a counted cluster. */
-const CLUSTER_RADIUS = 38;
+const CLUSTER_RADIUS = 36;
 
 // Lucide icons as SVG markup, for pins (plain DOM that MapLibre positions). Rendered once per
 // icon the first time a pin needs it.
@@ -80,17 +88,51 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-/** The most urgent status among events, for a cluster's colour. */
+/** The most urgent status among events, for a cluster. */
 function topStatus(events: readonly FoodEvent[], now: Date): TimeStatus {
   const order: TimeStatus[] = ['now', 'soon', 'later', 'ended'];
   const statuses = new Set(events.map((e) => timeStatus(e, now)));
   return order.find((s) => statuses.has(s)) ?? 'later';
 }
 
+function ToolbarButton({
+  icon: Icon,
+  label,
+  pressed,
+  busy = false,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  pressed?: boolean;
+  busy?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      disabled={busy}
+      onClick={onClick}
+      className="grid size-10 place-items-center text-ink transition-colors hover:bg-sunken disabled:opacity-50 aria-pressed:text-rsvp"
+    >
+      <Icon
+        aria-hidden="true"
+        className={cx('size-[1.125rem]', busy && 'animate-pulse')}
+        strokeWidth={1.75}
+      />
+    </button>
+  );
+}
+
 /**
  * The map half of the interface. Pins are real buttons (keyboard and screen-reader reachable)
- * coloured by urgency, nearby pins merge into counted clusters, and hover, focus and selection
- * mirror the list. Loaded lazily: MapLibre is the heaviest dependency.
+ * sized and coloured by urgency, nearby pins merge into counted clusters, and hover, focus and
+ * selection mirror the list. One toolbar floats over it; nothing else does, apart from the
+ * "Search this area" offer after the user moves the map. Loaded lazily: MapLibre is the
+ * heaviest dependency.
  */
 export default function EventMap({
   events,
@@ -103,6 +145,9 @@ export default function EventMap({
   userLocation = null,
   nearMe = 'idle',
   onNearMe,
+  onSearchArea,
+  areaActive = false,
+  peek = true,
 }: EventMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -110,6 +155,8 @@ export default function EventMap({
   const index = useRef<Supercluster<PinProps> | null>(null);
   const popup = useRef<maplibregl.Popup | null>(null);
   const userMarker = useRef<maplibregl.Marker | null>(null);
+  /** The user has panned or zoomed since the view was last set for them. */
+  const [moved, setMoved] = useState(false);
   const { theme } = useTheme();
   const now = useNow();
 
@@ -121,12 +168,7 @@ export default function EventMap({
 
   const padding = useCallback(() => {
     const { inset: i } = live.current;
-    return {
-      top: 72 + (i?.top ?? 0),
-      left: 56,
-      right: 72 + (i?.right ?? 0),
-      bottom: 56 + (i?.bottom ?? 0),
-    };
+    return { top: 56, left: 48, right: 72 + (i?.right ?? 0), bottom: 48 + (i?.bottom ?? 0) };
   }, []);
 
   /** Marks which pins are hovered and focused. A clustered event lights up its cluster. */
@@ -149,7 +191,7 @@ export default function EventMap({
       if (!m) return;
       closePopup();
       popup.current = new maplibregl.Popup({
-        offset: 22,
+        offset: 20,
         closeButton: false,
         closeOnClick: false,
         maxWidth: '280px',
@@ -162,32 +204,57 @@ export default function EventMap({
     [closePopup],
   );
 
-  /** A small card over a pin: when, what, the food, and a way into the details. */
+  /**
+   * The peek card over a pin: status, title, food, place, and the two things to do next. Built
+   * as plain DOM because MapLibre owns the popup (it supplies the arrow to the pin).
+   */
   const showEvent = useCallback(
     (event: LocatedEvent) => {
-      const box = el('div', 'p-3.5');
+      const at = live.current.now;
+      const status = timeStatus(event, at);
+      const box = el('div', 'w-[17.5rem] p-3.5');
+      box.setAttribute('role', 'group');
+      box.setAttribute('aria-label', event.title);
       box.appendChild(
         el(
           'p',
-          'tabular text-xs font-semibold text-ink-2',
-          statusPill(event, live.current.now).text,
+          cx(
+            'tabular inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold',
+            event.likelyGone || status === 'ended'
+              ? 'bg-sunken text-ink-3'
+              : status === 'now'
+                ? 'bg-now-soft text-now-ink'
+                : status === 'soon'
+                  ? 'bg-soon-soft text-soon-ink'
+                  : 'bg-sunken text-ink-2',
+          ),
+          event.likelyGone ? 'Likely over' : statusPhrase(event, at),
         ),
       );
-      box.appendChild(el('p', 'mt-1 text-sm font-semibold leading-snug text-ink', event.title));
-      if (event.foodItems.length > 0)
-        box.appendChild(
-          el('p', 'mt-0.5 text-sm font-semibold text-food', formatFood(event.foodItems)),
-        );
-      const details = el(
-        'button',
-        buttonClass({ variant: 'primary', size: 'sm' }, 'mt-3 w-full'),
-        'Details',
+      box.appendChild(
+        el(
+          'p',
+          'mt-2 line-clamp-2 text-base leading-[1.375rem] font-semibold text-ink',
+          event.title,
+        ),
       );
+      const food = foodText(event, MEAL_LABELS);
+      if (food) box.appendChild(el('p', 'mt-1 text-sm font-medium text-ink-2', food));
+      const place = formatLocation(event);
+      if (place) box.appendChild(el('p', 'mt-0.5 truncate text-[0.8125rem] text-ink-3', place));
+
+      const actions = el('div', 'mt-3 grid grid-cols-2 gap-2');
+      const directions = el('a', buttonClass({ variant: 'secondary', size: 'sm' }), 'Directions');
+      directions.href = directionsUrl(event, isApplePlatform()) ?? '#';
+      directions.target = '_blank';
+      directions.rel = 'noopener noreferrer';
+      const details = el('button', buttonClass({ variant: 'primary', size: 'sm' }), 'Details');
       details.type = 'button';
       details.addEventListener('click', () => {
         live.current.onOpen(event.id);
       });
-      box.appendChild(details);
+      actions.append(directions, details);
+      box.appendChild(actions);
       openPopup([event.lng, event.lat], box);
     },
     [openPopup],
@@ -196,11 +263,11 @@ export default function EventMap({
   /** Several events at one spot: a list to pick from. */
   const showList = useCallback(
     (at: [number, number], members: readonly FoodEvent[]) => {
-      const box = el('div', 'p-2');
+      const box = el('div', 'w-[17.5rem] p-2');
       box.appendChild(
         el(
           'p',
-          'px-2 pt-1.5 pb-1 text-xs font-semibold text-ink-2',
+          'px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide text-ink-3 uppercase',
           `${members.length} events here`,
         ),
       );
@@ -209,7 +276,7 @@ export default function EventMap({
         const item = el('li', '');
         const button = el(
           'button',
-          'block w-full rounded-lg px-2 py-2 text-left text-sm font-medium text-ink hover:bg-sunken',
+          'block w-full truncate rounded-lg px-2 py-2 text-left text-sm font-medium text-ink hover:bg-sunken',
           event.title,
         );
         button.type = 'button';
@@ -327,10 +394,13 @@ export default function EventMap({
       attributionControl: { compact: true },
       cooperativeGestures: false,
     });
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.current = m;
 
-    m.on('moveend', sync);
+    m.on('moveend', (e) => {
+      sync();
+      // `originalEvent` is set only for moves the user made (drag, wheel, pinch), not ours.
+      if ('originalEvent' in e && e.originalEvent) setMoved(true);
+    });
     m.on('click', () => {
       live.current.onFocus(null);
     });
@@ -369,7 +439,7 @@ export default function EventMap({
   }, [theme]);
 
   // New results: rebuild the cluster index and fit the view to them.
-  const idsKey = events.map((e) => e.id).join(',');
+  const idsKey = events.map((e) => `${e.id}${e.likelyGone ? '!' : ''}`).join(',');
   const fitted = useRef(false);
   const fit = useCallback(
     (animate: boolean) => {
@@ -379,6 +449,7 @@ export default function EventMap({
       const bounds = new maplibregl.LngLatBounds();
       for (const e of located) bounds.extend([e.lng, e.lat]);
       m.fitBounds(bounds, { padding: padding(), maxZoom: 16.5, duration: animate ? 500 : 0 });
+      setMoved(false);
     },
     [padding],
   );
@@ -395,14 +466,15 @@ export default function EventMap({
     // Drop every marker: an event's details (status, likely over) may have changed.
     for (const item of shown.current.values()) item.marker.remove();
     shown.current.clear();
-    fit(fitted.current);
+    // Results limited to an area the user chose stay where the user put the map.
+    if (!areaActive) fit(fitted.current);
     fitted.current = true;
     sync();
     // idsKey captures the relevant change in `events`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey, fit, sync]);
 
-  // Statuses drift as time passes; refresh pin colours on each clock tick.
+  // Statuses drift as time passes; refresh pins on each clock tick.
   useEffect(() => {
     sync();
   }, [now, sync]);
@@ -411,7 +483,7 @@ export default function EventMap({
     paint();
   }, [hoveredId, focusedId, paint]);
 
-  // The focused event: bring it into view and open its popover.
+  // The focused event: bring it into view and open its peek card.
   useEffect(() => {
     const m = map.current;
     if (!m) return;
@@ -420,16 +492,17 @@ export default function EventMap({
       closePopup();
       return;
     }
-    showEvent(event);
+    if (peek) showEvent(event);
+    else closePopup();
     m.easeTo({
       center: [event.lng, event.lat],
-      zoom: Math.max(m.getZoom(), 16),
+      zoom: Math.max(m.getZoom(), 15.5),
       padding: padding(),
       duration: 600,
     });
     // Re-run for a new focus or a new result set, not for every render's fresh `events` array.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusedId, idsKey, closePopup, showEvent, padding]);
+  }, [focusedId, idsKey, peek, closePopup, showEvent, padding]);
 
   // "Near me": a dot for the user, and the view moves to include them.
   useEffect(() => {
@@ -439,7 +512,7 @@ export default function EventMap({
     if (!m || !userLocation) return;
     const dot = el(
       'div',
-      'size-4 rounded-full border-2 border-white bg-[#2f6fed] shadow-[0_0_0_6px_rgb(47_111_237/0.25)]',
+      'size-4 rounded-full border-2 border-panel bg-rsvp shadow-[0_0_0_6px_color-mix(in_srgb,var(--rsvp)_25%,transparent)]',
     );
     dot.setAttribute('role', 'img');
     dot.setAttribute('aria-label', 'Your location');
@@ -453,11 +526,10 @@ export default function EventMap({
     });
   }, [userLocation, padding]);
 
-  const unlocated = events.filter((e) => !isLocated(e)).length;
-  const overlayButton = buttonClass(
-    { variant: 'secondary', size: 'sm' },
-    'shadow-card border-line bg-surface',
-  );
+  const zoomBy = useCallback((by: number) => {
+    const m = map.current;
+    m?.easeTo({ zoom: m.getZoom() + by, duration: 250 });
+  }, []);
 
   return (
     <div className="relative h-full overflow-hidden" style={{ background: mapBackground(theme) }}>
@@ -467,45 +539,75 @@ export default function EventMap({
         aria-label="Map of free food events"
         className="h-full w-full"
       />
-      <div className="absolute left-3 flex gap-2" style={{ top: 12 + (inset?.top ?? 0) }}>
-        {onNearMe && (
-          <button
-            type="button"
-            onClick={onNearMe}
-            aria-pressed={nearMe === 'on'}
-            disabled={nearMe === 'locating'}
-            className={overlayButton}
-          >
-            <LocateFixed
-              aria-hidden="true"
-              className={nearMe === 'on' ? 'size-4 text-[#2f6fed]' : 'size-4'}
-            />
-            {nearMe === 'locating' ? 'Locating…' : 'Near me'}
-          </button>
-        )}
+
+      {onSearchArea && moved && (
         <button
           type="button"
+          onClick={() => {
+            const bounds = map.current?.getBounds();
+            if (!bounds) return;
+            setMoved(false);
+            onSearchArea({
+              west: bounds.getWest(),
+              south: bounds.getSouth(),
+              east: bounds.getEast(),
+              north: bounds.getNorth(),
+            });
+          }}
+          className={buttonClass(
+            { variant: 'secondary', size: 'sm' },
+            'absolute top-3 left-1/2 -translate-x-1/2 animate-enter border-line bg-raised shadow-lift',
+          )}
+        >
+          <Search aria-hidden="true" className="size-4" strokeWidth={1.75} />
+          Search this area
+        </button>
+      )}
+
+      <div
+        role="toolbar"
+        aria-label="Map controls"
+        aria-orientation="vertical"
+        className="absolute top-3 right-3 flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-raised shadow-lift"
+      >
+        {onNearMe && (
+          <ToolbarButton
+            icon={LocateFixed}
+            label={
+              nearMe === 'denied'
+                ? 'Near me (location is blocked for this site)'
+                : nearMe === 'locating'
+                  ? 'Finding your location'
+                  : 'Near me'
+            }
+            pressed={nearMe === 'on'}
+            busy={nearMe === 'locating'}
+            onClick={onNearMe}
+          />
+        )}
+        <ToolbarButton
+          icon={Maximize}
+          label="Fit results"
           onClick={() => {
             closePopup();
             fit(true);
           }}
-          className={overlayButton}
-        >
-          <Maximize aria-hidden="true" className="size-4" />
-          Fit results
-        </button>
+        />
+        <ToolbarButton
+          icon={Plus}
+          label="Zoom in"
+          onClick={() => {
+            zoomBy(1);
+          }}
+        />
+        <ToolbarButton
+          icon={Minus}
+          label="Zoom out"
+          onClick={() => {
+            zoomBy(-1);
+          }}
+        />
       </div>
-      {(unlocated > 0 || nearMe === 'denied') && (
-        <p
-          role="status"
-          className="absolute left-3 max-w-[70%] rounded-lg border border-line bg-surface/95 px-2.5 py-1.5 text-xs text-ink-2 shadow-card"
-          style={{ bottom: 12 + (inset?.bottom ?? 0) }}
-        >
-          {nearMe === 'denied'
-            ? 'Location is blocked for this site. Allow it in your browser settings to use Near me.'
-            : `${unlocated} ${unlocated === 1 ? 'event has' : 'events have'} no map location and ${unlocated === 1 ? 'is' : 'are'} only in the list.`}
-        </p>
-      )}
     </div>
   );
 }

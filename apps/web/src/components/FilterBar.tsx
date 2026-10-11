@@ -13,7 +13,7 @@ import { TAB_OPTIONS } from '../lib/tabs';
 import { SearchBox } from './SearchBox';
 import { Button } from './ui/Button';
 import { RemovableChip } from './ui/Chip';
-import { PillMenu } from './ui/Menu';
+import { DropdownPill } from './ui/DropdownPill';
 import { Segmented } from './ui/Segmented';
 import { Toggle } from './ui/Toggle';
 
@@ -22,7 +22,7 @@ const DIET_OPTIONS = DIETARY_TAGS.map((value) => ({ value, label: DIETARY_LABELS
 const MEAL_OPTIONS = MEAL_TYPES.map((value) => ({ value, label: MEAL_LABELS[value] }));
 const CHIP_LABELS = { campus: CAMPUS_LABELS, dietary: DIETARY_LABELS, meal: MEAL_LABELS };
 
-/** The active filters as removable chips. Renders nothing when none is set. */
+/** The dropdown choices as removable chips. Renders nothing when none is set. */
 export function ActiveFilters({
   filters,
   onChange,
@@ -49,8 +49,9 @@ export function ActiveFilters({
 }
 
 /**
- * Everything that narrows the list, in one row: when, three pill menus, the open-to-all switch,
- * search. What's active shows as removable chips on a second row that exists only when needed.
+ * Everything that narrows the list, in one row: when, three dropdown pills, the open-to-all
+ * switch, search. Dropdown choices also show as removable chips on a second row, which exists
+ * only when there are some.
  */
 export function FilterBar({
   tab,
@@ -73,8 +74,8 @@ export function FilterBar({
     <section aria-label="Filters" className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Segmented label="When" value={tab} options={TAB_OPTIONS} onChange={onTab} />
-        <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-line xl:block" />
-        <PillMenu
+        <span aria-hidden="true" className="mx-1 hidden h-5 w-px bg-line-strong xl:block" />
+        <DropdownPill
           label="Campus"
           options={CAMPUS_OPTIONS}
           selected={filters.campuses}
@@ -82,7 +83,7 @@ export function FilterBar({
             onChange({ ...filters, campuses: toggle(filters.campuses, c) });
           }}
         />
-        <PillMenu
+        <DropdownPill
           label="Diet"
           options={DIET_OPTIONS}
           selected={filters.dietary}
@@ -90,7 +91,7 @@ export function FilterBar({
             onChange({ ...filters, dietary: toggle(filters.dietary, d) });
           }}
         />
-        <PillMenu
+        <DropdownPill
           label="Meal"
           single
           options={MEAL_OPTIONS}
@@ -119,7 +120,7 @@ export function FilterBar({
               Clear
             </Button>
           )}
-          <SearchBox value={search} onChange={onSearch} inputRef={searchRef} className="w-80" />
+          <SearchBox value={search} onChange={onSearch} inputRef={searchRef} className="w-72" />
         </div>
       </div>
       <ActiveFilters filters={filters} onChange={onChange} />

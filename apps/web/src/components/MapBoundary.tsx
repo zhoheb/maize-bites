@@ -18,7 +18,7 @@ export class MapBoundary extends Component<{ children: ReactNode }, { failed: bo
     return (
       <div
         role="status"
-        className="flex h-full items-center justify-center border border-dashed border-line-strong bg-surface px-6 text-center"
+        className="flex h-full items-center justify-center border border-dashed border-line-strong bg-card px-6 text-center"
       >
         <p className="text-sm text-ink-2">
           <span className="block font-semibold text-ink">

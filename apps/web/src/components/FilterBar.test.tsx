@@ -113,6 +113,18 @@ describe('FilterBar', () => {
     expect(search()).toBe('');
   });
 
+  it('shows no chip row when the only filter is the open-to-all switch', () => {
+    renderAt('/?open=1');
+    expect(screen.queryByRole('list', { name: 'Active filters' })).toBeNull();
+    // It still counts as a filter: Clear is offered.
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy();
+  });
+
+  it('never colours a control maize: active controls are ink', () => {
+    const { container } = renderAt('/?tab=week&campus=north&open=1');
+    expect(container.innerHTML).not.toMatch(/\b(bg|border|text)-maize\b/);
+  });
+
   it('toggles open-to-all with the switch', async () => {
     const { user, search } = renderAt();
     const toggle = screen.getByRole('switch', { name: 'Open to all' });
@@ -126,7 +138,12 @@ describe('FilterBar', () => {
 
   it('restores state from the URL and ignores unknown values', () => {
     renderAt('/?campus=north,mars&diet=vegan,halal&meal=brunch&open=1&q=pizza');
-    expect(activeChips()).toEqual(['North Campus', 'Vegan', 'Halal', 'Open to all']);
+    // Dropdown choices get chips. "Open to all" does not: its switch already shows it is on.
+    expect(activeChips()).toEqual(['North Campus', 'Vegan', 'Halal']);
+    expect(screen.getByRole('switch', { name: 'Open to all' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    expect(screen.getAllByText('Open to all')).toHaveLength(1);
     expect(pill(/^Diet/).textContent).toBe('Diet· 2 selected');
     expect(pill(/^Meal/)).toBeTruthy();
     expect(screen.getByRole<HTMLInputElement>('searchbox').value).toBe('pizza');

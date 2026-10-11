@@ -2,9 +2,9 @@ import type { ExpressionSpecification, StyleSpecification } from 'maplibre-gl';
 import type { Theme } from './theme';
 
 // Our own basemap over the free OpenFreeMap vector tiles (OpenStreetMap data, OpenMapTiles
-// schema; no key, no paid API). It is deliberately quiet: land matches the page, streets and
-// buildings are a shade apart, and campus land gets a faint maize wash so the university's
-// buildings read as the subject. One palette per theme.
+// schema; no key, no paid API). It is deliberately quiet: paper land, white roads with a soft
+// casing, buildings a shade apart, few labels. Campus land gets a faint warm wash so the
+// university reads as the subject. One palette per theme.
 
 const TILES = 'https://tiles.openfreemap.org/planet';
 const GLYPHS = 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
@@ -25,36 +25,38 @@ interface Palette {
   waterLabel: string;
 }
 
+// A map is a picture, not UI chrome, so its colours live here rather than in the CSS tokens.
+// They are chosen to sit a clear step away from the panels beside it in both themes.
 const PALETTES: Record<Theme, Palette> = {
   light: {
-    land: '#f5f2ea',
-    water: '#cfdfe6',
-    green: '#e3ebd6',
-    campus: '#f6ecc6',
-    building: '#e7e0d1',
-    buildingLine: '#d6cdba',
-    path: '#d9d1c0',
+    land: '#f2efe8',
+    water: '#cfe0ea',
+    green: '#e3ebd8',
+    campus: '#f4ecd2',
+    building: '#e8e3d8',
+    buildingLine: '#d9d2c3',
+    path: '#ddd6c8',
     road: '#ffffff',
-    roadCasing: '#e2dbca',
-    rail: '#d2cab9',
-    label: '#6d7480',
-    labelStrong: '#3d4a5f',
-    waterLabel: '#6f8f9d',
+    roadCasing: '#e0d9cb',
+    rail: '#d6cfc0',
+    label: '#7c8697',
+    labelStrong: '#5c6678',
+    waterLabel: '#7f9bb0',
   },
   dark: {
-    land: '#0e2443',
-    water: '#071629',
-    green: '#102e38',
-    campus: '#1c2f47',
-    building: '#183258',
-    buildingLine: '#21406c',
-    path: '#24416b',
-    road: '#1f3b66',
-    roadCasing: '#0b1d38',
-    rail: '#1c3558',
-    label: '#93a3ba',
-    labelStrong: '#c5cfdd',
-    waterLabel: '#4f6c8f',
+    land: '#0f151c',
+    water: '#0b1a26',
+    green: '#111d1c',
+    campus: '#161d22',
+    building: '#18212b',
+    buildingLine: '#222d3a',
+    path: '#1a232d',
+    road: '#1e2833',
+    roadCasing: '#0b1016',
+    rail: '#1a232d',
+    label: '#5e6b7a',
+    labelStrong: '#8491a3',
+    waterLabel: '#3d566b',
   },
 };
 
@@ -286,8 +288,9 @@ export function mapStyle(theme: Theme): StyleSpecification {
         type: 'symbol',
         source: 'osm',
         'source-layer': 'poi',
-        minzoom: 15.5,
-        filter: ['<=', ['get', 'rank'], 12],
+        minzoom: 15,
+        // Reduced density: of all points of interest, only university buildings are named.
+        filter: classIn('college', 'university'),
         layout: { ...text, 'text-field': ['get', 'name'], 'text-size': 11, 'text-padding': 6 },
         paint: { 'text-color': c.label, ...halo },
       },

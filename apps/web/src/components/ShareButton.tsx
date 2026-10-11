@@ -37,7 +37,7 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
   return (
     <Button variant="ghost" size="sm" onClick={() => void share()}>
       {copied ? (
-        <Check aria-hidden="true" className="size-4 text-now" />
+        <Check aria-hidden="true" className="size-4 text-now-ink" />
       ) : (
         <Share2 aria-hidden="true" className="size-4" />
       )}

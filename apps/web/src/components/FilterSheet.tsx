@@ -6,17 +6,18 @@ import { useEventsInfinite } from '../api/queries';
 import { NO_FILTERS, hasActiveFilters, toggle, type Filters, type Tab } from '../lib/filters';
 import { CAMPUS_LABELS, DIETARY_LABELS, MEAL_LABELS } from '../lib/labels';
 import { Button } from './ui/Button';
-import { buttonClass } from './ui/button-class';
+import { iconButtonClass } from './ui/button-class';
 import { Chip } from './ui/Chip';
+import { SectionHeader } from './ui/SectionHeader';
 import { Toggle } from './ui/Toggle';
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   const id = `sheet-filter-${label.toLowerCase()}`;
   return (
     <div role="group" aria-labelledby={id}>
-      <h3 id={id} className="text-xs font-semibold tracking-wider text-ink-2 uppercase">
+      <SectionHeader id={id} as="h3">
         {label}
-      </h3>
+      </SectionHeader>
       <div className="mt-2.5 flex flex-wrap gap-2">{children}</div>
     </div>
   );
@@ -24,7 +25,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * The phone's filters: a full-screen sheet. Choices are a draft until "Show N events" applies
- * them; N is the live count for the draft, so there are no surprises on the way back.
+ * them; "Show N spots" carries the live count for the draft, so there are no surprises on the way back.
  */
 export function FilterSheet({
   tab,
@@ -55,11 +56,8 @@ export function FilterSheet({
           className="fixed inset-0 z-50 flex flex-col bg-page text-ink"
         >
           <div className="flex items-center justify-between border-b border-line px-4 py-2">
-            <Dialog.Title className="font-display text-xl font-bold">Filters</Dialog.Title>
-            <Dialog.Close
-              aria-label="Close filters"
-              className={buttonClass({ variant: 'ghost', size: 'icon' })}
-            >
+            <Dialog.Title className="text-lg font-semibold">Filters</Dialog.Title>
+            <Dialog.Close aria-label="Close filters" className={iconButtonClass()}>
               <X aria-hidden="true" className="size-5" />
             </Dialog.Close>
           </div>
@@ -113,7 +111,7 @@ export function FilterSheet({
             />
           </div>
 
-          <div className="flex items-center gap-3 border-t border-line bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-3 border-t border-line bg-panel px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Button
               variant="ghost"
               disabled={!hasActiveFilters(draft)}
@@ -124,7 +122,7 @@ export function FilterSheet({
               Clear all
             </Button>
             <Button
-              variant="maize"
+              variant="primary"
               className="tabular flex-1"
               onClick={() => {
                 onApply(draft);
@@ -132,8 +130,8 @@ export function FilterSheet({
               }}
             >
               {count === undefined
-                ? 'Show events'
-                : `Show ${count}${more ? '+' : ''} ${count === 1 ? 'event' : 'events'}`}
+                ? 'Show spots'
+                : `Show ${count}${more ? '+' : ''} ${count === 1 ? 'spot' : 'spots'}`}
             </Button>
           </div>
         </Dialog.Content>

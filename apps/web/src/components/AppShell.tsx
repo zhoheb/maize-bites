@@ -6,13 +6,16 @@ import { useMe } from '../api/account';
 import { useTheme } from '../hooks/useTheme';
 import { Logo } from './Logo';
 import { SiteCredit } from './SiteCredit';
-import { buttonClass } from './ui/button-class';
+import { buttonClass, iconButtonClass } from './ui/button-class';
 import { cx } from './ui/cx';
 
+// The current page: ink text with a maize underline sitting on the header's bottom edge.
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cx(
-    'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-    isActive ? 'bg-sunken font-semibold text-ink' : 'text-ink-2 hover:text-ink',
+    'relative flex h-14 items-center px-3 text-sm transition-colors',
+    isActive
+      ? 'font-semibold text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-maize'
+      : 'font-medium text-ink-2 hover:text-ink',
   );
 
 function ThemeToggle() {
@@ -23,12 +26,12 @@ function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
-      className={buttonClass({ variant: 'ghost', size: 'icon' })}
+      className={iconButtonClass({ variant: 'secondary' })}
     >
       {dark ? (
-        <Sun aria-hidden="true" className="size-4.5" />
+        <Sun aria-hidden="true" className="size-[1.125rem]" strokeWidth={1.75} />
       ) : (
-        <Moon aria-hidden="true" className="size-4.5" />
+        <Moon aria-hidden="true" className="size-[1.125rem]" strokeWidth={1.75} />
       )}
     </button>
   );
@@ -52,21 +55,21 @@ export function AppShell() {
       <div className="flex min-h-dvh flex-col bg-page text-ink">
         <a
           href="#main"
-          className="sr-only z-50 rounded-full bg-maize px-4 py-2 font-semibold text-on-maize focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+          className="sr-only z-50 rounded-full bg-maize px-4 py-2 font-semibold text-maize-ink focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
         >
           Skip to content
         </a>
-        <header className="sticky top-0 z-30 h-14 border-b border-line bg-page/90 backdrop-blur">
+        <header className="sticky top-0 z-30 h-14 border-b border-line bg-panel">
           <div className="flex h-full items-center gap-2 px-4 lg:px-6">
             <NavLink to="/" className="flex items-center gap-2 rounded-full pr-2">
               <Logo className="size-7" />
-              <span className="font-display text-lg font-bold tracking-tight text-ink">
+              <span className="font-display text-lg font-bold tracking-[-0.02em] text-ink">
                 Maize Bites
               </span>
             </NavLink>
 
-            <nav aria-label="Main" className="ml-4 hidden md:block">
-              <ul className="flex items-center gap-1">
+            <nav aria-label="Main" className="ml-5 hidden md:block">
+              <ul className="flex items-center">
                 {links.map((link) => (
                   <li key={link.to}>
                     <NavLink to={link.to} end={link.end ?? false} className={navClass}>
@@ -77,13 +80,13 @@ export function AppShell() {
               </ul>
             </nav>
 
-            <div className="ml-auto flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-2">
               <ThemeToggle />
               {!signedIn && me.isSuccess && (
                 <NavLink
                   to="/sign-in"
                   className={buttonClass(
-                    { variant: 'primary', size: 'sm' },
+                    { variant: 'secondary', size: 'sm' },
                     'hidden sm:inline-flex',
                   )}
                 >
@@ -93,15 +96,15 @@ export function AppShell() {
               <DropdownMenu.Root modal={false}>
                 <DropdownMenu.Trigger
                   aria-label="Menu"
-                  className={buttonClass({ variant: 'ghost', size: 'icon' }, 'md:hidden')}
+                  className={iconButtonClass({ variant: 'secondary' }, 'md:hidden')}
                 >
-                  <Menu aria-hidden="true" className="size-5" />
+                  <Menu aria-hidden="true" className="size-[1.125rem]" strokeWidth={1.75} />
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content
                     align="end"
                     sideOffset={6}
-                    className="z-50 min-w-48 rounded-card border border-line bg-surface p-1.5 text-ink shadow-lift"
+                    className="z-50 min-w-48 rounded-card border border-line bg-raised p-1.5 text-ink shadow-lift"
                   >
                     {[
                       ...links,
