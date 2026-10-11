@@ -66,7 +66,7 @@ You need Node 20.19 or newer, pnpm 10, and Docker.
 cp .env.example .env    # then set INGEST_CONTACT_EMAIL to your address
 pnpm install
 pnpm dev                # starts Postgres in Docker, applies migrations, runs web, api, and worker
-pnpm db:seed            # once: about 50 campus buildings
+pnpm db:seed            # once: the 73 campus buildings
 ```
 
 Open http://localhost:5173. The API is at http://localhost:3001/api/health.
@@ -148,27 +148,51 @@ secret store, never in the repository.
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: install with a frozen
-lockfile, lint, typecheck, the test suite on PGlite, the same suite against a Postgres 16 service
-container, and a production build.
+lockfile, lint, typecheck, the test suite on PGlite, the same suite against a Postgres 18 service
+container (the version production runs), and a production build.
 
 ## Deploying
 
-The repo carries configuration for three hosts. Nothing deploys until you connect them.
+The repo is set up to run for $0 a month: the web app on Vercel (Hobby), the API on Render's free
+plan, Postgres on Neon's free plan, and the jobs as scheduled GitHub Actions in place of an
+always-on worker. Nothing deploys until you connect the hosts.
 
-1. **Database: Neon.** Create a Postgres 16 project and copy its connection string.
-2. **API and worker: Render.** Create a Blueprint from `render.yaml`. It defines two Docker
-   services built from `apps/api/Dockerfile` and `apps/worker/Dockerfile`. Enter the values marked
-   `sync: false` in the dashboard: `DATABASE_URL`, `WEB_ORIGIN`, the email and push keys,
-   `INGEST_CONTACT_EMAIL`, `UMICH_INTEGRATION_TOKEN`, `PUBLIC_SITE_URL`, and `ANTHROPIC_API_KEY`. The API applies migrations before each deploy
-   (`node node_modules/@maize-bites/db/dist/migrate.js`). Seed buildings once from your machine:
-   `DATABASE_URL=<neon url> pnpm db:seed`.
+1. **Database: Neon.** Create a Postgres project (production is on 18) and copy its direct
+   connection string. Seed the
+   campus buildings once from your machine: `DATABASE_URL=<neon url> pnpm db:seed`.
+2. **API: Render.** Create a Blueprint from `render.yaml` (one free Docker web service) and enter
+   the values marked `sync: false`. Copy the service's deploy hook URL for step 4.
 3. **Web: Vercel.** Import the repo with the root directory set to `apps/web`. In
    `apps/web/vercel.json`, replace `REPLACE-WITH-YOUR-API-HOST.onrender.com` with the API's
    Render hostname. The web app calls `/api/*` on its own origin and Vercel forwards it, so the
-   session cookie stays first-party.
-4. Set `WEB_ORIGIN` on both Render services to the Vercel URL, with no trailing slash.
-5. Point an uptime monitor at `/api/health` and alert when `status` is not `ok`. The response
-   lists each source's last successful ingestion.
+   session cookie stays first-party. No environment variables are needed.
+4. **Jobs and migrations: GitHub Actions.** Add the repository secrets and variables listed in
+   each workflow's `env` block (Settings → Secrets and variables → Actions).
+
+   | Workflow      | When                                       | Runs                                  |
+   | ------------- | ------------------------------------------ | ------------------------------------- |
+   | `ingest.yml`  | every 3 hours                              | `pnpm ingest:once`                    |
+   | `digest.yml`  | 7:30 AM Ann Arbor (two UTC times, for DST) | `pnpm digest:once`                    |
+   | `cleanup.yml` | daily                                      | `pnpm cleanup:once`                   |
+   | `migrate.yml` | every push to `main`                       | migrations, then Render's deploy hook |
+
+   Each can also be started by hand from the Actions tab.
+
+5. Set `WEB_ORIGIN` (Render, and the GitHub variable) to the site's public origin, with no
+   trailing slash, and `PUBLIC_SITE_URL` (GitHub variable) to the origin Student Life approved.
+
+What the free plans cost you:
+
+- **The API sleeps** after 15 minutes without a request and takes about a minute to wake. The
+  web app retries through it and shows "Waking up the server".
+- **Updates are every 3 hours, not hourly,** and "instant" alerts go out with the next ingest
+  run. GitHub may start scheduled runs late or skip one under load, and it switches schedules
+  off in a repository with no activity for 60 days.
+- **`/api/health` reports `degraded` between runs,** because its staleness limit is 3 hours and
+  runs are 3 hours apart. Don't alert on it without raising `INGESTION_STALE_MS`.
+
+To run a worker instead (hourly ingestion, alerts within the hour), `apps/worker` still starts a
+long-running scheduler with `node dist/index.js`, and `apps/worker/Dockerfile` builds it.
 
 To build the images yourself, from the repository root:
 

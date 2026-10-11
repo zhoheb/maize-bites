@@ -48,8 +48,10 @@ pnpm test:pg           # same suite against real Postgres (a throwaway db per te
 pnpm build
 pnpm db:generate       # after editing packages/db/src/schema.ts; commit the generated drizzle/ files
 pnpm ingest:once        # one ingestion pass over the enabled sources (needs INGEST_CONTACT_EMAIL; obeys the per-source guard)
+pnpm digest:once        # send the morning digest once (DIGEST_CRON set: only if that UTC schedule is 7:30 AM in Ann Arbor today)
+pnpm cleanup:once       # delete expired sessions and sign-in links, and events past EVENT_RETENTION_DAYS
 pnpm --filter worker eval  # score rules vs rules+LLM on eval/labeled.json (LLM part costs money; --rules-only, --max-llm-calls N, --mode rules)
-pnpm db:seed           # upsert ~50 UMich buildings (idempotent); run after a fresh migrate
+pnpm db:seed           # upsert the 73 UMich buildings (idempotent); run after a fresh migrate
 pnpm db:seed:demo      # 20 "[demo]" events covering every state (live, soon, later, members, RSVP, likely over); --clear removes them; refuses production
 pnpm db:migrate | db:studio | db:up | db:down
 pnpm --filter @maize-bites/api test   # target a single package
@@ -73,6 +75,9 @@ pnpm --filter @maize-bites/api test   # target a single package
 - If Happening answers 401, 403, or a challenge with the header sent, the run fails once with "Happening rejected the integration header; check the token".
 - A Cloudflare challenge (`cf-mitigated: challenge`) or a robots.txt refusal fails the run without retrying, and the source must not try another URL on that site. Don't add headers or clients meant to get past it.
 - **Duplicates across sources**: Happening imports some Maize Pages events. Both rows carry `events.maizepages_event_id` and only one is active: the Happening copy while its feed has listed it in the last 24h, otherwise the Maize Pages one (`hasFreshHappeningTwin`, `retireDuplicateEvents`). The hidden row is marked `removed` and its alert claims move to the survivor.
+- **Deployment runs the jobs one at a time, not as a worker.** In production there is no long-running worker: scheduled GitHub Actions (`.github/workflows/{ingest,digest,cleanup}.yml`) run the one-shot CLIs in `apps/worker/src/cli/` (ingest every 3 hours, digest at 7:30 AM Ann Arbor, cleanup daily), and `migrate.yml` applies migrations on each push to `main` and then triggers the API deploy. The scheduler in `apps/worker/src/index.ts` is what `pnpm dev` runs locally. A job added to the scheduler needs a CLI and a workflow too, and each CLI must exit nonzero on failure. Jobs can't rely on anything kept in memory between runs.
+- The API listens on `PORT` when the host sets it, else `API_PORT` (`listenPort`).
+- The API host sleeps when idle. Web queries retry through a wake-up (`shouldRetry`, `retryDelay` in `api/queries.ts`) and Home shows `WakingNotice`; don't surface an error for a 502/503/504 or a network failure until those retries are spent.
 - **Housekeeping** (`apps/worker/src/jobs/housekeeping.ts`): `auth-cleanup` runs daily at 4:17 AM; `prune-events` deletes events that ended more than `EVENT_RETENTION_DAYS` ago, every `PRUNE_INTERVAL_MINUTES`.
 - The Happening feed has no coordinates; Maize Pages gives some. Locations resolve by matching each source's location names against building names and aliases (`locations/matcher.ts`). Unmatched names accumulate in `location_misses`; add aliases to `packages/db/src/seed/buildings.ts` from there.
 - **Classifier** (`apps/worker/src/classifier/`) runs on every pass (also when no source was due), once per content version. `CLASSIFIER_MODE` picks who decides:
