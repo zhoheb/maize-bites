@@ -63,6 +63,29 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
+/**
+ * Shown over the loading skeleton when the first request is taking long or has already failed
+ * once: the API host sleeps when idle and needs up to a minute to wake. Says so, instead of
+ * leaving a silent skeleton or showing an error for something that fixes itself.
+ */
+export function WakingNotice() {
+  return (
+    <p
+      role="status"
+      className="mt-3 flex items-start gap-2.5 rounded-card bg-sunken px-3.5 py-2.5 text-[0.8125rem] leading-[1.125rem] text-ink-2"
+    >
+      <span aria-hidden="true" className="relative mt-1 flex size-2 shrink-0">
+        <span className="absolute inset-0 animate-ring rounded-full bg-soon" />
+        <span className="relative size-2 rounded-full bg-soon" />
+      </span>
+      <span>
+        <strong className="font-semibold text-ink">Waking up the server.</strong> After a quiet
+        spell the first visit takes up to a minute. This page will fill in by itself.
+      </span>
+    </p>
+  );
+}
+
 /** A slim line above a list that came from this device's saved copy. */
 export function OfflineBanner({ savedAt }: { savedAt: string }) {
   return (

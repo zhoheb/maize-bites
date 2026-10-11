@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, type DefaultOptions } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement, type ReactElement } from 'react';
@@ -50,9 +50,16 @@ export const apiError = (status: number, code: string, message: string) => ({
   body: { error: { code, message, requestId: 'test' } },
 });
 
-/** Renders with a fresh query cache (no retries) inside a router. */
-export function renderApp(ui: ReactElement, route = '/') {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+/**
+ * Renders with a fresh query cache inside a router. Queries don't retry unless `queries` says
+ * otherwise (a test of retry behaviour passes its own `retry` and a short `retryDelay`).
+ */
+export function renderApp(
+  ui: ReactElement,
+  route = '/',
+  queries: NonNullable<DefaultOptions['queries']> = {},
+) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, ...queries } } });
   const user = userEvent.setup();
   const view = render(
     createElement(

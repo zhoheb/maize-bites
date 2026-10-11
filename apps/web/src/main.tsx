@@ -3,7 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { registerSW } from 'virtual:pwa-register';
-import { shouldRetry } from './api/queries';
+import { retryDelay, shouldRetry } from './api/queries';
 import { AppShell } from './components/AppShell';
 import { HomePage } from './pages/HomePage';
 import {
@@ -19,7 +19,7 @@ import {
 import './index.css';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 60_000, retry: shouldRetry } },
+  defaultOptions: { queries: { staleTime: 60_000, retry: shouldRetry, retryDelay } },
 });
 
 registerSW({ immediate: true });

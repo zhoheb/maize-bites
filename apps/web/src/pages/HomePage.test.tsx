@@ -3,7 +3,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EventMapProps } from '../components/EventMap';
 import { expectAccessible } from '../test/axe';
-import { SIGNED_OUT, mockApi, renderApp } from '../test/api-mock';
+import { WAKING_RETRIES, shouldRetry } from '../api/queries';
+import { SIGNED_OUT, apiError, mockApi, renderApp } from '../test/api-mock';
 import { HEALTH, eventAt, eventId, makeDetail } from '../test/fixtures';
 import { setMediaQueries } from '../test/setup';
 import { HomePage } from './HomePage';
@@ -385,6 +386,58 @@ describe('HomePage', () => {
     renderApp(<HomePage />);
     expect(screen.getByRole('status').textContent).toContain('Loading events');
     expect(document.querySelectorAll('.skeleton').length).toBeGreaterThan(5);
+  });
+
+  describe('when the API is waking from sleep', () => {
+    /** Answers 503 (as a proxy does for a sleeping host) `failures` times, then normally. */
+    function sleepyApi(failures: number) {
+      let calls = 0;
+      mockApi({
+        'GET /api/me': SIGNED_OUT,
+        'GET /api/health': HEALTH,
+        'GET /api/events/now': () =>
+          calls++ < failures
+            ? apiError(503, 'service_unavailable', 'Service unavailable')
+            : { body: { events: [live], nextCursor: null } },
+      });
+      return () => calls;
+    }
+    const production = { retry: shouldRetry, retryDelay: () => 20 };
+
+    it('says so and keeps trying, then shows the list with no error in between', async () => {
+      const calls = sleepyApi(3);
+      renderApp(<HomePage />, '/', production);
+
+      expect(
+        (await screen.findByText('Waking up the server.')).closest('[role="status"]'),
+      ).toBeTruthy();
+      expect(screen.queryByRole('alert')).toBeNull();
+
+      expect(await cardFor('Leftover pizza')).toBeTruthy();
+      expect(calls()).toBe(4);
+      expect(screen.queryByText('Waking up the server.')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('gives up with a retry button if the API never comes back', async () => {
+      const calls = sleepyApi(Infinity);
+      const { user } = renderApp(<HomePage />, '/', production);
+
+      expect((await screen.findByRole('alert', {}, { timeout: 3000 })).textContent).toContain(
+        "Couldn't load events",
+      );
+      expect(calls()).toBe(WAKING_RETRIES + 1);
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+      await user.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(calls()).toBeGreaterThan(WAKING_RETRIES + 1);
+    });
+
+    it('does not mention waking on an ordinary quick load', async () => {
+      api();
+      renderApp(<HomePage />, '/', production);
+      await cardFor('Leftover pizza');
+      expect(screen.queryByText('Waking up the server.')).toBeNull();
+    });
   });
 
   it('has an empty state with a next step when nothing is on', async () => {

@@ -9,7 +9,7 @@ import { HeroStrip } from '../components/HeroStrip';
 import { MapBoundary } from '../components/MapBoundary';
 import { SearchBox } from '../components/SearchBox';
 import { SiteCredit } from '../components/SiteCredit';
-import { EmptyState, ErrorState, OfflineBanner } from '../components/States';
+import { EmptyState, ErrorState, OfflineBanner, WakingNotice } from '../components/States';
 import { Button } from '../components/ui/Button';
 import { RemovableChip } from '../components/ui/Chip';
 import { IconButton } from '../components/ui/IconButton';
@@ -22,6 +22,7 @@ import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery';
 import { useNearMe } from '../hooks/useNearMe';
 import { useNow } from '../hooks/useNow';
 import { useOnline } from '../hooks/useOnline';
+import { useSlow } from '../hooks/useSlow';
 import { useTheme } from '../hooks/useTheme';
 import { useViewportHeight } from '../hooks/useViewportHeight';
 import { emptyCopy } from '../lib/empty';
@@ -45,6 +46,8 @@ const NO_EVENTS: FoodEvent[] = [];
 const DRAWER_WIDTH = 440;
 /** The site header (h-14). */
 const HEADER_HEIGHT = 56;
+/** A first load still pending after this long gets an explanation. */
+const SLOW_LOAD_MS = 5000;
 /** How long a row stays washed in colour after its pin is picked. */
 const FLASH_MS = 1500;
 
@@ -110,6 +113,9 @@ export function HomePage() {
   );
   const groups = useMemo(() => groupEvents(events, now), [events, now]);
   const ready = loaded !== null || saved !== null;
+  // The first request is slow, or has failed and is being retried: most likely the API waking.
+  const waking =
+    useSlow(query.isPending && online, SLOW_LOAD_MS) || (query.isPending && query.failureCount > 0);
   const hero = useMemo(
     () => (ready ? heroFor(tab, events, now, query.hasNextPage && search === '' && !area) : null),
     [ready, tab, events, now, query.hasNextPage, search, area],
@@ -208,7 +214,10 @@ export function HomePage() {
         />
       </div>
     ) : (
-      <EventListSkeleton />
+      <>
+        {waking && <WakingNotice />}
+        <EventListSkeleton />
+      </>
     )
   ) : (
     <>
