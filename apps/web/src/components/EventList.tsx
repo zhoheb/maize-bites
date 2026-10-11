@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'motion/react';
 import type { EventGroup } from '../lib/grouping';
 import { EventCard } from './EventCard';
 import { cx } from './ui/cx';
@@ -51,27 +50,23 @@ export function EventList({
               <span className="tabular ml-auto font-medium text-ink-3">{group.events.length}</span>
             </h2>
             <ul className="mt-1 space-y-3">
-              <AnimatePresence initial={false}>
-                {group.events.map((event) => (
-                  <motion.li
-                    key={event.id}
-                    layout="position"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                  >
-                    <EventCard
-                      event={event}
-                      href={hrefFor(event.id)}
-                      selected={event.id === selectedId}
-                      highlighted={event.id === highlightedId}
-                      distance={distances?.get(event.id) ?? null}
-                      onHover={onHover}
-                    />
-                  </motion.li>
-                ))}
-              </AnimatePresence>
+              {group.events.map((event) => (
+                // Cards fade up as they arrive (CSS, so no script runs per card), and the
+                // browser skips laying out the ones off screen.
+                <li
+                  key={event.id}
+                  className="animate-enter [contain-intrinsic-size:auto_11rem] [content-visibility:auto]"
+                >
+                  <EventCard
+                    event={event}
+                    href={hrefFor(event.id)}
+                    selected={event.id === selectedId}
+                    highlighted={event.id === highlightedId}
+                    distance={distances?.get(event.id) ?? null}
+                    onHover={onHover}
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         );

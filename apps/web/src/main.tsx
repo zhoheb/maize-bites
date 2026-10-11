@@ -5,15 +5,17 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { registerSW } from 'virtual:pwa-register';
 import { shouldRetry } from './api/queries';
 import { AppShell } from './components/AppShell';
-import { AboutPage } from './pages/AboutPage';
-import { AdminPage } from './pages/AdminPage';
-import { AlertsPage } from './pages/AlertsPage';
-import { EventPage } from './pages/EventPage';
 import { HomePage } from './pages/HomePage';
-import { NotFoundPage } from './pages/NotFoundPage';
-import { SignInPage } from './pages/SignInPage';
-import { SubmitPage } from './pages/SubmitPage';
-import { VerifyPage } from './pages/VerifyPage';
+import {
+  AboutPage,
+  AdminPage,
+  AlertsPage,
+  EventPage,
+  NotFoundPage,
+  SignInPage,
+  SubmitPage,
+  VerifyPage,
+} from './pages/lazy';
 import './index.css';
 
 const queryClient = new QueryClient({

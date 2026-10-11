@@ -26,9 +26,12 @@ const VIEWPORTS = [
   { name: 'mobile', width: 390, height: 844 },
 ];
 const SCHEMES = ['light', 'dark'];
+/** `open` clicks the first event card before the capture, to show the detail drawer. */
 const PAGES = [
   { name: 'home', path: '/?tab=week' },
   { name: 'now', path: '/' },
+  { name: 'details', path: '/?tab=week', open: true },
+  { name: 'about', path: '/about', only: 'desktop' },
 ];
 
 /** Resolves once the map has painted its tiles, or after `timeout` if there is no map. */
@@ -66,12 +69,21 @@ try {
       });
       const page = await context.newPage();
       for (const target of PAGES) {
+        if (target.only && target.only !== viewport.name) continue;
         await page.goto(values.base + target.path, { waitUntil: 'domcontentloaded' });
         await page
-          .waitForSelector('article, [data-empty-state]', { timeout: 20_000 })
+          .waitForSelector('article, [data-empty-state], main h1', { timeout: 20_000 })
           .catch(() => undefined);
         await page.evaluate(() => document.fonts.ready);
         const hasMap = await waitForMap(page);
+        if (target.open) {
+          // Open the first event the way its card does: by its link.
+          const href = await page.locator('article a').first().getAttribute('href');
+          if (!href) continue;
+          await page.goto(values.base + href, { waitUntil: 'domcontentloaded' });
+          await page.waitForSelector('[role="dialog"] h2, dialog h2', { timeout: 10_000 });
+          await page.waitForTimeout(1_500); // drawer animation and its mini map
+        }
         const file = `${values.label}-${target.name}-${viewport.name}-${scheme}.png`;
         await page.screenshot({ path: resolve(outDir, file) });
         console.log(`wrote ${file}${hasMap ? '' : ' (no map in this view)'}`);

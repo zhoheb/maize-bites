@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Menu, Moon, Sun } from 'lucide-react';
-import { MotionConfig } from 'motion/react';
+import { Suspense } from 'react';
 import { NavLink, Outlet, useMatch } from 'react-router';
 import { useMe } from '../api/account';
 import { useTheme } from '../hooks/useTheme';
@@ -48,8 +48,7 @@ export function AppShell() {
   ];
 
   return (
-    // Animations follow the system's reduced-motion setting everywhere.
-    <MotionConfig reducedMotion="user">
+    <>
       <div className="flex min-h-dvh flex-col bg-page text-ink">
         <a
           href="#main"
@@ -130,7 +129,10 @@ export function AppShell() {
           </div>
         </header>
         <main id="main" tabIndex={-1} className="flex-1 outline-none">
-          <Outlet />
+          {/* Pages other than Home load on demand; hold their place quietly while they do. */}
+          <Suspense fallback={<div className="min-h-dvh" />}>
+            <Outlet />
+          </Suspense>
         </main>
         {!isHome && (
           <footer className="border-t border-line">
@@ -138,6 +140,6 @@ export function AppShell() {
           </footer>
         )}
       </div>
-    </MotionConfig>
+    </>
   );
 }

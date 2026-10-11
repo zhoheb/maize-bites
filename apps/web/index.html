@@ -21,6 +21,10 @@
     <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Start the landing view's two requests while the script downloads. The URLs must match
+         src/api/events.ts exactly (the Now tab with no filters) or the browser fetches twice. -->
+    <link rel="preload" href="/api/events/now?limit=100" as="fetch" crossorigin />
+    <link rel="preload" href="/api/health" as="fetch" crossorigin />
     <!-- Sets the theme before first paint so there is no flash. Kept in step with lib/theme.ts. -->
     <script>
       (function () {
@@ -36,7 +40,16 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- A static copy of the site header, painted before the script runs and replaced by React.
+         Keep it the same height as AppShell's header (h-14) so nothing moves on the swap. -->
+    <div id="root">
+      <div class="min-h-dvh bg-page text-ink">
+        <div class="flex h-14 items-center gap-2 border-b border-line px-4 lg:px-6">
+          <img src="/icons/favicon.svg" alt="" width="28" height="28" class="size-7" />
+          <span class="font-display text-lg font-bold tracking-tight">Maize Bites</span>
+        </div>
+      </div>
+    </div>
     <noscript>Maize Bites needs JavaScript to show live events.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>

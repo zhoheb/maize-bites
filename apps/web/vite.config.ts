@@ -1,10 +1,39 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defaultClientConditions, loadEnv } from 'vite';
+import { defaultClientConditions, loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 const ROOT_DIR = '../..';
+
+/**
+ * Preloads the Latin subset of both self-hosted fonts in the built index.html, so text paints
+ * in its real face without a swap. Their file names are hashed, so this reads them from the
+ * bundle. (In dev there is no bundle and nothing is added.)
+ */
+function preloadFonts(): Plugin {
+  return {
+    name: 'maize-bites:preload-fonts',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, { bundle }) {
+        return Object.keys(bundle ?? {})
+          .filter((file) => /-latin-wght-normal-[\w-]+\.woff2$/.test(file))
+          .map((file) => ({
+            tag: 'link',
+            attrs: {
+              rel: 'preload',
+              as: 'font',
+              type: 'font/woff2',
+              href: `/${file}`,
+              crossorigin: '',
+            },
+            injectTo: 'head' as const,
+          }));
+      },
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   // Only used to find the API in dev. Client code sees VITE_* vars only.
@@ -14,6 +43,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      preloadFonts(),
       VitePWA({
         strategies: 'injectManifest',
         srcDir: 'src/sw',
@@ -25,8 +55,8 @@ export default defineConfig(({ mode }) => {
           name: 'Maize Bites',
           short_name: 'Maize Bites',
           description: 'Free food on the University of Michigan campus, right now.',
-          theme_color: '#00274c',
-          background_color: '#00274c',
+          theme_color: '#0b1f3a',
+          background_color: '#0b1f3a',
           display: 'standalone',
           start_url: '/',
           scope: '/',
@@ -42,7 +72,14 @@ export default defineConfig(({ mode }) => {
             },
           ],
         },
-        injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'] },
+        injectManifest: {
+          // The shell, plus the two Latin font files so the installed app opens offline in its
+          // own type. Other scripts' subsets load on demand.
+          globPatterns: [
+            '**/*.{js,css,html,svg,png,webmanifest}',
+            '**/*-latin-wght-normal-*.woff2',
+          ],
+        },
       }),
     ],
     // MapLibre's worker is an ES module.

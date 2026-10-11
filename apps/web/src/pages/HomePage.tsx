@@ -3,7 +3,6 @@ import { List, Map as MapIcon, SlidersHorizontal } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEventsInfinite } from '../api/queries';
 import { EventCardSkeleton } from '../components/EventCard';
-import { EventDrawer } from '../components/EventDrawer';
 import { EventList } from '../components/EventList';
 import { ActiveFilters, FilterBar } from '../components/FilterBar';
 import { FilterSheet } from '../components/FilterSheet';
@@ -19,6 +18,7 @@ import { BottomSheet } from '../components/ui/Sheet';
 import { snapHeight, type SheetSnap } from '../components/ui/sheet-snaps';
 import { Skeleton } from '../components/ui/Skeleton';
 import { eventHref, tabHref, useHomeParams } from '../hooks/useHomeParams';
+import { useIdle } from '../hooks/useIdle';
 import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery';
 import { useNearMe } from '../hooks/useNearMe';
 import { useNow } from '../hooks/useNow';
@@ -34,6 +34,9 @@ import { searchEvents } from '../lib/search';
 import { TAB_LABELS, TAB_OPTIONS } from '../lib/tabs';
 
 const EventMap = lazy(() => import('../components/EventMap'));
+const EventDrawer = lazy(() =>
+  import('../components/EventDrawer').then((m) => ({ default: m.EventDrawer })),
+);
 
 const NO_EVENTS: FoodEvent[] = [];
 /** Width of the detail drawer, which covers the right of the map while open. */
@@ -80,6 +83,8 @@ export function HomePage() {
   const online = useOnline();
   const now = useNow();
   const nearMe = useNearMe();
+  // The map is the heaviest thing on the page; start it once the list has had its turn.
+  const mapReady = useIdle();
   const query = useEventsInfinite(tab, filters);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -156,7 +161,7 @@ export function HomePage() {
   }, [events, focusedId]);
 
   const count = (
-    <p className="tabular text-sm text-ink-2" aria-live="polite">
+    <p className="tabular min-h-5 text-sm text-ink-2" aria-live="polite">
       {(loaded !== null || saved !== null) &&
         `${events.length}${query.hasNextPage && search === '' ? '+' : ''} ${events.length === 1 ? 'event' : 'events'} · ${TAB_LABELS[tab]}${search === '' ? '' : ` · matching “${search}”`}`}
     </p>
@@ -246,33 +251,40 @@ export function HomePage() {
       </div>
     );
 
+  const mapShimmer = <Skeleton className="h-full w-full rounded-none" />;
   const map = (inset: { right?: number; bottom?: number; top?: number }) => (
     <MapBoundary>
-      <Suspense fallback={<Skeleton className="h-full w-full rounded-none" />}>
-        <EventMap
-          events={events}
-          hoveredId={hoveredId}
-          focusedId={activeId}
-          onHover={setHoveredId}
-          onFocus={setFocusedId}
-          onOpen={select}
-          inset={inset}
-          userLocation={nearMe.location}
-          nearMe={nearMe.state}
-          onNearMe={nearMe.toggle}
-        />
+      <Suspense fallback={mapShimmer}>
+        {!mapReady ? (
+          mapShimmer
+        ) : (
+          <EventMap
+            events={events}
+            hoveredId={hoveredId}
+            focusedId={activeId}
+            onHover={setHoveredId}
+            onFocus={setFocusedId}
+            onOpen={select}
+            inset={inset}
+            userLocation={nearMe.location}
+            nearMe={nearMe.state}
+            onNearMe={nearMe.toggle}
+          />
+        )}
       </Suspense>
     </MapBoundary>
   );
 
   const drawer = selectedId && (
-    <EventDrawer
-      key={selectedId}
-      id={selectedId}
-      onClose={() => {
-        select(null);
-      }}
-    />
+    <Suspense fallback={null}>
+      <EventDrawer
+        key={selectedId}
+        id={selectedId}
+        onClose={() => {
+          select(null);
+        }}
+      />
+    </Suspense>
   );
 
   if (isDesktop) {
@@ -372,8 +384,8 @@ export function HomePage() {
 
   if (view === 'list') {
     return (
-      <div ref={listRef} className="mx-auto max-w-2xl space-y-3 px-4 py-4">
-        <HeroStrip />
+      <div ref={listRef} className="mx-auto max-w-2xl space-y-3 px-4 pt-5 pb-4">
+        <HeroStrip compact />
         {controls}
         {searchBox}
         <ActiveFilters filters={filters} onChange={setFilters} />

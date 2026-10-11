@@ -51,3 +51,9 @@ Element.prototype.setPointerCapture = () => undefined;
 Element.prototype.releasePointerCapture = () => undefined;
 // Enough of CSS.escape for the ids we pass (uuids).
 define('CSS', { escape: (value: string) => value.replace(/["\\]/g, '\\$&') });
+// "Idle" arrives at once in tests, so work deferred with useIdle (the map) is there right away.
+define('requestIdleCallback', (callback: () => void) => {
+  callback();
+  return 0;
+});
+define('cancelIdleCallback', () => undefined);

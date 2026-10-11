@@ -1,5 +1,4 @@
-import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, type PointerEvent, type ReactNode } from 'react';
+import { useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { SHEET_SNAPS, SNAP_LABELS, nearestSnap, snapHeight, type SheetSnap } from './sheet-snaps';
 
 /**
@@ -25,9 +24,10 @@ export function BottomSheet({
   header: ReactNode;
   children: ReactNode;
 }) {
-  const reduced = useReducedMotion();
   const target = snapHeight(snap, available);
-  const height = useMotionValue(target);
+  // While a finger is down the sheet follows it exactly; otherwise it eases to its snap height
+  // (a CSS transition, which the global reduced-motion rule turns off).
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
   const drag = useRef<{
     y: number;
     height: number;
@@ -35,17 +35,6 @@ export function BottomSheet({
     lastT: number;
     v: number;
   } | null>(null);
-
-  useEffect(() => {
-    if (reduced) {
-      height.set(target);
-      return;
-    }
-    const controls = animate(height, target, { type: 'spring', stiffness: 380, damping: 36 });
-    return () => {
-      controls.stop();
-    };
-  }, [target, reduced, height]);
 
   const index = SHEET_SNAPS.indexOf(snap);
   const step = (by: number) => {
@@ -59,7 +48,7 @@ export function BottomSheet({
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = {
       y: e.clientY,
-      height: height.get(),
+      height: target,
       lastY: e.clientY,
       lastT: e.timeStamp,
       v: 0,
@@ -72,28 +61,26 @@ export function BottomSheet({
     if (dt > 0) d.v = ((d.lastY - e.clientY) / dt) * 1000;
     d.lastY = e.clientY;
     d.lastT = e.timeStamp;
-    height.set(Math.min(snapHeight('full', available), Math.max(72, d.height + (d.y - e.clientY))));
+    setDragHeight(
+      Math.min(snapHeight('full', available), Math.max(72, d.height + (d.y - e.clientY))),
+    );
   }
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current;
     if (!d) return;
     drag.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
-    const moved = Math.abs(e.clientY - d.y);
-    if (moved < 4) return; // a tap, not a drag: the handle's click handles it
-    const next = nearestSnap(height.get(), d.v, available);
-    if (next === snap) {
-      // Same snap point: spring back to it.
-      if (reduced) height.set(target);
-      else animate(height, target, { type: 'spring', stiffness: 380, damping: 36 });
-    } else onSnapChange(next);
+    const released = dragHeight ?? target;
+    setDragHeight(null);
+    if (Math.abs(e.clientY - d.y) < 4) return; // a tap, not a drag: the handle's click handles it
+    onSnapChange(nearestSnap(released, d.v, available));
   }
 
   return (
-    <motion.section
+    <section
       aria-label={label}
-      style={{ height }}
-      className="absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-3xl border border-b-0 border-line bg-surface text-ink shadow-lift"
+      style={{ height: dragHeight ?? target }}
+      className={`${dragHeight === null ? 'transition-[height] duration-300 ease-out ' : ''}absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-3xl border border-b-0 border-line bg-surface text-ink shadow-lift`}
     >
       <div
         onPointerDown={onPointerDown}
@@ -126,6 +113,6 @@ export function BottomSheet({
         <div className="px-4 pb-3">{header}</div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
-    </motion.section>
+    </section>
   );
 }

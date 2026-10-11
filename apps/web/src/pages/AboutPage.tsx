@@ -40,7 +40,7 @@ export function AboutPage() {
       <h1 className="text-4xl font-bold text-ink">Free food, found for you.</h1>
       <p className="mt-3 max-w-2xl text-lg text-ink-2">
         Maize Bites shows the free food on the University of Michigan campus: what's out right now,
-        where it is, and whether it's open to you. It's a student project and isn't run by the
+        where it is, and whether it's open to you. It isn't run by or affiliated with the
         university.
       </p>
 
