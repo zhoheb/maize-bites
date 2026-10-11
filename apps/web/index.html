@@ -8,10 +8,32 @@
       name="description"
       content="Find free food on the University of Michigan campus right now: live events, a campus map, and dietary filters."
     />
-    <meta name="theme-color" content="#00274c" />
+    <meta name="theme-color" content="#faf8f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1f3a" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Maize Bites · Free food at the University of Michigan" />
+    <meta
+      property="og:description"
+      content="What free food is on campus right now, where it is, and how soon."
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Sets the theme before first paint so there is no flash. Kept in step with lib/theme.ts. -->
+    <script>
+      (function () {
+        var saved = null;
+        try {
+          saved = localStorage.getItem('mb-theme');
+        } catch (e) {}
+        var dark =
+          saved === 'dark' ||
+          (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

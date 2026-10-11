@@ -27,7 +27,6 @@
     "react-dom": "catalog:",
     "react-router": "catalog:",
     "supercluster": "catalog:",
-    "vaul": "catalog:",
     "workbox-window": "catalog:",
     "zod": "catalog:"
   },
