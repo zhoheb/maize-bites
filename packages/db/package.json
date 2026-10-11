@@ -28,7 +28,8 @@
     "db:seed": "tsx --conditions=@maize-bites/source src/seed/run.ts",
     "db:seed:demo": "tsx --conditions=@maize-bites/source src/seed/run-demo.ts",
     "db:studio": "drizzle-kit studio",
-    "db:migrate:deploy": "node dist/migrate.js"
+    "db:migrate:deploy": "node dist/migrate.js",
+    "db:migrate:run": "tsx --conditions=@maize-bites/source src/migrate.ts"
   },
   "dependencies": {
     "@maize-bites/shared": "workspace:*",

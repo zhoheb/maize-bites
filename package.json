@@ -22,7 +22,9 @@
     "db:seed": "pnpm --filter @maize-bites/db db:seed",
     "db:seed:demo": "pnpm --filter @maize-bites/db db:seed:demo",
     "db:studio": "pnpm --filter @maize-bites/db db:studio",
-    "ingest:once": "pnpm --filter @maize-bites/worker ingest:once"
+    "ingest:once": "pnpm --filter @maize-bites/worker ingest:once",
+    "digest:once": "pnpm --filter @maize-bites/worker digest:once",
+    "cleanup:once": "pnpm --filter @maize-bites/worker cleanup:once"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

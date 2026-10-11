@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "tsx watch --conditions=@maize-bites/source src/index.ts",
     "ingest:once": "tsx --conditions=@maize-bites/source src/cli/ingest-once.ts",
+    "digest:once": "tsx --conditions=@maize-bites/source src/cli/digest-once.ts",
+    "cleanup:once": "tsx --conditions=@maize-bites/source src/cli/cleanup-once.ts",
     "eval": "tsx --conditions=@maize-bites/source src/cli/eval.ts",
     "vapid:keys": "tsx src/cli/vapid-keys.ts",
     "build": "tsc -p tsconfig.build.json",

@@ -3,6 +3,7 @@
 // scheduled job. To run a single source: HAPPENING_ENABLED=false MAIZEPAGES_ENABLED=true pnpm ingest:once
 // After editing the rules-mode vocabulary: `pnpm ingest:once --reclassify` (rules mode only)
 // drops the stored rules-mode verdicts first, so every live event is judged with the new lists.
+// Exits 1 when a source did not complete, 2 when it is not configured to fetch anything.
 import { clearRulesModeVerdicts, createDb, loadRootEnvFile } from '@maize-bites/db';
 import { parseEnv } from '../env.js';
 import { ingestIfDue } from '../jobs/ingest.js';
