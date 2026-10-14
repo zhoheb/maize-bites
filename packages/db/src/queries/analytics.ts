@@ -62,15 +62,6 @@ export async function recordPageView(db: Database, view: PageViewInput): Promise
   await db.insert(pageViews).values({ ...rest, createdAt: at });
 }
 
-/** Whether a user's own visits are left out of the analytics. Unknown users: false. */
-export async function isExcludedFromAnalytics(db: Database, userId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ exclude: users.excludeFromAnalytics })
-    .from(users)
-    .where(eq(users.id, userId));
-  return row?.exclude ?? false;
-}
-
 export async function setExcludeFromAnalytics(
   db: Database,
   userId: string,

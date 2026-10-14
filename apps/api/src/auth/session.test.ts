@@ -17,6 +17,7 @@ function appWith(user: Partial<UserRow> | null) {
         email: 'a@umich.edu',
         isAdmin: false,
         trustLevel: 0,
+        excludeFromAnalytics: true,
         createdAt: new Date(),
         ...user,
       };

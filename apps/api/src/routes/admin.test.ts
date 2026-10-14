@@ -42,6 +42,8 @@ const ADMIN_ROUTES = [
   ['get', '/api/admin/metrics'],
   ['post', `/api/admin/buildings/${ID}/aliases`],
   ['get', '/api/admin/audit-log'],
+  ['get', '/api/admin/analytics'],
+  ['put', '/api/admin/analytics/settings'],
 ] as const;
 
 describe('admin routes require an admin', () => {

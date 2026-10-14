@@ -179,6 +179,7 @@ export const TEST_RATE_LIMITS: RateLimits = {
   magicLinkPerEmail: { windowMs: 60_000, limit: 1000 },
   submissionsPerUser: { windowMs: 60_000, limit: 1000 },
   reportsPerUser: { windowMs: 60_000, limit: 1000 },
+  pageViewsPerIp: { windowMs: 60_000, limit: 1000 },
 };
 
 export async function createTestApi(overrides: Partial<AppDeps> = {}): Promise<TestApi> {

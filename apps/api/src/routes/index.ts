@@ -3,6 +3,7 @@ import { sessionMiddleware } from '../auth/session.js';
 import type { ApiContext } from '../context.js';
 import { writeProtection } from '../security.js';
 import { adminRouter } from './admin.js';
+import { analyticsRouter } from './analytics.js';
 import { authRouter } from './auth.js';
 import { buildingsRouter } from './buildings.js';
 import { eventsRouter } from './events.js';
@@ -23,6 +24,7 @@ export function apiRouter(ctx: ApiContext): Router {
   router.use('/me', meRouter(ctx));
   router.use('/push', pushRouter(ctx));
   router.use('/submissions', submissionsRouter(ctx));
+  router.use('/analytics', analyticsRouter(ctx));
   router.use('/admin', adminRouter(ctx));
   return router;
 }

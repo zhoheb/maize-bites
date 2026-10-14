@@ -1,6 +1,8 @@
 import {
   SubmissionStateError,
   addBuildingAlias,
+  alertSignupsByDay,
+  analyticsDays,
   approveSubmission,
   classifierStats,
   getActiveClassification,
@@ -14,9 +16,13 @@ import {
   recordClassification,
   rejectSubmission,
   resolveReviewFlags,
+  setExcludeFromAnalytics,
 } from '@maize-bites/db';
 import {
   addAliasRequestSchema,
+  adminAnalyticsQuerySchema,
+  analyticsSettingsSchema,
+  localDateOf,
   eventIdParamsSchema,
   overrideRequestSchema,
   reviewSubmissionRequestSchema,
@@ -30,6 +36,7 @@ import {
 import { Router } from 'express';
 import { currentUser, requireAdmin } from '../auth/session.js';
 import type { ApiContext } from '../context.js';
+import { analyticsWindow, buildAnalyticsResponse } from '../analytics.js';
 import { HttpError } from '../errors.js';
 import { summarizeSources, toAdminClassification, toAdminEvent, toRun } from '../serializers.js';
 
@@ -191,6 +198,41 @@ export function adminRouter({ db, now }: ApiContext): Router {
       campus: building.campus,
     };
     res.status(201).json(body);
+  });
+
+  /** Daily unique visitors and page views (see ../analytics.ts for how they're counted). */
+  router.get('/analytics', async (req, res) => {
+    const { range } = adminAnalyticsQuerySchema.parse(req.query);
+    const today = localDateOf(now());
+    const { from, to } = analyticsWindow(range, today);
+    const [days, signups] = await Promise.all([
+      analyticsDays(db, from, to),
+      alertSignupsByDay(db, from, to),
+    ]);
+    const body = buildAnalyticsResponse({
+      range,
+      today,
+      days,
+      signups,
+      excludeSelf: currentUser(req).excludeFromAnalytics,
+    });
+    res.set('Cache-Control', 'no-store').json(body);
+  });
+
+  /** Whether the signed-in admin's own page views are counted. */
+  router.put('/analytics/settings', async (req, res) => {
+    const settings = analyticsSettingsSchema.parse(req.body);
+    const actor = currentUser(req);
+    await setExcludeFromAnalytics(db, actor.id, settings.excludeSelf);
+    await recordAudit(db, {
+      actorId: actor.id,
+      action: 'analytics.exclude_self',
+      targetType: 'user',
+      targetId: actor.id,
+      details: settings,
+      at: now(),
+    });
+    res.json(settings);
   });
 
   router.get('/audit-log', async (_req, res) => {
