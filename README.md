@@ -99,6 +99,7 @@ All configuration comes from the root `.env` locally, or the host's environment 
 | `LOG_LEVEL`                                              | api, worker | no (`info`)            | pino level                                                                      |
 | `API_PORT`                                               | api         | no (`3001`)            | Port the API listens on                                                         |
 | `TRUST_PROXY`                                            | api         | no (`0`)               | Proxy hops in front of the API, for client IPs                                  |
+| `ADMIN_EMAILS`                                           | api         | no                     | Comma-separated @umich.edu addresses made admins at sign-in                     |
 | `INGEST_CONTACT_EMAIL`                                   | worker      | to ingest              | Sent in the User-Agent of every feed request                                    |
 | `HAPPENING_ENABLED`                                      | worker      | no (`true`)            | Ingest Happening @ Michigan                                                     |
 | `UMICH_INTEGRATION_TOKEN`, `PUBLIC_SITE_URL`             | worker      | for Happening          | Secret token and public site origin for the events.umich.edu integration header |

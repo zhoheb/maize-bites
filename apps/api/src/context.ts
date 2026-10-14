@@ -14,4 +14,6 @@ export interface ApiContext {
   /** VAPID public key for Web Push, or null if push isn't configured. */
   vapidPublicKey: string | null;
   rateLimits: RateLimits;
+  /** Normalized addresses granted admin when they sign in (ADMIN_EMAILS). */
+  adminEmails: readonly string[];
 }

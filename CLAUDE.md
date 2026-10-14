@@ -116,6 +116,7 @@ pnpm --filter @maize-bites/api test   # target a single package
   - Tokens and sessions are 32 random bytes; only SHA-256 hashes are stored.
   - Links are single-use (atomic `consumeMagicLink`) and expire in 15 min. Sessions last 30 days in the httpOnly, SameSite=Lax `mb_session` cookie.
   - The emailed link opens `/auth/verify` in the web app, which calls the API from JS, so link scanners can't burn tokens.
+  - Admins: `ADMIN_EMAILS` (API env, comma-separated @umich.edu) grants `is_admin` at sign-in in `/api/auth/verify`, for new accounts and existing ones on their next sign-in (`upsertUserByEmail(..., { grantAdmin })`). Removing an address never demotes; clear `users.is_admin` in the database for that.
   - Protect routes with `requireUser` / `requireAdmin`. Writes pass `writeProtection` (Origin must be `WEB_ORIGIN`; bodies must be JSON).
 - **Alerts** (`apps/worker/src/notify/`):
   - Instant alerts run after each ingestion. They cover only events published after the subscription was created; filters are ANDed; quiet hours (America/Detroit) defer rather than drop.

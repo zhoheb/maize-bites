@@ -29,6 +29,9 @@ services:
       # Vercel's rewrite and Render's load balancer both sit in front of the API.
       - key: TRUST_PROXY
         value: 2
+      # Comma-separated @umich.edu addresses made admins when they sign in. Set in the dashboard.
+      - key: ADMIN_EMAILS
+        sync: false
       - key: DATABASE_URL
         sync: false
       # The web app's origin, e.g. https://maizebites.zachhoheb.dev (no trailing slash).

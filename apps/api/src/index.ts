@@ -24,6 +24,7 @@ const app = createApp({
   cookieSecure: env.NODE_ENV !== 'development',
   vapidPublicKey: env.VAPID_PUBLIC_KEY ?? null,
   trustProxy: env.TRUST_PROXY,
+  adminEmails: env.ADMIN_EMAILS,
 });
 const port = listenPort(env);
 const server = app.listen(port, () => {

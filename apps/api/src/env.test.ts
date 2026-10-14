@@ -15,6 +15,7 @@ describe('parseEnv', () => {
       LOG_LEVEL: 'info',
       TRUST_PROXY: 0,
       EMAIL_FROM: 'Maize Bites <noreply@zachhoheb.dev>',
+      ADMIN_EMAILS: [],
     });
   });
 
@@ -23,6 +24,16 @@ describe('parseEnv', () => {
     expect(parseEnv({ ...base, VAPID_PUBLIC_KEY: ` "${key}"\n` }).VAPID_PUBLIC_KEY).toBe(key);
     expect(() => parseEnv({ ...base, VAPID_PUBLIC_KEY: `${key.slice(2)}a=` })).toThrow(
       /VAPID_PUBLIC_KEY/,
+    );
+  });
+
+  it('reads ADMIN_EMAILS as a normalized list of @umich.edu addresses', () => {
+    expect(
+      parseEnv({ ...base, ADMIN_EMAILS: ' Zhoheb@UMich.edu, ,other@umich.edu ' }).ADMIN_EMAILS,
+    ).toEqual(['zhoheb@umich.edu', 'other@umich.edu']);
+    expect(parseEnv({ ...base, ADMIN_EMAILS: '' }).ADMIN_EMAILS).toEqual([]);
+    expect(() => parseEnv({ ...base, ADMIN_EMAILS: 'a@umich.edu,b@gmail.com' })).toThrow(
+      /ADMIN_EMAILS/,
     );
   });
 

@@ -59,7 +59,9 @@ export function authRouter(ctx: ApiContext): Router {
         'This sign-in link is invalid, expired, or already used',
       );
     }
-    const user = await upsertUserByEmail(db, email);
+    const user = await upsertUserByEmail(db, email, {
+      grantAdmin: ctx.adminEmails.includes(email),
+    });
     const sessionToken = generateToken();
     await createSession(db, {
       userId: user.id,

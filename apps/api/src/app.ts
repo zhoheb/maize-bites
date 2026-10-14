@@ -9,8 +9,9 @@ import type { Logger } from './logger.js';
 import { DEFAULT_RATE_LIMITS, type RateLimits } from './rate-limit.js';
 import { apiRouter } from './routes/index.js';
 
-export interface AppDeps extends Omit<ApiContext, 'now' | 'rateLimits'> {
+export interface AppDeps extends Omit<ApiContext, 'now' | 'rateLimits' | 'adminEmails'> {
   logger: Logger;
+  adminEmails?: readonly string[];
   now?: () => Date;
   rateLimits?: RateLimits;
   /** Express `trust proxy`: number of proxy hops in front of the API (for client IPs). */
@@ -24,6 +25,7 @@ export function createApp({
   now = () => new Date(),
   rateLimits = DEFAULT_RATE_LIMITS,
   trustProxy = 0,
+  adminEmails = [],
   ...ctx
 }: AppDeps): Express {
   const { webOrigin } = ctx;
@@ -65,7 +67,7 @@ export function createApp({
   );
   app.use(express.json({ limit: '100kb' }));
 
-  app.use('/api', apiRouter({ ...ctx, now, rateLimits }));
+  app.use('/api', apiRouter({ ...ctx, now, rateLimits, adminEmails }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -270,3 +270,47 @@ describe('write protection', () => {
     expect(apiErrorSchema.parse(res.body).error.message).toMatch(/JSON/);
   });
 });
+
+describe('ADMIN_EMAILS', () => {
+  const isAdmin = async (email: string) => {
+    const [row] = await api.handle.db
+      .select({ isAdmin: users.isAdmin })
+      .from(users)
+      .where(sql`email = ${email}`);
+    return row?.isAdmin;
+  };
+  const signInAs = async (app: TestApi, email: string) => {
+    await request(app.app).post('/api/auth/magic-link').send({ email });
+    const token = /token=([A-Za-z0-9_-]{43})/.exec(app.outbox.at(-1)?.text ?? '')?.[1] ?? '';
+    return request(app.app).get('/api/auth/verify').query({ token });
+  };
+
+  beforeEach(async () => {
+    await api.handle.close();
+    api = await createTestApi({ adminEmails: ['zhoheb@umich.edu'] });
+  });
+
+  it('makes a listed address an admin on its first sign-in', async () => {
+    const res = await signInAs(api, 'Zhoheb@umich.edu');
+    expect(meResponseSchema.parse(res.body).user).toEqual({
+      email: 'zhoheb@umich.edu',
+      isAdmin: true,
+    });
+    expect(await isAdmin('zhoheb@umich.edu')).toBe(true);
+  });
+
+  it('promotes an existing account on its next sign-in', async () => {
+    await api.handle.db.insert(users).values({ email: 'zhoheb@umich.edu' });
+    expect(await isAdmin('zhoheb@umich.edu')).toBe(false);
+    await signInAs(api, 'zhoheb@umich.edu');
+    expect(await isAdmin('zhoheb@umich.edu')).toBe(true);
+  });
+
+  it('leaves unlisted accounts as they are, without demoting anyone', async () => {
+    await api.handle.db.insert(users).values({ email: 'boss@umich.edu', isAdmin: true });
+    await signInAs(api, 'wolverine@umich.edu');
+    await signInAs(api, 'boss@umich.edu');
+    expect(await isAdmin('wolverine@umich.edu')).toBe(false);
+    expect(await isAdmin('boss@umich.edu')).toBe(true);
+  });
+});

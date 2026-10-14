@@ -32,11 +32,24 @@ export async function consumeMagicLink(
   return row?.email ?? null;
 }
 
-export async function upsertUserByEmail(db: Database, email: string): Promise<UserRow> {
+/**
+ * Finds or creates the user. `grantAdmin` makes them an admin, new or existing (ADMIN_EMAILS);
+ * without it, is_admin is left as it is, so nobody is demoted here.
+ */
+export async function upsertUserByEmail(
+  db: Database,
+  email: string,
+  { grantAdmin = false }: { grantAdmin?: boolean } = {},
+): Promise<UserRow> {
   const [row] = await db
     .insert(users)
-    .values({ email })
-    .onConflictDoUpdate({ target: users.email, set: { email: sql`excluded.email` } })
+    .values({ email, ...(grantAdmin ? { isAdmin: true } : {}) })
+    .onConflictDoUpdate({
+      target: users.email,
+      set: grantAdmin
+        ? { email: sql`excluded.email`, isAdmin: true }
+        : { email: sql`excluded.email` },
+    })
     .returning();
   if (!row) throw new Error('upsert returned no row');
   return row;

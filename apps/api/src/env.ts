@@ -1,5 +1,5 @@
 import { databaseEnvSchema } from '@maize-bites/db';
-import { base64UrlKeySchema } from '@maize-bites/shared';
+import { base64UrlKeySchema, umichEmailSchema } from '@maize-bites/shared';
 import { z } from 'zod';
 
 const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
@@ -40,6 +40,20 @@ export const apiEnvSchema = databaseEnvSchema
     EMAIL_FROM: z.string().min(3).default('Maize Bites <noreply@zachhoheb.dev>'),
     /** Web Push. The public key is served to browsers; the private key lives in the worker. */
     VAPID_PUBLIC_KEY: z.preprocess(pastedKey, base64UrlKeySchema(65).optional()),
+    /**
+     * Comma-separated @umich.edu addresses made admins when they sign in (new or existing
+     * accounts). Removing an address doesn't demote anyone; do that in the database.
+     */
+    ADMIN_EMAILS: z.preprocess(
+      (value) =>
+        typeof value === 'string'
+          ? value
+              .split(',')
+              .map((email) => email.trim())
+              .filter(Boolean)
+          : value,
+      z.array(umichEmailSchema).default([]),
+    ),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
