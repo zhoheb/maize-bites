@@ -75,3 +75,15 @@ export function startOfNextLocalDay(date: Date, timeZone: string = CAMPUS_TIME_Z
     timeZone,
   );
 }
+
+/** `date`'s calendar day in `timeZone`, as YYYY-MM-DD. */
+export function localDateOf(date: Date | number, timeZone: string = CAMPUS_TIME_ZONE): string {
+  const { year, month, day } = wallTimeOf(date, timeZone);
+  return `${String(year)}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** The YYYY-MM-DD date `days` after (or before, if negative) `date`. Calendar math, no zones. */
+export function addDays(date: string, days: number): string {
+  const [year = 0, month = 1, day = 1] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}

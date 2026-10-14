@@ -12,6 +12,7 @@ export const CHANNELS = ['email', 'push'] as const;
 export const REPORT_KINDS = ['food_gone', 'still_food', 'not_free', 'wrong_info'] as const;
 export const SUBMISSION_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export const SUBSCRIPTION_MODES = ['instant', 'digest'] as const;
+export const DEVICE_CLASSES = ['mobile', 'desktop'] as const;
 
 // Stored as text / text[] (validated here) so the classifier's vocabulary can grow without a migration.
 export const DIETARY_TAGS = [
@@ -34,6 +35,7 @@ export const channelSchema = z.enum(CHANNELS);
 export const reportKindSchema = z.enum(REPORT_KINDS);
 export const submissionStatusSchema = z.enum(SUBMISSION_STATUSES);
 export const subscriptionModeSchema = z.enum(SUBSCRIPTION_MODES);
+export const deviceClassSchema = z.enum(DEVICE_CLASSES);
 export const dietaryTagSchema = z.enum(DIETARY_TAGS);
 export const mealTypeSchema = z.enum(MEAL_TYPES);
 
@@ -46,6 +48,7 @@ export type Channel = z.infer<typeof channelSchema>;
 export type ReportKind = z.infer<typeof reportKindSchema>;
 export type SubmissionStatus = z.infer<typeof submissionStatusSchema>;
 export type SubscriptionMode = z.infer<typeof subscriptionModeSchema>;
+export type DeviceClass = z.infer<typeof deviceClassSchema>;
 export type DietaryTag = z.infer<typeof dietaryTagSchema>;
 export type MealType = z.infer<typeof mealTypeSchema>;
 
