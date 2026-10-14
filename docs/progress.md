@@ -689,3 +689,30 @@ docker compose exec postgres psql -U maize -d maize_bites \
 - The token does not appear in the dev log, in any tracked file, or in any commit.
 
 Not checked in a browser: signing in, Share, Admin, Alerts, and the report buttons.
+
+## 2026-10-14: digest push fix (shipped)
+
+**Root cause.** The digest push used its tag (`digest-Wednesday, October 14`) as the Web Push
+`Topic` header, which only allows URL-safe base64 characters, so web-push threw before
+contacting FCM. The VAPID keys and the subscription were fine. Fixed in `2ac46ab`.
+
+- Pushed `2ac46ab` to `main` at 18:18 UTC. `migrate.yml` passed: the migrator applied
+  `0007_normalize_push_keys` (the only pending migration; the migrator fails the step on any
+  error) and called the Render deploy hook.
+- `/api/health` answered 200 with `status: "ok"` on every check from 18:20 to 18:30 UTC. It
+  doesn't report a version, so this can't tell which build is serving; Render keeps the old one
+  up if a new one fails its health check. Worth a glance at the Render dashboard.
+- Manual `digest.yml` run 38614232502: green. The worker parsed both VAPID keys under the new
+  validation. It sent 0 messages: the failed morning run had already claimed today's events
+  (delivery is at-most-once), so nothing was due. Tomorrow's 7:30 AM digest is the first real
+  push through the fixed path. I didn't delete `notification_log` rows to force a resend.
+
+### Flaky test: HomePage › headline › at / reads "1 spot with free food right now"
+
+Failed once in `pnpm test` (3.5s), passed on every rerun and on unchanged `main`. Reproduced
+once in four runs of the web, api, and worker suites in parallel: it hit vitest's 5s test
+timeout, together with an unrelated FilterBar test. So the cause is CPU contention: the first
+HomePage test pays for the first render and lazy imports. It does read the real clock
+(`NOW = new Date()` at module load, fixtures relative to it), but every margin is 20+ minutes,
+so a fixed fake timer would not have prevented this failure. Not fixed. Options if it recurs
+in CI: raise `testTimeout` for apps/web, or warm the lazy imports in a `beforeAll`.
