@@ -96,7 +96,8 @@ describe('dashboard formatting', () => {
 
   it('rounds the axis and compacts big numbers', () => {
     expect(niceMax(0)).toBe(4);
-    expect(niceMax(37)).toBe(50);
+    expect(niceMax(5)).toBe(6);
+    expect(niceMax(37)).toBe(40);
     expect(niceMax(120)).toBe(200);
     expect(formatCount(1284)).toBe('1,284');
     expect(formatCount(12_900)).toBe('12.9K');

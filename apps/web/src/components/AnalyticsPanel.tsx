@@ -23,8 +23,12 @@ function Tile({ label, figure, against }: { label: string; figure: Comparison; a
     <div className="rounded-xl border border-line bg-card p-3">
       <dt className="text-sm text-ink-2">{label}</dt>
       <dd className="mt-1 text-2xl font-semibold text-ink">{formatCount(figure.value)}</dd>
-      <dd className="mt-0.5 flex items-center gap-1 text-xs text-ink-2">
-        <Arrow aria-hidden="true" className="size-3.5" strokeWidth={2} />
+      <dd className="mt-0.5 text-xs text-ink-2">
+        <Arrow
+          aria-hidden="true"
+          className="mr-0.5 inline size-3.5 align-[-0.2em]"
+          strokeWidth={2}
+        />
         {change.text} <span className="text-ink-3">vs {against}</span>
       </dd>
     </div>

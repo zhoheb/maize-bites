@@ -116,12 +116,13 @@ export function describeChange({ value, previous }: Comparison): Change {
     : { direction: 'down', text: `−${String(-pct)}%` };
 }
 
-/** A round axis maximum at or above `max`: 1, 2 or 5 times a power of ten. */
+/** A round axis maximum at or above `max` whose midpoint is a whole number too. */
 export function niceMax(max: number): number {
-  if (max <= 0) return 4;
+  if (max <= 4) return 4;
   const power = 10 ** Math.floor(Math.log10(max));
-  for (const step of [1, 2, 5, 10]) {
-    if (step * power >= max) return Math.max(step * power, 4);
+  for (const step of [1, 2, 4, 5, 6, 8, 10]) {
+    const value = step * power;
+    if (value >= max && Number.isInteger(value / 2)) return value;
   }
   return 10 * power;
 }
