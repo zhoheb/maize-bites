@@ -114,6 +114,26 @@ describe('/api/me/push', () => {
     expect(await api.handle.db.$count(pushSubscriptions)).toBe(0);
   });
 
+  it('stores keys sent in standard base64 as URL-safe base64, and rejects malformed ones', async () => {
+    const standard = {
+      ...sub,
+      keys: {
+        p256dh: `${sub.keys.p256dh.replaceAll('-', '+').replaceAll('_', '/')}=`,
+        auth: `${sub.keys.auth}==`,
+      },
+    };
+    expect(
+      (await request(api.app).post('/api/me/push').set('Cookie', cookie).send(standard)).status,
+    ).toBe(201);
+    const [row] = await api.handle.db.select().from(pushSubscriptions);
+    expect(row).toMatchObject(sub.keys);
+
+    const short = { ...sub, keys: { ...sub.keys, auth: 'abc' } };
+    expect(
+      (await request(api.app).post('/api/me/push').set('Cookie', cookie).send(short)).status,
+    ).toBe(400);
+  });
+
   it('rejects non-https endpoints and missing keys', async () => {
     expect(
       (

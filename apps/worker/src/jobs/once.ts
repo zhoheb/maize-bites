@@ -1,4 +1,5 @@
 import { CAMPUS_TIME_ZONE, wallTimeOf } from '@maize-bites/shared';
+import type { NotifyStats } from '../notify/notifier.js';
 
 // Helpers for running jobs one at a time from a scheduler outside the process (GitHub Actions),
 // where there is no long-running worker to hold a cron.
@@ -34,4 +35,14 @@ export function isDigestRunForToday(cron: string | undefined, now: Date): boolea
   );
   const local = wallTimeOf(scheduled, CAMPUS_TIME_ZONE);
   return local.hour === DIGEST_LOCAL_TIME.hour && local.minute === DIGEST_LOCAL_TIME.minute;
+}
+
+/**
+ * Exit code for a one-shot notify run. A failure for some recipients while others got their
+ * message is theirs (a dead device, a bounced address) and is only logged; nothing getting
+ * through at all points at us (config, the provider, a bug) and fails the job. Errors that stop
+ * the run outright (bad env, an unreachable database) throw and exit nonzero on their own.
+ */
+export function notifyExitCode(stats: Pick<NotifyStats, 'sent' | 'failed'>): 0 | 1 {
+  return stats.failed > 0 && stats.sent === 0 ? 1 : 0;
 }

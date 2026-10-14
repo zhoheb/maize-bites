@@ -138,4 +138,43 @@ describe('parseEnv', () => {
       expect(String(error)).not.toContain('secret value');
     }
   });
+
+  describe('VAPID keys', () => {
+    const PUBLIC = `B${'a'.repeat(86)}`;
+    const PRIVATE = `x_-${'b'.repeat(40)}`;
+
+    it('accepts URL-safe keys, trimming whitespace and quotes from a paste', () => {
+      const env = parseEnv({
+        DATABASE_URL,
+        VAPID_PUBLIC_KEY: ` "${PUBLIC}"\n`,
+        VAPID_PRIVATE_KEY: `'${PRIVATE}'`,
+      });
+      expect(env.VAPID_PUBLIC_KEY).toBe(PUBLIC);
+      expect(env.VAPID_PRIVATE_KEY).toBe(PRIVATE);
+      expect(
+        parseEnv({ DATABASE_URL, VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: ' ' }).VAPID_PUBLIC_KEY,
+      ).toBeUndefined();
+    });
+
+    it('names the variable that is not URL-safe base64, without repeating it', () => {
+      const standard = `${PRIVATE.slice(0, 41).replace('_', '/')}+=`;
+      expect(() =>
+        parseEnv({ DATABASE_URL, VAPID_PUBLIC_KEY: PUBLIC, VAPID_PRIVATE_KEY: standard }),
+      ).toThrow(/URL-safe base64[\s\S]*VAPID_PRIVATE_KEY/);
+      try {
+        parseEnv({ DATABASE_URL, VAPID_PUBLIC_KEY: PUBLIC, VAPID_PRIVATE_KEY: standard });
+      } catch (error) {
+        expect(String(error)).not.toContain(standard);
+      }
+      expect(() =>
+        parseEnv({ DATABASE_URL, VAPID_PUBLIC_KEY: PUBLIC.slice(1), VAPID_PRIVATE_KEY: PRIVATE }),
+      ).toThrow(/65 bytes[\s\S]*VAPID_PUBLIC_KEY/);
+    });
+
+    it('requires both keys or neither', () => {
+      expect(() => parseEnv({ DATABASE_URL, VAPID_PUBLIC_KEY: PUBLIC })).toThrow(
+        /VAPID_PRIVATE_KEY/,
+      );
+    });
+  });
 });

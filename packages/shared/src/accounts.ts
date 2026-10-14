@@ -57,11 +57,29 @@ export const DEFAULT_ALERT_PREFERENCES: AlertPreferencesInput = {
   quietHours: null,
 };
 
+/** Rewrites standard base64 (`+`, `/`, `=` padding) as the unpadded URL-safe form. */
+export function toBase64Url(value: string): string {
+  return value.trim().replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Unpadded URL-safe base64 of exactly `bytes` bytes, the form Web Push uses for keys. */
+export const base64UrlKeySchema = (bytes: number) =>
+  z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/, 'must be URL-safe base64 (A-Z, a-z, 0-9, - and _, no padding)')
+    .length(Math.ceil((bytes * 4) / 3), `must encode ${bytes} bytes`);
+
+/** A subscription's keys, normalized to URL-safe base64: a P-256 point and a 16-byte secret. */
+export const pushKeysSchema = z.object({
+  p256dh: z.string().max(200).transform(toBase64Url).pipe(base64UrlKeySchema(65)),
+  auth: z.string().max(100).transform(toBase64Url).pipe(base64UrlKeySchema(16)),
+});
+
 /** PushSubscription.toJSON() from the browser. */
 export const pushSubscriptionSchema = z.object({
   endpoint: z.url({ protocol: /^https$/ }),
   expirationTime: z.number().nullable().optional(),
-  keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+  keys: pushKeysSchema,
 });
 export const pushUnsubscribeSchema = z.object({ endpoint: z.url({ protocol: /^https$/ }) });
 export const pushPublicKeySchema = z.object({ publicKey: z.string().nullable() });

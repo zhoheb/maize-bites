@@ -18,6 +18,14 @@ describe('parseEnv', () => {
     });
   });
 
+  it('trims a pasted VAPID public key and rejects one that is not URL-safe base64', () => {
+    const key = `B${'a'.repeat(86)}`;
+    expect(parseEnv({ ...base, VAPID_PUBLIC_KEY: ` "${key}"\n` }).VAPID_PUBLIC_KEY).toBe(key);
+    expect(() => parseEnv({ ...base, VAPID_PUBLIC_KEY: `${key.slice(2)}a=` })).toThrow(
+      /VAPID_PUBLIC_KEY/,
+    );
+  });
+
   it('coerces API_PORT', () => {
     expect(parseEnv({ ...base, API_PORT: '4000' }).API_PORT).toBe(4000);
   });

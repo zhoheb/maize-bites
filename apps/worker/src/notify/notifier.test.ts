@@ -17,7 +17,7 @@ import type { EmailMessage } from '@maize-bites/email';
 import type { PushPayload } from '@maize-bites/shared';
 import { createTestDb, eventInput, insertClassification } from '@maize-bites/db/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDelivery, type Delivery } from './delivery.js';
+import { createDelivery, pushTopic, type Delivery } from './delivery.js';
 import { runDigest, runInstantAlerts } from './notifier.js';
 
 const NOW = new Date('2026-10-01T16:00:00Z'); // noon in Ann Arbor
@@ -301,11 +301,16 @@ describe('runDigest', () => {
 describe('createDelivery push', () => {
   const vapid = { publicKey: 'pub', privateKey: 'priv', subject: 'mailto:x@umich.edu' };
   const payload = { title: 't', body: 'b', url: '/events/1', tag: '1' };
+  const keys = {
+    p256dh:
+      'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM',
+    auth: 'tBHItJI5svbpez7KI4CCXg',
+  };
 
   it('sends to every device and deletes endpoints the push service reports gone', async () => {
     const user = await upsertUserByEmail(db, 'a@umich.edu');
     for (const endpoint of ['https://push.test/live', 'https://push.test/gone']) {
-      await savePushSubscription(db, { userId: user.id, endpoint, p256dh: 'k', auth: 'a' });
+      await savePushSubscription(db, { userId: user.id, endpoint, ...keys });
     }
     const sendPush = vi.fn((sub: { endpoint: string }) =>
       sub.endpoint.endsWith('gone')
@@ -325,6 +330,74 @@ describe('createDelivery push', () => {
     expect((await db.select().from(pushSubscriptions)).map((r) => r.endpoint)).toEqual([
       'https://push.test/live',
     ]);
+  });
+
+  it('sends a topic web-push accepts, whatever the tag', async () => {
+    const user = await upsertUserByEmail(db, 'a@umich.edu');
+    await savePushSubscription(db, { userId: user.id, endpoint: 'https://push.test/1', ...keys });
+    const sendPush = vi.fn(() => Promise.resolve({}));
+    const d = createDelivery({
+      db,
+      mailer: { send: vi.fn() },
+      vapid,
+      logger,
+      sendPush: sendPush as never,
+    });
+
+    expect(await d.push(user.id, { ...payload, tag: 'digest-Wednesday, October 14' })).toBe(1);
+    expect(sendPush).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.objectContaining({ topic: 'digest-WednesdayOctober14' }),
+    );
+    expect(pushTopic('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')).toBe(
+      'aaaaaaaa-bbbb-cccc-dddd-eeeeeeee',
+    );
+    expect(pushTopic(', ')).toBeUndefined();
+  });
+
+  it('forgets a device whose stored keys are malformed, and sends standard base64 keys fixed', async () => {
+    const user = await upsertUserByEmail(db, 'a@umich.edu');
+    await savePushSubscription(db, {
+      userId: user.id,
+      endpoint: 'https://push.test/broken',
+      p256dh: 'k',
+      auth: 'a',
+    });
+    await savePushSubscription(db, {
+      userId: user.id,
+      endpoint: 'https://push.test/standard',
+      p256dh: `${keys.p256dh.replaceAll('-', '+').replaceAll('_', '/')}=`,
+      auth: `${keys.auth}==`,
+    });
+    const sendPush = vi.fn(() => Promise.resolve({}));
+    const d = createDelivery({
+      db,
+      mailer: { send: vi.fn() },
+      vapid,
+      logger,
+      sendPush: sendPush as never,
+    });
+
+    expect(await d.push(user.id, payload)).toBe(1);
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(sendPush).toHaveBeenCalledWith(
+      { endpoint: 'https://push.test/standard', keys },
+      expect.any(String),
+      expect.anything(),
+    );
+    expect((await db.select().from(pushSubscriptions)).map((r) => r.endpoint)).toEqual([
+      'https://push.test/standard',
+    ]);
+
+    await savePushSubscription(db, {
+      userId: user.id,
+      endpoint: 'https://push.test/standard',
+      p256dh: 'k',
+      auth: 'a',
+    });
+    await expect(d.push(user.id, payload)).rejects.toThrow(/gone or invalid/);
+    expect(await db.$count(pushSubscriptions)).toBe(0);
   });
 
   it('fails when the user has no devices or push is not configured', async () => {

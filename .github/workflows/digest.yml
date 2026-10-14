@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   digest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       NODE_ENV: production
@@ -37,9 +37,9 @@ jobs:
       VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
       VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           package: '@maize-bites/worker'
-      # Exits 1 if any message failed to send.
+      # Exits 1 only if messages were due and none could be sent, or the run itself failed.
       - run: pnpm digest:once

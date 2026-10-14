@@ -1,7 +1,18 @@
 import { databaseEnvSchema } from '@maize-bites/db';
+import { base64UrlKeySchema } from '@maize-bites/shared';
 import { z } from 'zod';
 
 const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
+
+/** A pasted secret: surrounding whitespace and one pair of quotes dropped. Blank means unset. */
+const pastedKey = (value: unknown) => {
+  if (typeof value !== 'string') return value;
+  const unquoted = value
+    .trim()
+    .replace(/^(["'])([\s\S]*)\1$/, '$2')
+    .trim();
+  return unquoted === '' ? undefined : unquoted;
+};
 
 export const apiEnvSchema = databaseEnvSchema
   .extend({
@@ -28,7 +39,7 @@ export const apiEnvSchema = databaseEnvSchema
     RESEND_API_KEY: z.preprocess(emptyAsUndefined, z.string().startsWith('re_').optional()),
     EMAIL_FROM: z.string().min(3).default('Maize Bites <noreply@zachhoheb.dev>'),
     /** Web Push. The public key is served to browsers; the private key lives in the worker. */
-    VAPID_PUBLIC_KEY: z.preprocess(emptyAsUndefined, z.string().min(80).optional()),
+    VAPID_PUBLIC_KEY: z.preprocess(pastedKey, base64UrlKeySchema(65).optional()),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {

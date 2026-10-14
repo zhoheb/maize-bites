@@ -1,7 +1,8 @@
 // pnpm --filter worker digest:once
 // Sends the morning digest once and exits: one message per digest subscriber with today's
 // matching events they haven't been sent. Safe to run twice in a day (events are claimed before
-// sending). Exits 1 if any delivery failed.
+// sending). Exits 1 if messages were due and none could be sent, or if the run itself fails
+// (bad env, unreachable database); failures for some recipients alone are logged, not fatal.
 //
 // From a scheduler set DIGEST_CRON to the UTC cron expression that fired. The digest is
 // scheduled at both UTC times that can be 7:30 AM in Ann Arbor, and this stands down on the one
@@ -9,7 +10,7 @@
 import { createDb, loadRootEnvFile } from '@maize-bites/db';
 import { parseEnv } from '../env.js';
 import { deliveryFromEnv } from '../jobs/index.js';
-import { isDigestRunForToday } from '../jobs/once.js';
+import { isDigestRunForToday, notifyExitCode } from '../jobs/once.js';
 import { runDigest } from '../notify/notifier.js';
 
 loadRootEnvFile();
@@ -31,7 +32,13 @@ if (!isDigestRunForToday(process.env['DIGEST_CRON'], now)) {
       now,
     });
     console.info(JSON.stringify(stats));
-    if (stats.failed > 0) process.exitCode = 1;
+    const code = notifyExitCode(stats);
+    process.exitCode = code;
+    if (code !== 0) {
+      console.error(`Digest failed: none of ${stats.failed} messages could be sent.`);
+    } else if (stats.failed > 0) {
+      console.warn(`Digest sent ${stats.sent}; ${stats.failed} recipients failed (see above).`);
+    }
   } finally {
     await close();
   }

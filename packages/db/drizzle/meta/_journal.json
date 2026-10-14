@@ -50,6 +50,13 @@
       "when": 1791525621814,
       "tag": "0006_classifier_rules_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791998092695,
+      "tag": "0007_normalize_push_keys",
+      "breakpoints": true
     }
   ]
 }

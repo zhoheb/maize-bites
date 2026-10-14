@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   ingest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       NODE_ENV: production
@@ -44,7 +44,7 @@ jobs:
       CLASSIFIER_MODE: ${{ vars.CLASSIFIER_MODE || 'rules' }}
       LLM_MAX_CALLS_PER_RUN: ${{ vars.LLM_MAX_CALLS_PER_RUN || '100' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           package: '@maize-bites/worker'

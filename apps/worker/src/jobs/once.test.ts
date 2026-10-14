@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDigestRunForToday } from './once.js';
+import { isDigestRunForToday, notifyExitCode } from './once.js';
 
 const SUMMER = '30 11 * * *'; // 7:30 AM EDT
 const WINTER = '30 12 * * *'; // 7:30 AM EST
@@ -41,5 +41,20 @@ describe('isDigestRunForToday', () => {
 
   it('refuses a schedule it cannot read a fixed time from', () => {
     expect(() => isDigestRunForToday('*/5 * * * *', new Date())).toThrow(/fixed UTC time/);
+  });
+});
+
+describe('notifyExitCode', () => {
+  it('succeeds when everything sent, or nothing was due', () => {
+    expect(notifyExitCode({ sent: 4, failed: 0 })).toBe(0);
+    expect(notifyExitCode({ sent: 0, failed: 0 })).toBe(0);
+  });
+
+  it('logs rather than fails when only some recipients failed', () => {
+    expect(notifyExitCode({ sent: 3, failed: 1 })).toBe(0);
+  });
+
+  it('fails when nothing due could be sent', () => {
+    expect(notifyExitCode({ sent: 0, failed: 2 })).toBe(1);
   });
 });
