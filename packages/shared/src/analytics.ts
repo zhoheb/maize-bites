@@ -60,14 +60,14 @@ export const NOT_FOUND_PATH = '/404';
  * `/404`, so nothing a visitor typed into the address bar is stored.
  */
 export function normalizePath(raw: string): string {
-  let url: URL;
-  try {
-    url = new URL(raw, 'https://maize-bites.invalid');
-  } catch {
-    return NOT_FOUND_PATH;
-  }
-  const path = url.pathname.replace(/\/+$/, '') || '/';
-  if (path === '/' && url.searchParams.get('event')) return '/events/:id';
+  // Plain string parsing: this package also builds without DOM or Node globals (no URL).
+  const [beforeHash = ''] = raw.split('#');
+  const q = beforeHash.indexOf('?');
+  const pathname = q < 0 ? beforeHash : beforeHash.slice(0, q);
+  const search = q < 0 ? '' : beforeHash.slice(q + 1);
+  if (!pathname.startsWith('/')) return NOT_FOUND_PATH;
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (path === '/' && search.split('&').some((p) => /^event=[^&]+/.test(p))) return '/events/:id';
   if (/^\/events\/[^/]+$/.test(path)) return '/events/:id';
   return (ANALYTICS_PATHS as readonly string[]).includes(path) ? path : NOT_FOUND_PATH;
 }
