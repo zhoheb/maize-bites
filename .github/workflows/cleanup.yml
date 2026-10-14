@@ -1,7 +1,9 @@
 name: Cleanup
 
 # Daily housekeeping: deletes expired sessions and sign-in links, and events that ended more
-# than EVENT_RETENTION_DAYS ago. `pnpm cleanup:once` is the same thing locally.
+# than EVENT_RETENTION_DAYS ago; rolls page views into daily totals and deletes raw page views
+# past 90 days and analytics salts from before yesterday. `pnpm cleanup:once` is the same
+# thing locally.
 
 on:
   schedule:

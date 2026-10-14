@@ -1,6 +1,6 @@
 import { createDb, loadRootEnvFile, sql } from '@maize-bites/db';
 import { parseEnv } from './env.js';
-import { authCleanupJob, pruneEventsJob } from './jobs/housekeeping.js';
+import { analyticsRollupJob, authCleanupJob, pruneEventsJob } from './jobs/housekeeping.js';
 import {
   deliveryFromEnv,
   digestJob,
@@ -28,6 +28,7 @@ if (!env.VAPID_PRIVATE_KEY) logger.warn('[worker] VAPID keys are not set; push a
 const jobs: Job[] = [
   digestJob(db, logger, delivery, env.WEB_ORIGIN),
   authCleanupJob(db, logger),
+  analyticsRollupJob(db, logger),
   pruneEventsJob(db, logger, {
     retentionDays: env.EVENT_RETENTION_DAYS,
     intervalMinutes: env.PRUNE_INTERVAL_MINUTES,

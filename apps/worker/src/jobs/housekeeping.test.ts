@@ -1,10 +1,14 @@
 import {
+  analyticsDaily,
+  analyticsSalts,
   classifications,
   consumeMagicLink,
   createMagicLink,
   createSession,
   events,
   magicLinkTokens,
+  pageViews,
+  recordPageView,
   sessions,
   upsertEvent,
   upsertUserByEmail,
@@ -13,7 +17,7 @@ import {
 } from '@maize-bites/db';
 import { createTestDb, eventInput, insertClassification } from '@maize-bites/db/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { authCleanupJob, pruneEventsJob } from './housekeeping.js';
+import { analyticsRollupJob, authCleanupJob, pruneEventsJob } from './housekeeping.js';
 
 const NOW = new Date('2026-10-01T16:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
@@ -85,5 +89,49 @@ describe('pruneEventsJob', () => {
     expect(job(15).schedule).toBe('*/15 * * * *');
     expect(job(360).schedule).toBe('0 */6 * * *');
     expect(() => job(45)).toThrow(/Unsupported interval/);
+  });
+});
+
+describe('analyticsRollupJob', () => {
+  it('keeps daily totals, then deletes raw views past 90 days and old salts', async () => {
+    const view = (day: string, visitorId: string) =>
+      recordPageView(db, {
+        day,
+        visitorId,
+        path: '/',
+        referrerHost: null,
+        device: 'desktop',
+        isSignedIn: false,
+        at: NOW,
+      });
+    await view('2026-06-01', 'old'); // past 90 days, never rolled up before
+    await view('2026-09-30', 'a');
+    await view('2026-09-30', 'b');
+    await view('2026-10-01', 'c'); // today: stays raw
+    await db.insert(analyticsSalts).values([
+      { day: '2026-09-29', salt: 'x' },
+      { day: '2026-09-30', salt: 'y' },
+      { day: '2026-10-01', salt: 'z' },
+    ]);
+
+    const job = analyticsRollupJob(db, logger, () => NOW);
+    expect(job.schedule).toBe('37 4 * * *');
+    expect(await job.run()).toBe(2);
+
+    const daily = await db.select().from(analyticsDaily);
+    expect(daily.map((d) => [d.day, d.uniqueVisitors]).sort()).toEqual([
+      ['2026-06-01', 1],
+      ['2026-09-30', 2],
+    ]);
+    expect((await db.select().from(pageViews)).map((r) => r.day).sort()).toEqual([
+      '2026-09-30',
+      '2026-09-30',
+      '2026-10-01',
+    ]);
+    expect((await db.select().from(analyticsSalts)).map((r) => r.day).sort()).toEqual([
+      '2026-09-30',
+      '2026-10-01',
+    ]);
+    expect(await job.run()).toBe(0);
   });
 });

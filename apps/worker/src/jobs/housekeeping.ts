@@ -1,4 +1,13 @@
-import { deleteExpiredAuthRows, pruneEndedEvents, type Database } from '@maize-bites/db';
+import {
+  countPageViews,
+  deleteExpiredAuthRows,
+  deleteExpiredSalts,
+  deleteOldPageViews,
+  pruneEndedEvents,
+  rollUpPageViews,
+  type Database,
+} from '@maize-bites/db';
+import { localDateOf } from '@maize-bites/shared';
 import { everyMinutesCron, type Job, type Logger } from '../scheduler.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -36,6 +45,29 @@ export function pruneEventsJob(
       const deleted = await pruneEndedEvents(db, cutoff);
       logger.info(`[prune] deleted ${deleted} event(s) that ended before ${cutoff.toISOString()}`);
       return deleted;
+    },
+  };
+}
+
+/**
+ * Daily at 4:37 AM Ann Arbor time: roll finished days of page views into analytics_daily, then
+ * delete raw page views past their retention and salts from before yesterday. Rolling up first
+ * means no day is deleted before its totals are kept.
+ */
+export function analyticsRollupJob(db: Database, logger: Logger, now = () => new Date()): Job {
+  return {
+    name: 'analytics-rollup',
+    schedule: '37 4 * * *',
+    run: async () => {
+      const today = localDateOf(now());
+      const rolled = await rollUpPageViews(db, today);
+      const deletedViews = await deleteOldPageViews(db, today);
+      const deletedSalts = await deleteExpiredSalts(db, today);
+      const stored = await countPageViews(db);
+      logger.info(
+        `[analytics] rolled up ${rolled.length} day(s), deleted ${deletedViews} old page view(s) and ${deletedSalts} salt(s); ${stored} raw page view(s) stored`,
+      );
+      return rolled.length;
     },
   };
 }
