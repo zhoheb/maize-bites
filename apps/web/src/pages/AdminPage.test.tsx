@@ -1,4 +1,8 @@
-import type { AdminMetricsResponse, ReviewQueueResponse } from '@maize-bites/shared';
+import type {
+  AdminAnalyticsResponse,
+  AdminMetricsResponse,
+  ReviewQueueResponse,
+} from '@maize-bites/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN, BUILDINGS, SIGNED_IN, mockApi, renderApp } from '../test/api-mock';
@@ -101,9 +105,36 @@ const metrics: AdminMetricsResponse = {
   ],
 };
 
+const analytics: AdminAnalyticsResponse = {
+  range: '30d',
+  today: '2026-10-14',
+  tiles: {
+    today: { value: 42, previous: 40 },
+    yesterday: { value: 40, previous: 50 },
+    weekAverage: { value: 38.4, previous: 38.4 },
+    last30: { value: 1200, previous: 0 },
+  },
+  series: Array.from({ length: 30 }, (_, i) => ({
+    day: new Date(Date.UTC(2026, 8, 15 + i)).toISOString().slice(0, 10),
+    uniqueVisitors: 30 + i,
+    pageViews: 60 + 2 * i,
+    signedInVisitors: 2,
+    eventVisitors: 10,
+    alertSignups: i === 29 ? 3 : 0,
+  })),
+  topPages: [
+    { name: '/', views: 900 },
+    { name: '/events/:id', views: 300 },
+  ],
+  topReferrers: [{ name: 'reddit.com', views: 120 }],
+  mobileShare: 0.62,
+  excludeSelf: true,
+};
+
 const routes = (extra: Parameters<typeof mockApi>[0] = {}) =>
   mockApi({
     'GET /api/me': ADMIN,
+    'GET /api/admin/analytics': analytics,
     'GET /api/admin/review-queue': queue,
     'GET /api/admin/metrics': metrics,
     'GET /api/buildings': BUILDINGS,
@@ -117,6 +148,39 @@ describe('AdminPage', () => {
 
     expect(await screen.findByText('Admins only')).toBeTruthy();
     expect(api.calls.map((c) => c.key)).toEqual(['GET /api/me']);
+  });
+
+  it('shows visitor tiles, the chart, top pages and referrers, and toggles self-exclusion', async () => {
+    const api = routes({
+      'PUT /api/admin/analytics/settings': (body: unknown) => ({ body }),
+    });
+    const { user } = renderApp(<AdminPage />);
+
+    const panel = await screen.findByRole('region', { name: 'Visitors' });
+    const today = (await within(panel).findByText('Today')).parentElement;
+    expect(today?.textContent).toContain('42');
+    expect(today?.textContent).toContain('+5% vs yesterday');
+    expect(within(panel).getByText(/−20%/)).toBeTruthy(); // yesterday vs the day before
+    expect(within(panel).getByText('new')).toBeTruthy(); // nothing in the 30 before
+    expect(
+      within(panel).getByRole('img', { name: /Daily unique visitors and page views/ }),
+    ).toBeTruthy();
+    expect(within(panel).getByText('Event pages')).toBeTruthy();
+    expect(within(panel).getByText('reddit.com')).toBeTruthy();
+    expect(within(panel).getByText('62%')).toBeTruthy();
+    expect(within(panel).getByText('Signed up for alerts')).toBeTruthy();
+
+    await user.click(within(panel).getByRole('switch', { name: 'Leave out my own visits' }));
+    await waitFor(() => {
+      expect(api.bodiesFor('PUT /api/admin/analytics/settings')).toEqual([{ excludeSelf: false }]);
+    });
+
+    await user.click(within(panel).getByRole('radio', { name: '90 days' }));
+    await waitFor(() => {
+      expect(api.calls.filter((c) => c.key === 'GET /api/admin/analytics').length).toBeGreaterThan(
+        1,
+      );
+    });
   });
 
   it('shows the review queue, ingestion per source, classifier stats, and location misses', async () => {

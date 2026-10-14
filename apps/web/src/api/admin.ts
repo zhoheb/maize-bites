@@ -1,9 +1,13 @@
 import {
+  adminAnalyticsResponseSchema,
   adminMetricsResponseSchema,
+  analyticsSettingsSchema,
   buildingSchema,
   overrideResponseSchema,
   reviewQueueResponseSchema,
   reviewSubmissionResponseSchema,
+  type AnalyticsRange,
+  type AnalyticsSettings,
   type OverrideRequest,
 } from '@maize-bites/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +18,7 @@ const adminKeys = {
   all: ['admin'] as const,
   queue: ['admin', 'review-queue'] as const,
   metrics: ['admin', 'metrics'] as const,
+  analytics: ['admin', 'analytics'] as const,
 };
 
 export function useReviewQueue(enabled: boolean) {
@@ -78,4 +83,23 @@ export function useAddAlias() {
       buildingSchema,
     ),
   );
+}
+
+export function useAdminAnalytics(range: AnalyticsRange, enabled: boolean) {
+  return useQuery({
+    queryKey: [...adminKeys.analytics, range],
+    queryFn: ({ signal }) =>
+      getJson(`/api/admin/analytics?range=${range}`, adminAnalyticsResponseSchema, { signal }),
+    enabled,
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+export function useAnalyticsSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: AnalyticsSettings) =>
+      sendJson('PUT', '/api/admin/analytics/settings', settings, analyticsSettingsSchema),
+    onSuccess: () => client.invalidateQueries({ queryKey: adminKeys.analytics }),
+  });
 }

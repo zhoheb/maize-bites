@@ -16,6 +16,7 @@ import {
   useReviewSubmission,
 } from '../api/admin';
 import { useBuildings } from '../api/crowd';
+import { AnalyticsPanel } from '../components/AnalyticsPanel';
 import { Badge } from '../components/ui/Badge';
 import { card, inputClass, primaryButton, secondaryButton } from '../components/forms';
 import { EmptyState, ErrorState } from '../components/States';
@@ -350,6 +351,8 @@ export function AdminPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
       <h1 className="text-2xl font-semibold text-ink">Admin</h1>
+
+      <AnalyticsPanel />
 
       <Panel title="Review queue">
         {queue.isPending && <p className="text-sm text-ink-2">Loading…</p>}

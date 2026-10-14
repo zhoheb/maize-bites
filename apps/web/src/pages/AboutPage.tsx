@@ -106,6 +106,22 @@ export function AboutPage() {
         </p>
       </Section>
 
+      <Section title="Privacy">
+        <p>
+          We count visits so we know whether the site is useful, without cookies, without storing
+          anything in your browser, and without third-party trackers. Each page view records the
+          page (never the query string), the site that linked you here, whether the screen is a
+          phone's, and whether you were signed in, but not who you are.
+        </p>
+        <p>
+          To tell visitors apart within a day, the server mixes your IP address and browser name
+          with a random value that changes every day, and keeps only the scrambled result. Your IP
+          address and browser details are never stored, and each day's random value is deleted two
+          days later, so a visit can't be traced back to you or linked to another day. Visits from
+          browsers with Do Not Track or Global Privacy Control turned on aren't counted at all.
+        </p>
+      </Section>
+
       <Section title="Data sources">
         <ul className="list-disc space-y-2 pl-5">
           <li>

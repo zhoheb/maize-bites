@@ -3,6 +3,7 @@ import { Menu, Moon, Sun } from 'lucide-react';
 import { Suspense } from 'react';
 import { NavLink, Outlet, useMatch } from 'react-router';
 import { useMe } from '../api/account';
+import { usePageViews } from '../hooks/usePageViews';
 import { useTheme } from '../hooks/useTheme';
 import { Logo } from './Logo';
 import { SiteCredit } from './SiteCredit';
@@ -38,6 +39,7 @@ function ThemeToggle() {
 }
 
 export function AppShell() {
+  usePageViews();
   const me = useMe();
   const signedIn = me.isSuccess && me.data !== null;
   // Home lays itself out to the viewport and shows the credit at the end of its list.

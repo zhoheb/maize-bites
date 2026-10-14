@@ -41,6 +41,10 @@
   --over: #9ca3af;
   --members: #a34a06;
   --rsvp: #2563eb;
+  /* Chart series (admin analytics). Validated as a pair for colour-blind separation and 3:1 on
+     the card, per mode. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
   --danger: #b42318;
   --danger-soft: #fee4e2;
   --focus: #0e1a2b;
@@ -92,6 +96,8 @@
   --over: #6b7787;
   --members: #f6a654;
   --rsvp: #7fb0ff;
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
   --danger: #ffa193;
   --danger-soft: rgba(255, 161, 147, 0.12);
   --focus: #ffd43b;
@@ -144,6 +150,8 @@
   --color-over: var(--over);
   --color-members: var(--members);
   --color-rsvp: var(--rsvp);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-focus: var(--focus);
