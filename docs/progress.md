@@ -716,3 +716,54 @@ HomePage test pays for the first render and lazy imports. It does read the real 
 (`NOW = new Date()` at module load, fixtures relative to it), but every margin is 20+ minutes,
 so a fixed fake timer would not have prevented this failure. Not fixed. Options if it recurs
 in CI: raise `testTimeout` for apps/web, or warm the lazy imports in a `beforeAll`.
+
+## 2026-10-14: daily unique visitors (shipped)
+
+Branch `analytics`, fast-forwarded into `main` (`95016b3`..`712707e`). Migration
+`0008_page_view_analytics` applied by `migrate.yml`; CI, migrate, Render and Vercel all green.
+
+**What it is.** One `sendBeacon` per page to `POST /api/analytics/view`; the API stores a
+`page_views` row keyed by `sha256(daily salt + IP + User-Agent + site host)`, with the route,
+referrer host, mobile/desktop and signed-in flag. No cookie, no browser storage, no IP or UA
+stored. Salts live in `analytics_salts` and are deleted after two days. Housekeeping rolls
+finished days into `analytics_daily` (kept forever) and deletes raw rows after 90 days. The
+admin page has a Visitors panel (tiles, 30/90-day chart, table view, funnel, top pages and
+referrers, device split, "Leave out my own visits"). About has a Privacy section; CLAUDE.md
+documents the scheme.
+
+**Verified.**
+- Locally: two Chromium contexts with different real-browser User-Agents (desktop Chrome, iPhone
+  Safari) browsed 3 and 2 pages; the dashboard showed 2 unique visitors and 5 page views; the
+  admin's own `/admin` visits weren't counted. Screenshots:
+  `docs/screenshots/analytics/analytics-dashboard-{light,dark}.png`.
+- Production: after deploy, `POST /api/analytics/view` answers 204 (the old build 404s, so this
+  also shows the new API is serving), `/api/health` is ok, and the Vercel bundle sends beacons.
+  I visited 2 pages with headless Chromium and a desktop User-Agent; a manual `cleanup.yml` run
+  (38620466950) logged `2 raw page view(s) stored`. My curl probes (bot UA) weren't stored.
+
+**A miss, fixed.** `0a1fc51` broke `pnpm build`: `normalizePath` used `URL`, which
+`@maize-bites/shared` doesn't have when it compiles without DOM or Node types (typecheck
+passed). CI caught it; Render most likely kept the previous API until `712707e` fixed it. I
+hadn't run `pnpm build` locally; I do now.
+
+### Decisions to review
+
+- **"Last 30 days" is visitor-days.** Ids change daily by design, so distinct people across
+  days can't be counted. The tile sums daily uniques and says so.
+- **Always 204**, including invalid input and over the rate limit (60/min per IP); this departs
+  from the API's usual 400. The route answers after its single insert rather than before, so
+  failures are logged and tests need no timing.
+- **What counts as a page:** a path change, or opening an event in Home's drawer (`?event=`,
+  stored as `/events/:id`). Filter and tab changes don't. Unknown paths are stored as `/404`.
+- **Device:** viewport under 640px is mobile; tablets count as desktop.
+- **Funnel step 3** counts people whose first alert subscription was made that day. It isn't
+  linked to visitors (it can't be without storing a user id).
+- **Admin opt-out** is a `users.exclude_from_analytics` column, default true for everyone; only
+  admins' flags are read.
+- **Bots:** the User-Agent regex includes `HeadlessChrome` and `preview`; rare phone brands
+  with "bot" in the model name (e.g. Cubot) would be dropped. Testing with a headless browser
+  needs a normal User-Agent.
+- **Client IP** comes from `req.ip` with `TRUST_PROXY=2` (Vercel, then Render). Tests cover the
+  two-hop case; in production the only sign of a wrong setting would be uniques collapsing to
+  about one a day. Worth a look once real traffic arrives.
+- **Production test data:** my 2 test page views on 2026-10-14 are in the production counts.
