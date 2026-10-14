@@ -732,6 +732,7 @@ referrers, device split, "Leave out my own visits"). About has a Privacy section
 documents the scheme.
 
 **Verified.**
+
 - Locally: two Chromium contexts with different real-browser User-Agents (desktop Chrome, iPhone
   Safari) browsed 3 and 2 pages; the dashboard showed 2 unique visitors and 5 page views; the
   admin's own `/admin` visits weren't counted. Screenshots:
