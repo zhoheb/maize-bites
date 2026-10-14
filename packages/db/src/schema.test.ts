@@ -8,6 +8,7 @@ import {
   REPORT_KINDS,
   SUBMISSION_STATUSES,
   SUBSCRIPTION_MODES,
+  DEVICE_CLASSES,
 } from '@maize-bites/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DbHandle } from './client.js';
@@ -24,6 +25,7 @@ import {
   reports,
   submissionStatus,
   subscriptionMode,
+  deviceClass,
   users,
 } from './schema.js';
 import { createTestDb, eventInput, insertClassification } from './testing.js';
@@ -39,6 +41,7 @@ describe('pg enums match @maize-bites/shared', () => {
     ['report_kind', reportKind.enumValues, REPORT_KINDS],
     ['submission_status', submissionStatus.enumValues, SUBMISSION_STATUSES],
     ['subscription_mode', subscriptionMode.enumValues, SUBSCRIPTION_MODES],
+    ['device_class', deviceClass.enumValues, DEVICE_CLASSES],
   ])('%s', (_name, dbValues, sharedValues) => {
     expect(dbValues).toEqual(sharedValues);
   });

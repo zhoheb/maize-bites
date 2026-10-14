@@ -57,6 +57,13 @@
       "when": 1791998092695,
       "tag": "0007_normalize_push_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792002754195,
+      "tag": "0008_page_view_analytics",
+      "breakpoints": true
     }
   ]
 }

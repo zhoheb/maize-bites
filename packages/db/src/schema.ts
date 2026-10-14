@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   index,
   integer,
@@ -35,6 +36,7 @@ export const reportKind = pgEnum('report_kind', [
 ]);
 export const submissionStatus = pgEnum('submission_status', ['pending', 'approved', 'rejected']);
 export const subscriptionMode = pgEnum('subscription_mode', ['instant', 'digest']);
+export const deviceClass = pgEnum('device_class', ['mobile', 'desktop']);
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 const createdAt = () => timestamptz('created_at').notNull().defaultNow();
@@ -135,6 +137,8 @@ export const users = pgTable(
     isAdmin: boolean('is_admin').notNull().default(false),
     /** Incremented per approved submission; tips auto-publish at 3. */
     trustLevel: integer('trust_level').notNull().default(0),
+    /** Admins only: leave this person's page views out of the analytics. */
+    excludeFromAnalytics: boolean('exclude_from_analytics').notNull().default(true),
     createdAt: createdAt(),
   },
   (t) => [check('users_umich_email', sql`${t.email} ~ '^[a-z0-9._%+-]+@umich\\.edu$'`)],
@@ -368,6 +372,57 @@ export const locationMisses = pgTable('location_misses', {
   lastSeenAt: timestamptz('last_seen_at').notNull().defaultNow(),
 });
 
+// Page view analytics. No IP address, User-Agent, cookie or user id is stored: visitor_id is
+// sha256(daily salt + IP + User-Agent + site host), and each day's salt is deleted two days
+// later, after which that day's ids can't be recomputed or matched to another day's.
+const day = (name: string) => date(name, { mode: 'string' });
+
+export const pageViews = pgTable(
+  'page_views',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** America/Detroit calendar day. */
+    day: day('day').notNull(),
+    visitorId: text('visitor_id').notNull(),
+    /** A route from ANALYTICS_PATHS: no query string, no ids. */
+    path: text('path').notNull(),
+    referrerHost: text('referrer_host'),
+    device: deviceClass('device').notNull(),
+    isSignedIn: boolean('is_signed_in').notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('page_views_day_idx').on(t.day),
+    index('page_views_day_visitor_idx').on(t.day, t.visitorId),
+  ],
+);
+
+/** One random salt per America/Detroit day; deleted two days later. */
+export const analyticsSalts = pgTable('analytics_salts', {
+  day: day('day').primaryKey(),
+  salt: text('salt').notNull(),
+  createdAt: createdAt(),
+});
+
+export interface NamedCount {
+  name: string;
+  views: number;
+}
+
+/** Daily totals rolled up from page_views. Kept forever; the raw rows are not. */
+export const analyticsDaily = pgTable('analytics_daily', {
+  day: day('day').primaryKey(),
+  uniqueVisitors: integer('unique_visitors').notNull(),
+  pageViews: integer('page_views').notNull(),
+  signedInVisitors: integer('signed_in_visitors').notNull(),
+  eventVisitors: integer('event_visitors').notNull(),
+  topPaths: jsonb('top_paths').$type<NamedCount[]>().notNull(),
+  topReferrers: jsonb('top_referrers').$type<NamedCount[]>().notNull(),
+  /** Share of the day's visitors on a phone, 0 to 1. */
+  mobileShare: doublePrecision('mobile_share').notNull(),
+  updatedAt: timestamptz('updated_at').notNull().defaultNow(),
+});
+
 export type BuildingRow = typeof buildings.$inferSelect;
 export type NewBuildingRow = typeof buildings.$inferInsert;
 export type EventRow = typeof events.$inferSelect;
@@ -386,3 +441,5 @@ export type IngestionRunRow = typeof ingestionRuns.$inferSelect;
 export type LocationMissRow = typeof locationMisses.$inferSelect;
 export type ReviewFlagRow = typeof reviewFlags.$inferSelect;
 export type AuditLogRow = typeof auditLog.$inferSelect;
+export type PageViewRow = typeof pageViews.$inferSelect;
+export type AnalyticsDailyRow = typeof analyticsDaily.$inferSelect;

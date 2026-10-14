@@ -3,6 +3,7 @@ export { computeContentHash, type ContentFields } from './content-hash.js';
 export { databaseEnvSchema, loadRootEnvFile } from './env.js';
 export * from './queries/events.js';
 export * from './queries/admin.js';
+export * from './queries/analytics.js';
 export * from './queries/auth.js';
 export * from './queries/classification.js';
 export * from './queries/ingestion.js';
