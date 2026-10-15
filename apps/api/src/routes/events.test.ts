@@ -186,7 +186,7 @@ describe('GET /api/events/:id', () => {
       title: PIZZA,
       url: 'https://events.umich.edu/event/1',
       classification: { method: 'llm', confidence: 0.9, evidence: 'free pizza' },
-      reportCounts: { food_gone: 3, still_food: 1, not_free: 0, wrong_info: 0 },
+      reportCounts: { food_gone: 3, still_food: 1, not_free: 0, wrong_info: 0, wrong_audience: 0 },
       likelyGone: true,
     });
   });

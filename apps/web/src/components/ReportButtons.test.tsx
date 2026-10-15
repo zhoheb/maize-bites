@@ -12,7 +12,7 @@ afterEach(() => {
 const event = makeEvent();
 const detail = (overrides: Partial<EventDetail> = {}): EventDetail =>
   makeDetail({
-    reportCounts: { food_gone: 2, still_food: 1, not_free: 0, wrong_info: 0 },
+    reportCounts: { food_gone: 2, still_food: 1, not_free: 0, wrong_info: 0, wrong_audience: 0 },
     ...overrides,
   });
 const PATH = `/api/events/${event.id}`;
@@ -39,7 +39,13 @@ describe('report buttons in event details', () => {
       [`POST ${PATH}/reports`]: () => ({
         status: 201,
         body: {
-          reportCounts: { food_gone: 3, still_food: 1, not_free: 0, wrong_info: 0 },
+          reportCounts: {
+            food_gone: 3,
+            still_food: 1,
+            not_free: 0,
+            wrong_info: 0,
+            wrong_audience: 0,
+          },
           lastReportAt: new Date().toISOString(),
           likelyGone: true,
         },
@@ -114,7 +120,13 @@ describe('crowd signals', () => {
       await pending;
       return Response.json(
         {
-          reportCounts: { food_gone: 2, still_food: 2, not_free: 0, wrong_info: 0 },
+          reportCounts: {
+            food_gone: 2,
+            still_food: 2,
+            not_free: 0,
+            wrong_info: 0,
+            wrong_audience: 0,
+          },
           lastReportAt: new Date().toISOString(),
           likelyGone: false,
         },

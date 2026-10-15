@@ -36,6 +36,7 @@ describe('countReportsByKind', () => {
       still_food: 1,
       not_free: 0,
       wrong_info: 0,
+      wrong_audience: 0,
     });
   });
 });

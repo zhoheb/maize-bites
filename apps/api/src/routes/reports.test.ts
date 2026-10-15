@@ -56,7 +56,7 @@ describe('POST /api/events/:id/reports', () => {
     const first = await report(id, 'still_food');
     expect(first.status).toBe(201);
     expect(reportResponseSchema.parse(first.body)).toEqual({
-      reportCounts: { food_gone: 0, still_food: 1, not_free: 0, wrong_info: 0 },
+      reportCounts: { food_gone: 0, still_food: 1, not_free: 0, wrong_info: 0, wrong_audience: 0 },
       lastReportAt: NOW.toISOString(),
       likelyGone: false,
     });
@@ -74,6 +74,7 @@ describe('POST /api/events/:id/reports', () => {
       still_food: 1,
       not_free: 0,
       wrong_info: 1,
+      wrong_audience: 0,
     });
   });
 

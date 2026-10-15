@@ -25,7 +25,7 @@ import {
 export const eventSource = pgEnum('event_source', ['happening', 'maizepages', 'submission']);
 export const eventStatus = pgEnum('event_status', ['active', 'cancelled', 'removed']);
 export const classificationMethod = pgEnum('classification_method', ['rules', 'llm', 'manual']);
-export const audience = pgEnum('audience', ['open', 'members', 'rsvp']);
+export const audience = pgEnum('audience', ['open', 'members', 'rsvp', 'unknown']);
 export const campus = pgEnum('campus', ['central', 'north', 'medical', 'athletic']);
 export const channel = pgEnum('channel', ['email', 'push']);
 export const reportKind = pgEnum('report_kind', [
@@ -33,6 +33,7 @@ export const reportKind = pgEnum('report_kind', [
   'still_food',
   'not_free',
   'wrong_info',
+  'wrong_audience',
 ]);
 export const submissionStatus = pgEnum('submission_status', ['pending', 'approved', 'rejected']);
 export const subscriptionMode = pgEnum('subscription_mode', ['instant', 'digest']);
@@ -119,7 +120,14 @@ export const classifications = pgTable(
     foodItems: text('food_items').array().notNull().default(emptyTextArray),
     mealType: text('meal_type').$type<MealType>(),
     dietary: text('dietary').array().$type<DietaryTag[]>().notNull().default(emptyTextArray),
+    /**
+     * open, members, or rsvp only with an audience_evidence phrase from the listing (for a
+     * manual row, the admin's note); otherwise unknown. Null on llm-mode prefilter rows, which
+     * don't judge the audience; it reads as unknown.
+     */
     audience: audience('audience'),
+    /** The listing's words that justify `audience` ("members only", "RSVP required"). */
+    audienceEvidence: text('audience_evidence'),
     evidence: text('evidence'),
     createdAt: createdAt(),
   },

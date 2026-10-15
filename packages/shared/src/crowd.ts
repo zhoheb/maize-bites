@@ -77,7 +77,12 @@ export const overrideRequestSchema = z.object({
   foodItems: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
   mealType: mealTypeSchema.nullable().optional(),
   dietary: z.array(dietaryTagSchema).optional(),
-  audience: audienceSchema.nullable().optional(),
+  audience: audienceSchema.optional(),
+  /**
+   * Why the audience is what it is, e.g. the listing's words or "asked the host". Omitted keeps
+   * the current evidence when the audience is unchanged, and clears it when it changes.
+   */
+  audienceNote: z.string().trim().max(300).optional(),
   note: z.string().trim().max(500).optional(),
 });
 export type OverrideRequest = z.infer<typeof overrideRequestSchema>;
@@ -111,6 +116,7 @@ const adminClassificationSchema = z.object({
   mealType: mealTypeSchema.nullable(),
   dietary: z.array(dietaryTagSchema),
   audience: audienceSchema.nullable(),
+  audienceEvidence: z.string().nullable(),
   evidence: z.string().nullable(),
   createdAt: isoDateTime,
 });
@@ -132,6 +138,8 @@ export const reviewQueueResponseSchema = z.object({
       event: adminEventSchema,
       classification: adminClassificationSchema.nullable(),
       flag: z.object({ reason: z.string(), detail: z.string().nullable() }).nullable(),
+      /** "Wrong audience" reports since the event's active verdict was made. */
+      wrongAudienceReports: z.number().int().min(0),
     }),
   ),
   submissions: z.array(

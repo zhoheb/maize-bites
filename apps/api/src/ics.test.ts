@@ -20,6 +20,7 @@ const event: FoodEvent = {
   mealType: null,
   dietary: [],
   audience: 'members',
+  audienceEvidence: 'members only',
   likelyGone: false,
 };
 

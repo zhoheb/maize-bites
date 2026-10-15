@@ -25,6 +25,7 @@ const event: FoodEvent = {
   mealType: 'snacks',
   dietary: [],
   audience: 'members',
+  audienceEvidence: 'members only',
   likelyGone: false,
 };
 const links = {

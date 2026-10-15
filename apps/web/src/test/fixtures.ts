@@ -23,6 +23,7 @@ export function makeEvent(overrides: Partial<FoodEvent> = {}): FoodEvent {
     mealType: 'lunch',
     dietary: [],
     audience: 'open',
+    audienceEvidence: 'All are welcome',
     likelyGone: false,
     ...overrides,
   };
@@ -32,7 +33,7 @@ export function makeDetail(overrides: Partial<EventDetail> = {}): EventDetail {
   return {
     ...makeEvent(),
     classification: null,
-    reportCounts: { food_gone: 0, still_food: 0, not_free: 0, wrong_info: 0 },
+    reportCounts: { food_gone: 0, still_food: 0, not_free: 0, wrong_info: 0, wrong_audience: 0 },
     lastReportAt: null,
     ...overrides,
   };

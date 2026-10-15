@@ -160,7 +160,8 @@ describe('approved tips and the classifier', () => {
     expect(before && toFoodEvent(before)).toMatchObject({
       source: 'submission',
       foodItems: [],
-      audience: null,
+      audience: 'unknown',
+      audienceEvidence: null,
     });
 
     await insertClassification(db, event, {

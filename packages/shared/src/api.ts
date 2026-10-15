@@ -40,6 +40,7 @@ export const reportCountsSchema = z.object({
   still_food: count,
   not_free: count,
   wrong_info: count,
+  wrong_audience: count,
 } satisfies Record<ReportKind, typeof count>);
 export type ReportCounts = z.infer<typeof reportCountsSchema>;
 

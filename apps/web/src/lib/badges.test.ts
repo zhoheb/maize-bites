@@ -4,7 +4,7 @@ import { exceptionBadges } from './badges';
 describe('exceptionBadges', () => {
   it('gives no badge to the default: open to all, or no stated audience', () => {
     expect(exceptionBadges({ audience: 'open', likelyGone: false })).toEqual([]);
-    expect(exceptionBadges({ audience: null, likelyGone: false })).toEqual([]);
+    expect(exceptionBadges({ audience: 'unknown', likelyGone: false })).toEqual([]);
   });
 
   it('badges only what is exceptional', () => {

@@ -323,14 +323,24 @@ describe('listPublishedEvents', () => {
       expect(await titles({ dietary: ['vegan', 'gluten_free'] })).toEqual(['vegan+gf']);
     });
 
-    it('openOnly: excludes members-only, RSVP, and unknown audiences', async () => {
-      await publishedEvent({ title: 'open' }, { audience: 'open' });
+    it("openOnly: only open with the listing's words behind it, or a manual open", async () => {
+      await publishedEvent(
+        { title: 'open' },
+        { audience: 'open', audienceEvidence: 'all welcome' },
+      );
       await publishedEvent({ title: 'members' }, { audience: 'members' });
       await publishedEvent({ title: 'rsvp' }, { audience: 'rsvp' });
-      await publishedEvent({ title: 'unknown' }, { audience: null });
+      await publishedEvent({ title: 'unknown' }, { audience: 'unknown', audienceEvidence: null });
+      await publishedEvent({ title: 'not judged' }, { audience: null, audienceEvidence: null });
+      // A machine "open" with no evidence (written before evidence was required) isn't open.
+      await publishedEvent({ title: 'unproven' }, { audience: 'open', audienceEvidence: null });
+      await publishedEvent(
+        { title: 'manual' },
+        { method: 'manual', audience: 'open', audienceEvidence: null },
+      );
 
-      expect(await titles({ openOnly: true })).toEqual(['open']);
-      expect(await titles({ openOnly: false })).toHaveLength(4);
+      expect((await titles({ openOnly: true })).sort()).toEqual(['manual', 'open']);
+      expect(await titles({ openOnly: false })).toHaveLength(7);
     });
 
     it('mealType: matches exactly', async () => {

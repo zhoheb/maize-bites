@@ -16,6 +16,7 @@ import {
   getTableColumns,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lte,
   ne,
@@ -158,6 +159,7 @@ export interface PublishedEventFilters {
   campuses?: readonly Campus[] | undefined;
   /** Event must be tagged with every listed need. */
   dietary?: readonly DietaryTag[] | undefined;
+  /** Only events whose listing says they're open to everyone (or a reviewer said so). */
   openOnly?: boolean | undefined;
   mealType?: MealType | undefined;
   /** Uses the event's own coordinates, falling back to its building's. */
@@ -229,7 +231,13 @@ export async function listPublishedEvents(
     filters.to && lte(events.startsAt, filters.to),
     filters.campuses?.length ? inArray(buildings.campus, [...filters.campuses]) : undefined,
     filters.dietary?.length ? arrayContains(active.dietary, [...filters.dietary]) : undefined,
-    filters.openOnly ? eq(active.audience, 'open') : undefined,
+    // Mirrors effectiveAudience: a machine "open" counts only with the listing's words behind it.
+    filters.openOnly
+      ? and(
+          eq(active.audience, 'open'),
+          or(eq(active.method, 'manual'), isNotNull(active.audienceEvidence)),
+        )
+      : undefined,
     filters.mealType && eq(active.mealType, filters.mealType),
     filters.bbox && between(lat, filters.bbox.south, filters.bbox.north),
     filters.bbox && between(lng, filters.bbox.west, filters.bbox.east),

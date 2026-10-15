@@ -15,7 +15,9 @@ const any: AlertFilters = { campuses: [], dietary: [], openOnly: false };
 describe('matchesFilters', () => {
   it('matches everything with no filters', () => {
     expect(matchesFilters(event(), any)).toBe(true);
-    expect(matchesFilters(event({ building: null, audience: null, dietary: [] }), any)).toBe(true);
+    expect(matchesFilters(event({ building: null, audience: 'unknown', dietary: [] }), any)).toBe(
+      true,
+    );
   });
 
   it.each([
@@ -30,7 +32,7 @@ describe('matchesFilters', () => {
     [{ openOnly: true }, event(), true],
     [{ openOnly: true }, event({ audience: 'members' }), false],
     [{ openOnly: true }, event({ audience: 'rsvp' }), false],
-    [{ openOnly: true }, event({ audience: null }), false],
+    [{ openOnly: true }, event({ audience: 'unknown' }), false],
     [{ campuses: ['north'], dietary: ['vegan'], openOnly: true }, event(), true],
     [
       { campuses: ['north'], dietary: ['vegan'], openOnly: true },

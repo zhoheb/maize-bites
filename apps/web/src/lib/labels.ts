@@ -41,4 +41,5 @@ export const AUDIENCE_LABELS: Record<Audience, string> = {
   open: 'Open to all',
   members: 'Members only',
   rsvp: 'RSVP required',
+  unknown: 'Not stated',
 };

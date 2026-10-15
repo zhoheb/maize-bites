@@ -29,7 +29,16 @@ export const foodEventSchema = z.object({
   foodItems: z.array(z.string()),
   mealType: mealTypeSchema.nullable(),
   dietary: z.array(dietaryTagSchema),
-  audience: audienceSchema.nullable(),
+  /**
+   * open, members, or rsvp only when the listing says so (audienceEvidence); otherwise
+   * unknown. Null is read as unknown, so a list saved by an older API still parses.
+   */
+  audience: audienceSchema.nullable().transform((a) => a ?? 'unknown'),
+  /**
+   * The listing's words behind `audience` ("all students welcome"), or for a manual verdict the
+   * reviewer's note. Null when unknown. Defaults to null for responses from an older API.
+   */
+  audienceEvidence: z.string().nullable().default(null),
   /** At least FOOD_GONE_THRESHOLD "food's gone" reports in the last FOOD_GONE_WINDOW_MS. */
   likelyGone: z.boolean(),
 });

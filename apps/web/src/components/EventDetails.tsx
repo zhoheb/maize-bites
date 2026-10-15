@@ -53,6 +53,7 @@ const AUDIENCE_TEXT: Record<Audience, string> = {
   open: 'Open to everyone. Just show up.',
   members: "For members of the host group. Please don't crash it for the food.",
   rsvp: 'You need to RSVP or register first. Check the listing for how.',
+  unknown: "The listing doesn't say who can come. Check it before you go.",
 };
 
 function DetailsSkeleton() {
@@ -212,11 +213,7 @@ export function EventDetails({
         </Section>
 
         <Section icon={Users} title="Who it's for">
-          <p>
-            {event.audience
-              ? AUDIENCE_TEXT[event.audience]
-              : "The listing doesn't say who can come. Check it before you go."}
-          </p>
+          <p>{AUDIENCE_TEXT[event.audience]}</p>
           {event.sponsor && <p className="text-sm text-ink-2">Hosted by {event.sponsor}</p>}
         </Section>
 

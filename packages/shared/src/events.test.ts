@@ -29,6 +29,7 @@ const event: FoodEvent = {
   mealType: 'lunch',
   dietary: ['vegetarian'],
   audience: 'open',
+  audienceEvidence: 'all students welcome',
   likelyGone: false,
 };
 

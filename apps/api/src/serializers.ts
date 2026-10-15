@@ -60,6 +60,7 @@ export function toAdminClassification(
     mealType: c.mealType,
     dietary: c.dietary,
     audience: c.audience,
+    audienceEvidence: c.audienceEvidence,
     evidence: c.evidence,
     createdAt: c.createdAt.toISOString(),
   };

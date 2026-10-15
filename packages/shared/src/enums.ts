@@ -6,10 +6,20 @@ import { z } from 'zod';
 export const EVENT_SOURCES = ['happening', 'maizepages', 'submission'] as const;
 export const EVENT_STATUSES = ['active', 'cancelled', 'removed'] as const;
 export const CLASSIFICATION_METHODS = ['rules', 'llm', 'manual'] as const;
-export const AUDIENCES = ['open', 'members', 'rsvp'] as const;
+/**
+ * Who an event is for. open, members, and rsvp need a phrase in the listing that says so
+ * (audienceEvidence); without one it is unknown. No restriction stated is not "open".
+ */
+export const AUDIENCES = ['open', 'members', 'rsvp', 'unknown'] as const;
 export const CAMPUSES = ['central', 'north', 'medical', 'athletic'] as const;
 export const CHANNELS = ['email', 'push'] as const;
-export const REPORT_KINDS = ['food_gone', 'still_food', 'not_free', 'wrong_info'] as const;
+export const REPORT_KINDS = [
+  'food_gone',
+  'still_food',
+  'not_free',
+  'wrong_info',
+  'wrong_audience',
+] as const;
 export const SUBMISSION_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export const SUBSCRIPTION_MODES = ['instant', 'digest'] as const;
 export const DEVICE_CLASSES = ['mobile', 'desktop'] as const;

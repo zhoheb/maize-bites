@@ -1,5 +1,5 @@
 import type { FoodEvent } from '@maize-bites/shared';
-import { FOOD_GONE_THRESHOLD } from '@maize-bites/shared';
+import { effectiveAudience, FOOD_GONE_THRESHOLD } from '@maize-bites/shared';
 import type { PublishedEvent } from './queries/events.js';
 
 /** A published event in the shared wire format (API responses, emails, push). */
@@ -26,7 +26,7 @@ export function toFoodEvent({
     foodItems: classification?.foodItems ?? [],
     mealType: classification?.mealType ?? null,
     dietary: classification?.dietary ?? [],
-    audience: classification?.audience ?? null,
+    ...effectiveAudience(classification),
     likelyGone: recentFoodGone >= FOOD_GONE_THRESHOLD,
   };
 }

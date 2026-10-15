@@ -81,7 +81,7 @@ describe('NowCard', () => {
       expect(badges()).toEqual([]);
       expect(screen.queryByText('Open to all')).toBeNull();
       unmount();
-      renderCard({ event: makeEvent({ audience: null }) });
+      renderCard({ event: makeEvent({ audience: 'unknown' }) });
       expect(badges()).toEqual([]);
     });
 

@@ -102,6 +102,7 @@ export async function insertClassification(
       hasFreeFood: true,
       confidence: 0.9,
       audience: 'open',
+      audienceEvidence: 'Open to all',
       ...overrides,
     })
     .returning();

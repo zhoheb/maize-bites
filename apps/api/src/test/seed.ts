@@ -91,6 +91,7 @@ async function seedApiFixtures(db: Database): Promise<Seeded> {
       mealType: 'snacks',
       dietary: ['vegan', 'vegetarian'],
       audience: 'members',
+      audienceEvidence: 'members only',
     },
   );
   const bagels = await publish(
@@ -104,7 +105,12 @@ async function seedApiFixtures(db: Database): Promise<Seeded> {
   );
   const breakfast = await publish(
     { title: 'Grand rounds breakfast', buildingId: hospital, startsAt: at(20), endsAt: at(21) },
-    { foodItems: ['eggs', 'coffee'], mealType: 'breakfast', audience: 'rsvp' },
+    {
+      foodItems: ['eggs', 'coffee'],
+      mealType: 'breakfast',
+      audience: 'rsvp',
+      audienceEvidence: 'RSVP required',
+    },
   );
   const dinner = await publish(
     { title: 'Next week dinner', buildingId: union, startsAt: at(24 * 7) },
