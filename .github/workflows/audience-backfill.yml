@@ -1,0 +1,37 @@
+name: Audience backfill
+
+# One-off, run by hand: reapplies the audience rules to every current and upcoming event in
+# production (open, members, or rsvp only where the listing says so, otherwise unknown) and
+# prints the before/after counts with examples. Manual verdicts are kept. Idempotent.
+# `pnpm --filter worker audience:backfill [--dry-run]` is the same thing locally.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report what would change without writing
+        type: boolean
+        default: true
+
+concurrency:
+  group: audience-backfill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+      DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          package: '@maize-bites/worker'
+      - run: pnpm --filter @maize-bites/worker audience:backfill $DRY_RUN

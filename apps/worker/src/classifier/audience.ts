@@ -15,6 +15,7 @@ export interface AudienceVerdict {
 
 export interface CompiledAudienceRules {
   open: RegExp[];
+  notOpen: RegExp[];
   members: RegExp[];
   notMembers: RegExp[];
   rsvp: RegExp[];
@@ -27,6 +28,7 @@ const patterns = (phrases: readonly string[]) => compile(phrases).map((p) => p.p
 export function compileAudienceRules(rules: AudienceRules = AUDIENCE_RULES): CompiledAudienceRules {
   return {
     open: patterns(rules.openPhrases),
+    notOpen: [...rules.notOpenPatterns],
     members: [...patterns(rules.membersPhrases), ...rules.membersPatterns],
     notMembers: patterns(rules.notMembersPhrases),
     rsvp: patterns(rules.rsvpPhrases),
@@ -58,8 +60,11 @@ function blank(text: string, list: readonly RegExp[]): string {
   return out;
 }
 
-/** Sentence-ish breaks evidence never crosses: ". " "! " "? " a newline, or a semicolon. */
-const BREAK = /[.!?](?=\s|$)|[\n;•|]/g;
+/**
+ * Sentence-ish breaks evidence never crosses: "." "!" or "?" before a space, the end, or a
+ * capital ("provided.This"), a newline, or a semicolon.
+ */
+const BREAK = /[.!?](?=\s|$|[A-Z])|[\n;•|]/g;
 
 /**
  * The matched span plus up to `words` words of the listing on each side, within the same
@@ -105,7 +110,7 @@ export function detectAudience(
     return { audience: 'members', evidence: evidenceAround(text, members, rules.contextWords) };
   const rsvp = first(rules.rsvp, blank(text, rules.notRsvp));
   if (rsvp) return { audience: 'rsvp', evidence: evidenceAround(text, rsvp, rules.contextWords) };
-  const open = first(rules.open, text);
+  const open = first(rules.open, blank(text, rules.notOpen));
   if (open) return { audience: 'open', evidence: evidenceAround(text, open, rules.contextWords) };
   return { audience: 'unknown', evidence: null };
 }

@@ -250,3 +250,42 @@ export async function listReviewQueue(db: Database, now: Date): Promise<ReviewQu
     wrongAudienceReports: r.wrong_audience?.n ?? 0,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Audience backfill
+// ---------------------------------------------------------------------------
+
+/** Active events that haven't ended, each with its active classification (null if none). */
+export async function listLiveEventsWithActiveClassification(
+  db: Database,
+  now: Date,
+): Promise<{ event: EventRow; classification: ClassificationRow | null }[]> {
+  const active = activeClassificationLateral(db);
+  const rows = await db
+    .select()
+    .from(events)
+    .leftJoinLateral(active, sql`true`)
+    .where(liveEvent(now))
+    .orderBy(asc(events.startsAt), asc(events.id));
+  return rows.map((r) => ({ event: r.events, classification: r.active }));
+}
+
+/**
+ * Rewrites the audience of one machine classification in place. Manual rows are never touched:
+ * the update matches only non-manual methods. Returns whether a row changed.
+ */
+export async function setMachineAudience(
+  db: Database,
+  classificationId: string,
+  audience: {
+    audience: NonNullable<ClassificationRow['audience']>;
+    audienceEvidence: string | null;
+  },
+): Promise<boolean> {
+  const rows = await db
+    .update(classifications)
+    .set(audience)
+    .where(and(eq(classifications.id, classificationId), ne(classifications.method, 'manual')))
+    .returning({ id: classifications.id });
+  return rows.length > 0;
+}

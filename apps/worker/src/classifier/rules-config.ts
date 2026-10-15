@@ -383,6 +383,11 @@ export const RULES_MODE: RulesModeConfig = {
 export interface AudienceRules {
   /** The listing says anyone may come. */
   openPhrases: readonly string[];
+  /**
+   * Look like an open phrase but name a group, so they prove neither open nor members ("open to
+   * all degree-seeking students"). Removed before the open match. Case-insensitive; no /g flag.
+   */
+  notOpenPatterns: readonly RegExp[];
   /** The listing limits who may come. */
   membersPhrases: readonly string[];
   /** Restrictions built around a group name. Case-insensitive; no /g flag. */
@@ -416,6 +421,12 @@ export const AUDIENCE_RULES: AudienceRules = {
     'members and non-members',
     'members and nonmembers',
   ],
+  notOpenPatterns: [
+    // "open to all engineering students", "open to all degree-seeking students": one group, but
+    // "Members only" would overstate it too. "Open to all students", "...all U-M students" and
+    // "...all graduate and undergraduate students" stay open.
+    /\bopen\s+to\s+all\s+(?!(?:u-?m|umich|u\s+of\s+m|university\s+of\s+michigan|michigan|current|interested|undergraduate\s+and\s+graduate|graduate\s+and\s+undergraduate)\b)(?:[a-z0-9&'’-]+\s+){1,3}?(?:students|staff|faculty|employees)\b/i,
+  ],
   membersPhrases: [
     'members only',
     'members-only',
@@ -433,12 +444,10 @@ export const AUDIENCE_RULES: AudienceRules = {
   ],
   membersPatterns: [
     // "for MBA students only", "for Ross BBA students only"
-    /\bfor\s+(?:[a-z0-9&'’.-]+\s+){1,4}students\s+only\b/i,
+    // Group-name words never include "." so a pattern can't run across sentences.
+    /\bfor\s+(?:[a-z0-9&'’-]+\s+){1,4}students\s+only\b/i,
     // "open to SWE members", "open only to members of Phi Delta"
-    /\bopen\s+(?:only\s+)?to\s+(?:all\s+)?(?:[a-z0-9&'’.-]+\s+){0,4}?members\b/i,
-    // "open to all engineering students": one program, not everyone. "open to all students",
-    // "...all U-M students" and "...all graduate and undergraduate students" stay open.
-    /\bopen\s+to\s+all\s+(?!(?:u-?m|umich|u\s+of\s+m|university\s+of\s+michigan|michigan|current|interested|undergraduate\s+and\s+graduate|graduate\s+and\s+undergraduate)\b)(?:[a-z0-9&'’.-]+\s+){1,3}?(?:students|staff|faculty|employees)\b/i,
+    /\bopen\s+(?:only\s+)?to\s+(?:all\s+)?(?:[a-z0-9&'’-]+\s+){0,4}?members\b/i,
   ],
   notMembersPhrases: [
     'members of the public',

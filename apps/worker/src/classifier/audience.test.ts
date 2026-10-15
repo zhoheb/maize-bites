@@ -81,11 +81,20 @@ describe('detectAudience', () => {
       'Free for members, $5 for non-members',
     ],
     ['Social', 'Open to all SWE members', 'members', 'Open to all SWE members'],
+    // One group named after "open to all": not open, and "Members only" would overstate it.
+    ['Town hall', 'Open to all engineering students', 'unknown', null],
+    // Seen in the feed: a sentence break with no space, and "Members" opening the next sentence.
     [
-      'Town hall',
-      'Open to all engineering students',
-      'members',
-      'Open to all engineering students',
+      'Career conference',
+      'Lunch will be provided.This event is open to all degree-seeking students and alumni',
+      'unknown',
+      null,
+    ],
+    [
+      'Awareness Day',
+      'This event is free and open to all. Members of the student group A2STAR will speak.',
+      'open',
+      'This event is free and open to all',
     ],
     // ── rsvp ──────────────────────────────────────────────────────────────────────────────
     [
