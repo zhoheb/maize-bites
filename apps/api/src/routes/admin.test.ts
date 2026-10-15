@@ -12,6 +12,7 @@ import {
   submissions,
   users,
 } from '@maize-bites/db';
+import { insertClassification } from '@maize-bites/db/testing';
 import {
   adminMetricsResponseSchema,
   apiErrorSchema,
@@ -193,6 +194,64 @@ describe('as an admin', () => {
       ]);
     });
 
+    describe('audience', () => {
+      const detail = async (id: string) =>
+        eventDetailSchema.parse((await request(api.app).get(`/api/events/${id}`)).body);
+
+      it("records a new audience with the reviewer's note as its evidence", async () => {
+        const { id } = api.seeded.pizza;
+        await post(`/api/admin/events/${id}/override`, {
+          action: 'show',
+          audience: 'members',
+          audienceNote: 'Host says it is for club members',
+        });
+        expect(await detail(id)).toMatchObject({
+          audience: 'members',
+          audienceEvidence: 'Host says it is for club members',
+          classification: { method: 'manual' },
+        });
+      });
+
+      it('keeps the audience and its evidence when only the verdict changes', async () => {
+        const { id } = api.seeded.boba;
+        await post(`/api/admin/events/${id}/override`, { action: 'show', foodItems: ['tea'] });
+        expect(await detail(id)).toMatchObject({
+          foodItems: ['tea'],
+          audience: 'members',
+          audienceEvidence: 'members only',
+        });
+      });
+
+      it("doesn't vouch for a machine audience that had no evidence", async () => {
+        const event = (await api.handle.db.select().from(events)).find(
+          (e) => e.title === 'Maybe snacks',
+        );
+        if (!event) throw new Error('seeded event missing');
+        await insertClassification(api.handle.db, event, {
+          confidence: 0.55,
+          audience: 'open',
+          audienceEvidence: null,
+          // Newer than the seeded verdict, which defaults to the wall clock.
+          createdAt: new Date(Date.now() + 60_000),
+        });
+        await post(`/api/admin/events/${event.id}/override`, { action: 'show' });
+        expect(await detail(event.id)).toMatchObject({
+          audience: 'unknown',
+          audienceEvidence: null,
+        });
+      });
+
+      it('clears the evidence when set to unknown', async () => {
+        const { id } = api.seeded.boba;
+        await post(`/api/admin/events/${id}/override`, {
+          action: 'show',
+          audience: 'unknown',
+          audienceNote: 'ignored',
+        });
+        expect(await detail(id)).toMatchObject({ audience: 'unknown', audienceEvidence: null });
+      });
+    });
+
     it('hides a published event, whatever the classifier said', async () => {
       const { id } = api.seeded.pizza;
       const res = await post(`/api/admin/events/${id}/override`, { action: 'hide' });
@@ -205,7 +264,7 @@ describe('as an admin', () => {
 
     it('keeps the extracted details when the override leaves them out', async () => {
       const { id } = api.seeded.pizza;
-      await post(`/api/admin/events/${id}/override`, { action: 'show', audience: null });
+      await post(`/api/admin/events/${id}/override`, { action: 'show', audience: 'unknown' });
 
       const detail = eventDetailSchema.parse(
         (await request(api.app).get(`/api/events/${id}`)).body,
@@ -214,7 +273,7 @@ describe('as an admin', () => {
         foodItems: ['pizza'],
         mealType: 'lunch',
         dietary: ['vegetarian'],
-        audience: null, // explicitly cleared
+        audience: 'unknown', // explicitly cleared
         classification: { method: 'manual' },
       });
     });

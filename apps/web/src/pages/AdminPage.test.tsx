@@ -36,11 +36,13 @@ const queue: ReviewQueueResponse = {
         foodItems: ['snacks'],
         mealType: 'snacks',
         dietary: [],
-        audience: null,
+        audience: 'unknown',
+        audienceEvidence: null,
         evidence: 'snacks may be provided',
         createdAt: '2026-10-01T16:00:00.000Z',
       },
       flag: null,
+      wrongAudienceReports: 0,
     },
   ],
   submissions: [
@@ -252,16 +254,22 @@ describe('AdminPage', () => {
     await user.clear(food);
     await user.type(food, 'granola bars, fruit');
     await user.selectOptions(screen.getByLabelText('Who can come'), 'open');
+    await user.type(
+      screen.getByLabelText("Audience evidence (the listing's words, or how you know)"),
+      'Host confirmed anyone can come',
+    );
     await user.click(screen.getByRole('button', { name: 'Show Maybe snacks' }));
 
     await waitFor(() => {
       expect(api.bodiesFor(`POST /api/admin/events/${EVENT_ID}/override`)).toEqual([
-        { action: 'hide', foodItems: ['snacks'], mealType: 'snacks', audience: null },
+        // The audience is left out unless the reviewer changes it.
+        { action: 'hide', foodItems: ['snacks'], mealType: 'snacks' },
         {
           action: 'show',
           foodItems: ['granola bars', 'fruit'],
           mealType: 'snacks',
           audience: 'open',
+          audienceNote: 'Host confirmed anyone can come',
         },
       ]);
     });

@@ -1,9 +1,25 @@
 import { PUBLISH_CONFIDENCE, REVIEW_CONFIDENCE } from '@maize-bites/shared';
-import { and, asc, eq, exists, gte, isNull, lt, ne, not, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  gt,
+  gte,
+  isNull,
+  lt,
+  ne,
+  not,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type { Database } from '../client.js';
 import {
   classifications,
   events,
+  reports,
   reviewFlags,
   type ClassificationRow,
   type EventRow,
@@ -162,20 +178,36 @@ export interface ReviewQueueItem {
   classification: ClassificationRow | null;
   /** Set when the classifier failed on this content. */
   flag: ReviewFlagRow | null;
+  /** "Wrong audience" reports made after the active classification. */
+  wrongAudienceReports: number;
 }
 
 /**
  * Live events a human should look at: an unresolved flag on the current content; an active
  * machine verdict of free food with REVIEW_CONFIDENCE <= confidence < PUBLISH_CONFIDENCE; or an
  * approved community tip the LLM thinks has no free food. A manual verdict settles an event.
+ * Separately, any live event with "wrong audience" reports newer than its active verdict, manual
+ * or not: a new manual verdict (an audience override) settles those.
  */
 export async function listReviewQueue(db: Database, now: Date): Promise<ReviewQueueItem[]> {
   const active = activeClassificationLateral(db);
+  const wrongAudience = db
+    .select({ n: count().as('n') })
+    .from(reports)
+    .where(
+      and(
+        eq(reports.eventId, events.id),
+        eq(reports.kind, 'wrong_audience'),
+        sql`${reports.createdAt} > coalesce(${active.createdAt}, '-infinity'::timestamptz)`,
+      ),
+    )
+    .as('wrong_audience');
 
   const rows = await db
     .select()
     .from(events)
     .leftJoinLateral(active, sql`true`)
+    .leftJoinLateral(wrongAudience, sql`true`)
     .leftJoin(
       reviewFlags,
       and(
@@ -187,24 +219,34 @@ export async function listReviewQueue(db: Database, now: Date): Promise<ReviewQu
     .where(
       and(
         liveEvent(now),
-        or(isNull(active.method), ne(active.method, 'manual')),
         or(
-          sql`${reviewFlags.id} is not null`,
+          gt(wrongAudience.n, 0),
           and(
-            ne(events.source, 'submission'),
-            eq(active.hasFreeFood, true),
-            gte(active.confidence, REVIEW_CONFIDENCE),
-            lt(active.confidence, PUBLISH_CONFIDENCE),
-          ),
-          and(
-            eq(events.source, 'submission'),
-            eq(active.method, 'llm'),
-            eq(active.hasFreeFood, false),
+            or(isNull(active.method), ne(active.method, 'manual')),
+            or(
+              sql`${reviewFlags.id} is not null`,
+              and(
+                ne(events.source, 'submission'),
+                eq(active.hasFreeFood, true),
+                gte(active.confidence, REVIEW_CONFIDENCE),
+                lt(active.confidence, PUBLISH_CONFIDENCE),
+              ),
+              and(
+                eq(events.source, 'submission'),
+                eq(active.method, 'llm'),
+                eq(active.hasFreeFood, false),
+              ),
+            ),
           ),
         ),
       ),
     )
     .orderBy(asc(events.startsAt), asc(events.id));
 
-  return rows.map((r) => ({ event: r.events, classification: r.active, flag: r.review_flags }));
+  return rows.map((r) => ({
+    event: r.events,
+    classification: r.active,
+    flag: r.review_flags,
+    wrongAudienceReports: r.wrong_audience?.n ?? 0,
+  }));
 }

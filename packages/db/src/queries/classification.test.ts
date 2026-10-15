@@ -10,7 +10,9 @@ import {
   listReviewQueue,
   recordClassification,
 } from './classification.js';
+import { upsertUserByEmail } from './auth.js';
 import { upsertEvent } from './events.js';
+import { addReport } from './reports.js';
 
 let handle: DbHandle;
 let db: Database;
@@ -229,6 +231,35 @@ describe('listReviewQueue', () => {
     expect(queue.map((q) => q.event.title)).toEqual(['review band', 'flagged']);
     expect(queue[0]).toMatchObject({ classification: { confidence: 0.55 }, flag: null });
     expect(queue[1]?.flag).toMatchObject({ reason: 'llm_invalid_output' });
+  });
+
+  it('adds events with "wrong audience" reports newer than the verdict, with their count', async () => {
+    const reported = await event('reported', { startsAt: hours(1) });
+    await insertClassification(db, reported, { confidence: 0.9, createdAt: hours(-2) });
+    const manual = await event('manual, reported', { startsAt: hours(2) });
+    await insertClassification(db, manual, { method: 'manual', createdAt: hours(-2) });
+    const settled = await event('settled after reports', { startsAt: hours(3) });
+    await insertClassification(db, settled, { method: 'manual', createdAt: hours(-0.5) });
+    const otherKind = await event('wrong info only', { startsAt: hours(4) });
+    await insertClassification(db, otherKind, { confidence: 0.9, createdAt: hours(-2) });
+
+    const [a, b] = await Promise.all([
+      upsertUserByEmail(db, 'a@umich.edu'),
+      upsertUserByEmail(db, 'b@umich.edu'),
+    ]);
+    const report = (e: { id: string }, userId: string, kind: 'wrong_audience' | 'wrong_info') =>
+      addReport(db, { eventId: e.id, userId, kind, createdAt: hours(-1) });
+    await report(reported, a.id, 'wrong_audience');
+    await report(reported, b.id, 'wrong_audience');
+    await report(manual, a.id, 'wrong_audience');
+    await report(settled, a.id, 'wrong_audience');
+    await report(otherKind, a.id, 'wrong_info');
+
+    const queue = await listReviewQueue(db, NOW);
+    expect(queue.map((q) => [q.event.title, q.wrongAudienceReports])).toEqual([
+      ['reported', 2],
+      ['manual, reported', 1],
+    ]);
   });
 
   it('drops flags once the content changes (a new version gets a fresh attempt)', async () => {

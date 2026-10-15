@@ -1,7 +1,9 @@
 import {
   AUDIENCES,
   MEAL_TYPES,
+  effectiveAudience,
   type AdminMetricsResponse,
+  type Audience,
   type Building,
   type OverrideRequest,
   type ReviewQueueResponse,
@@ -57,8 +59,10 @@ function EventReview({ item }: { item: QueueEvent }) {
   const override = useOverrideEvent();
   const [foodItems, setFoodItems] = useState(item.classification?.foodItems.join(', ') ?? '');
   const [mealType, setMealType] = useState(item.classification?.mealType ?? '');
-  const [audience, setAudience] = useState(item.classification?.audience ?? '');
-  const { event, classification, flag } = item;
+  const shown = effectiveAudience(item.classification);
+  const [audience, setAudience] = useState<Audience>(shown.audience);
+  const [audienceNote, setAudienceNote] = useState('');
+  const { event, classification, flag, wrongAudienceReports } = item;
 
   const send = (action: OverrideRequest['action']) => {
     override.mutate({
@@ -69,7 +73,9 @@ function EventReview({ item }: { item: QueueEvent }) {
         .map((f) => f.trim())
         .filter(Boolean),
       mealType: MEAL_TYPES.find((m) => m === mealType) ?? null,
-      audience: AUDIENCES.find((a) => a === audience) ?? null,
+      // Sent only when changed, so publishing an event never vouches for the audience shown.
+      ...(audience !== shown.audience ? { audience } : {}),
+      ...(audienceNote.trim() ? { audienceNote: audienceNote.trim() } : {}),
     });
   };
 
@@ -78,6 +84,12 @@ function EventReview({ item }: { item: QueueEvent }) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="neutral">{SOURCE_LABELS[event.source] ?? event.source}</Badge>
         {flag && <Badge tone="danger">Classifier failed</Badge>}
+        {wrongAudienceReports > 0 && (
+          <Badge tone="danger">
+            {wrongAudienceReports} wrong-audience{' '}
+            {wrongAudienceReports === 1 ? 'report' : 'reports'}
+          </Badge>
+        )}
         {classification && (
           <Badge>
             {classification.method} {Math.round(classification.confidence * 100)}%
@@ -92,6 +104,10 @@ function EventReview({ item }: { item: QueueEvent }) {
       {classification?.evidence && (
         <p className="mt-1 text-sm text-ink-2">Evidence: “{classification.evidence}”</p>
       )}
+      <p className="mt-1 text-sm text-ink-2">
+        Who it's for: {AUDIENCE_LABELS[shown.audience]}
+        {shown.audienceEvidence && <> (“{shown.audienceEvidence}”)</>}
+      </p>
       {flag && <p className="mt-1 text-sm text-members">{flag.detail ?? flag.reason}</p>}
       {event.url && (
         <a
@@ -104,7 +120,7 @@ function EventReview({ item }: { item: QueueEvent }) {
         </a>
       )}
 
-      <details className="mt-2">
+      <details className="mt-2" open={wrongAudienceReports > 0}>
         <summary className="cursor-pointer text-sm font-semibold text-ink">Edit details</summary>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <label className="text-sm font-medium text-ink">
@@ -141,16 +157,30 @@ function EventReview({ item }: { item: QueueEvent }) {
               className={`${inputClass} mt-1`}
               value={audience}
               onChange={(e) => {
-                setAudience(e.target.value);
+                setAudience(AUDIENCES.find((a) => a === e.target.value) ?? 'unknown');
               }}
             >
-              <option value="">Unknown</option>
               {AUDIENCES.map((a) => (
                 <option key={a} value={a}>
                   {AUDIENCE_LABELS[a]}
                 </option>
               ))}
             </select>
+          </label>
+          <label className="text-sm font-medium text-ink sm:col-span-3">
+            Audience evidence (the listing's words, or how you know)
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={audienceNote}
+              maxLength={300}
+              placeholder={
+                shown.audienceEvidence ?? 'e.g. “open to all students” or “asked the host”'
+              }
+              onChange={(e) => {
+                setAudienceNote(e.target.value);
+              }}
+            />
           </label>
         </div>
       </details>

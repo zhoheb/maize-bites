@@ -21,18 +21,22 @@ import {
 import {
   addAliasRequestSchema,
   adminAnalyticsQuerySchema,
+  effectiveAudience,
   analyticsSettingsSchema,
   localDateOf,
   eventIdParamsSchema,
   overrideRequestSchema,
   reviewSubmissionRequestSchema,
   type AdminMetricsResponse,
+  type Audience,
   type AuditLogResponse,
   type Building,
+  type OverrideRequest,
   type OverrideResponse,
   type ReviewQueueResponse,
   type ReviewSubmissionResponse,
 } from '@maize-bites/shared';
+import type { ClassificationRow } from '@maize-bites/db';
 import { Router } from 'express';
 import { currentUser, requireAdmin } from '../auth/session.js';
 import type { ApiContext } from '../context.js';
@@ -44,6 +48,29 @@ import { summarizeSources, toAdminClassification, toAdminEvent, toRun } from '..
 const STATS_BACK_MS = 7 * 24 * 60 * 60 * 1000;
 const STATS_AHEAD_MS = 14 * 24 * 60 * 60 * 1000;
 const RECENT_RUNS = 40;
+
+/**
+ * The audience a manual verdict records. A new audience takes the reviewer's note as its evidence
+ * (none for unknown). Otherwise the current audience carries over with its evidence, or the
+ * note replaces that evidence when given. A machine audience without evidence carries over as
+ * unknown, since a manual row would otherwise vouch for it.
+ */
+function overrideAudience(
+  override: Pick<OverrideRequest, 'audience' | 'audienceNote'>,
+  current: ClassificationRow | null,
+): { audience: Audience; audienceEvidence: string | null } {
+  const note = override.audienceNote === '' ? undefined : override.audienceNote;
+  if (override.audience !== undefined && override.audience !== effectiveAudience(current).audience)
+    return {
+      audience: override.audience,
+      audienceEvidence: override.audience === 'unknown' ? null : (note ?? null),
+    };
+  const kept = effectiveAudience(current);
+  return {
+    audience: kept.audience,
+    audienceEvidence: kept.audience === 'unknown' ? null : (note ?? kept.audienceEvidence),
+  };
+}
 
 // Mounted at /api/admin. Every route requires users.is_admin, and every write is recorded in
 // audit_log with who did it.
@@ -58,10 +85,11 @@ export function adminRouter({ db, now }: ApiContext): Router {
       listPendingSubmissions(db),
     ]);
     const body: ReviewQueueResponse = {
-      events: queue.map(({ event, classification, flag }) => ({
+      events: queue.map(({ event, classification, flag, wrongAudienceReports }) => ({
         event: toAdminEvent(event),
         classification: classification && toAdminClassification(classification),
         flag: flag && { reason: flag.reason, detail: flag.detail },
+        wrongAudienceReports,
       })),
       submissions: pending.map(({ submission, submitter, building }) => ({
         id: submission.id,
@@ -103,7 +131,7 @@ export function adminRouter({ db, now }: ApiContext): Router {
       foodItems: override.foodItems ?? current?.foodItems ?? [],
       mealType: override.mealType === undefined ? (current?.mealType ?? null) : override.mealType,
       dietary: override.dietary ?? current?.dietary ?? [],
-      audience: override.audience === undefined ? (current?.audience ?? null) : override.audience,
+      ...overrideAudience(override, current),
       evidence: override.note ?? null,
       createdAt: at,
     });
