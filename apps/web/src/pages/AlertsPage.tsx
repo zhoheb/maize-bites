@@ -225,6 +225,9 @@ function AlertsForm({ email, initial }: { email: string; initial: AlertPreferenc
             >
               Open to all only
             </Chip>
+            <p className="mt-1.5 text-xs text-ink-2">
+              Only events whose listing says they're open to everyone.
+            </p>
           </div>
         </Fieldset>
 

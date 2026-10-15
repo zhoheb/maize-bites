@@ -60,6 +60,21 @@ describe('templates', () => {
     expect(m.html).not.toContain('<b>&');
   });
 
+  it('says "open" only as the listing does, and points to the listing when it is silent', () => {
+    const open = instantAlertEmail(
+      { ...event, audience: 'open', audienceEvidence: 'all welcome' },
+      links,
+    );
+    expect(open.text).toContain('Open to everyone');
+    const unknown = instantAlertEmail(
+      { ...event, audience: 'unknown', audienceEvidence: null },
+      links,
+    );
+    expect(unknown.text).toContain('Check the listing for who can attend');
+    expect(unknown.html).toContain('Check the listing for who can attend');
+    expect(unknown.text).not.toMatch(/open to/i);
+  });
+
   it('digest lists every event', () => {
     const m = digestEmail(
       [event, { ...event, id: 'x', title: 'Bagels' }],

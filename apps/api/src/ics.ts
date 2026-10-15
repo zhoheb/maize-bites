@@ -1,4 +1,4 @@
-import { effectiveEnd, type FoodEvent } from '@maize-bites/shared';
+import { audienceNote, effectiveEnd, type FoodEvent } from '@maize-bites/shared';
 
 // Minimal RFC 5545 calendar with one VEVENT, for "add to calendar".
 
@@ -51,8 +51,7 @@ function location(event: FoodEvent): string | null {
 function description(event: FoodEvent): string {
   const parts: string[] = [];
   if (event.foodItems.length > 0) parts.push(`Free food: ${event.foodItems.join(', ')}`);
-  if (event.audience === 'members') parts.push('Members only.');
-  if (event.audience === 'rsvp') parts.push('RSVP required.');
+  parts.push(`${audienceNote(event.audience)}.`);
   if (event.description) parts.push(event.description);
   if (event.url) parts.push(`Details: ${event.url}`);
   parts.push('Via Maize Bites. Food availability is not guaranteed.');

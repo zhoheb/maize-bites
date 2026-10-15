@@ -61,6 +61,14 @@ describe('buildIcs', () => {
     expect(unfolded).not.toContain('URL:');
   });
 
+  it('points to the listing when it does not say who can come', () => {
+    const ics = buildIcs(
+      { ...event, audience: 'unknown', audienceEvidence: null },
+      { now: new Date('2026-10-01T12:00:00Z') },
+    ).replace(/\r\n /g, '');
+    expect(ics).toContain('DESCRIPTION:Check the listing for who can attend.\\n\\n');
+  });
+
   it('notes audience restrictions and the disclaimer', () => {
     expect(unfolded).toContain(
       'DESCRIPTION:Members only.\\n\\nLine 1\\nLine 2\\n\\nVia Maize Bites.',

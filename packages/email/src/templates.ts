@@ -1,4 +1,4 @@
-import { CAMPUS_TIME_ZONE, type FoodEvent } from '@maize-bites/shared';
+import { CAMPUS_TIME_ZONE, audienceNote, type FoodEvent } from '@maize-bites/shared';
 import type { EmailMessage } from './mailer.js';
 
 type Content = Omit<EmailMessage, 'to'>;
@@ -36,12 +36,6 @@ export function eventWhere(event: Pick<FoodEvent, 'building' | 'room' | 'locatio
   return event.room && event.building ? `${place}, ${event.room}` : place;
 }
 
-function audienceNote(event: Pick<FoodEvent, 'audience'>): string | null {
-  if (event.audience === 'members') return 'Members only';
-  if (event.audience === 'rsvp') return 'RSVP required';
-  return null;
-}
-
 const MAIZE = '#ffcb05';
 const BLUE = '#00274c';
 
@@ -73,23 +67,25 @@ ${button(url, 'Sign in')}
 }
 
 function eventBlock(event: FoodEvent, url: string): string {
-  const note = audienceNote(event);
+  // Never claims "open" without the listing's words; unknown points to the listing.
+  const note = audienceNote(event.audience);
   const food = event.foodItems.length > 0 ? event.foodItems.join(', ') : 'Free food';
   return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:12px 0">
 <p style="margin:0;font-weight:700;color:${BLUE}"><a href="${escapeHtml(url)}" style="color:${BLUE}">${escapeHtml(event.title)}</a></p>
 <p style="margin:4px 0 0;text-transform:capitalize">${escapeHtml(food)}</p>
 <p style="margin:4px 0 0;color:#475569;font-size:14px">${escapeHtml(eventWhen(event))} · ${escapeHtml(eventWhere(event))}</p>
-${note ? `<p style="margin:6px 0 0;font-size:13px;font-weight:600;color:#334155">${escapeHtml(note)}</p>` : ''}
+<p style="margin:6px 0 0;font-size:13px;font-weight:600;color:#334155">${escapeHtml(note)}</p>
 </div>`;
 }
 
 function eventText(event: FoodEvent, url: string): string {
-  const note = audienceNote(event);
+  // Never claims "open" without the listing's words; unknown points to the listing.
+  const note = audienceNote(event.audience);
   return [
     event.title,
     event.foodItems.length > 0 ? event.foodItems.join(', ') : 'Free food',
     `${eventWhen(event)} · ${eventWhere(event)}`,
-    ...(note ? [note] : []),
+    note,
     url,
   ].join('\n');
 }

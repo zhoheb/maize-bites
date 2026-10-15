@@ -16,6 +16,7 @@ import {
   type LinkBuilder,
 } from '@maize-bites/email';
 import {
+  audienceNote,
   CAMPUS_TIME_ZONE,
   startOfNextLocalDay,
   type Channel,
@@ -82,7 +83,8 @@ const pushFor = (event: FoodEvent) => ({
     event.foodItems.length > 0
       ? `Free ${event.foodItems.slice(0, 2).join(' & ')}`
       : 'Free food nearby',
-  body: `${event.title} · ${eventWhere(event)} · ${eventWhen(event)}`,
+  // Same audience wording as the emails: never "open" without the listing's words.
+  body: `${event.title} · ${eventWhere(event)} · ${eventWhen(event)}\n${audienceNote(event.audience)}`,
   url: `/events/${event.id}`,
   tag: event.id,
 });

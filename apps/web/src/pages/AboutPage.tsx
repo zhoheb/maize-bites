@@ -99,6 +99,14 @@ export function AboutPage() {
         </p>
       </Section>
 
+      <Section title="Who an event is for">
+        <p>
+          We say an event is open to everyone, for members only, or needs an RSVP only when its
+          listing says so, and we quote the listing's words; when it doesn't say, we tell you to
+          check the listing before you go.
+        </p>
+      </Section>
+
       <Section title="Good manners">
         <p>
           “Members only” and “RSVP required” badges mean exactly that. Please don't crash a club
