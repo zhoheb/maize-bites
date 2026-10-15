@@ -15,6 +15,7 @@ const SIGNALS: { kind: ReportKind; label: string; Icon: LucideIcon }[] = [
 ];
 const CORRECTIONS: { kind: ReportKind; label: string }[] = [
   { kind: 'not_free', label: 'Not free' },
+  { kind: 'wrong_audience', label: 'Wrong audience' },
   { kind: 'wrong_info', label: 'Wrong info' },
 ];
 

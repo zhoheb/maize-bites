@@ -17,8 +17,14 @@ describe('parseFilters', () => {
       campuses: ['central', 'north'], // canonical order
       dietary: ['vegan'],
       openOnly: true,
+      includeUnspecified: false,
       mealType: 'lunch',
     });
+  });
+
+  it('reads "include unspecified" only together with "open to all"', () => {
+    expect(parseFilters(params('open=1&unspec=1')).includeUnspecified).toBe(true);
+    expect(parseFilters(params('unspec=1'))).toEqual(NO_FILTERS);
   });
 
   it('defaults to no filters', () => {
@@ -41,10 +47,11 @@ describe('withFilters', () => {
       campuses: ['north', 'central'],
       dietary: ['halal', 'vegan'],
       openOnly: true,
+      includeUnspecified: true,
       mealType: 'snacks',
     });
     expect(next.toString()).toBe(
-      'tab=today&event=abc&campus=central%2Cnorth&diet=vegan%2Chalal&open=1&meal=snacks',
+      'tab=today&event=abc&campus=central%2Cnorth&diet=vegan%2Chalal&open=1&unspec=1&meal=snacks',
     );
   });
 
@@ -62,6 +69,7 @@ describe('withFilters', () => {
       campuses: ['medical' as const],
       dietary: ['kosher' as const],
       openOnly: false,
+      includeUnspecified: false,
       mealType: null,
     };
     expect(parseFilters(withFilters(params(''), filters))).toEqual(filters);
@@ -92,14 +100,18 @@ describe('helpers', () => {
         campuses: ['central', 'north'],
         dietary: ['vegan'],
         openOnly: true,
+        includeUnspecified: true,
         mealType: 'lunch',
       }),
     ).toEqual({
       campus: 'central,north',
       dietary: 'vegan',
       open_only: 'true',
+      include_unspecified: 'true',
       meal_type: 'lunch',
     });
+    // Without "open to all", "include unspecified" means nothing and isn't sent.
+    expect(toApiParams({ ...NO_FILTERS, includeUnspecified: true })).toEqual({});
     expect(toApiParams(NO_FILTERS)).toEqual({});
   });
 });

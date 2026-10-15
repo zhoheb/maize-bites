@@ -341,6 +341,16 @@ describe('listPublishedEvents', () => {
 
       expect((await titles({ openOnly: true })).sort()).toEqual(['manual', 'open']);
       expect(await titles({ openOnly: false })).toHaveLength(7);
+      // Unspecified added: everything except a stated restriction.
+      expect((await titles({ openOnly: true, includeUnspecified: true })).sort()).toEqual([
+        'manual',
+        'not judged',
+        'open',
+        'unknown',
+        'unproven',
+      ]);
+      // On its own it does nothing.
+      expect(await titles({ includeUnspecified: true })).toHaveLength(7);
     });
 
     it('mealType: matches exactly', async () => {

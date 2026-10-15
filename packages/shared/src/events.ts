@@ -77,7 +77,10 @@ export const listEventsQuerySchema = z.object({
   campus: csv(campusSchema).optional(),
   /** Event must satisfy every listed need. */
   dietary: csv(dietaryTagSchema).optional(),
+  /** Only events whose listing says they're open to everyone. */
   open_only: z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] }).optional(),
+  /** With open_only: also events whose listing doesn't say who can come. */
+  include_unspecified: z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] }).optional(),
   meal_type: mealTypeSchema.optional(),
   bbox: bboxSchema.optional(),
   cursor: z.string().min(1).optional(),

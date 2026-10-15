@@ -30,6 +30,7 @@ describe('report buttons in event details', () => {
     expect(screen.getByRole('button', { name: 'Still food, 1 report' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Not free, 0 reports' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Wrong info, 0 reports' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Wrong audience, 0 reports' })).toBeTruthy();
   });
 
   it('sends a report and updates the count and the gone state from the answer', async () => {

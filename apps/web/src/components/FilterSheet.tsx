@@ -10,6 +10,7 @@ import { iconButtonClass } from './ui/button-class';
 import { Chip } from './ui/Chip';
 import { SectionHeader } from './ui/SectionHeader';
 import { Toggle } from './ui/Toggle';
+import { OpenFilterOptions } from './OpenFilterOptions';
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   const id = `sheet-filter-${label.toLowerCase()}`;
@@ -102,13 +103,16 @@ export function FilterSheet({
                 </Chip>
               ))}
             </Group>
-            <Toggle
-              label="Only events open to all"
-              checked={draft.openOnly}
-              onChange={(openOnly) => {
-                setDraft({ ...draft, openOnly });
-              }}
-            />
+            <div className="space-y-1">
+              <Toggle
+                label="Only events open to all"
+                checked={draft.openOnly}
+                onChange={(openOnly) => {
+                  setDraft({ ...draft, openOnly, includeUnspecified: false });
+                }}
+              />
+              <OpenFilterOptions filters={draft} onChange={setDraft} />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 border-t border-line bg-panel px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

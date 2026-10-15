@@ -43,6 +43,25 @@ const activeChips = () =>
     .map((b) => b.textContent);
 
 describe('FilterBar', () => {
+  it('open to all: explains itself and can add unspecified events, off by default', async () => {
+    const { user, search } = renderAt();
+    expect(screen.queryByText("Only events whose listing says they're open.")).toBeNull();
+
+    await user.click(screen.getByRole('switch', { name: 'Open to all' }));
+    expect(screen.getByText("Only events whose listing says they're open.")).toBeTruthy();
+    const unspecified = screen.getByRole('checkbox', { name: 'Include unspecified' });
+    expect((unspecified as HTMLInputElement).checked).toBe(false);
+    expect(search()).toBe('?open=1');
+
+    await user.click(unspecified);
+    expect(search()).toBe('?open=1&unspec=1');
+
+    // Turning "open to all" off drops the choice with it.
+    await user.click(screen.getByRole('switch', { name: 'Open to all' }));
+    expect(search()).toBe('');
+    expect(screen.queryByRole('checkbox', { name: 'Include unspecified' })).toBeNull();
+  });
+
   it('is one row: when, three pill menus, the open-to-all switch, and search', () => {
     renderAt();
     expect(

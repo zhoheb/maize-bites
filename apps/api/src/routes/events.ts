@@ -32,6 +32,7 @@ function commonFilters(query: NowEventsQuery, now: Date): PublishedEventFilters 
     campuses: query.campus,
     dietary: query.dietary,
     openOnly: query.open_only,
+    includeUnspecified: query.include_unspecified,
     mealType: query.meal_type,
     bbox: query.bbox,
     after: query.cursor === undefined ? undefined : decodeCursor(query.cursor),

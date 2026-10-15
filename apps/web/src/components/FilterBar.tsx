@@ -10,6 +10,7 @@ import {
 } from '../lib/filters';
 import { CAMPUS_LABELS, DIETARY_LABELS, MEAL_LABELS } from '../lib/labels';
 import { TAB_OPTIONS } from '../lib/tabs';
+import { OpenFilterOptions } from './OpenFilterOptions';
 import { SearchBox } from './SearchBox';
 import { Button } from './ui/Button';
 import { RemovableChip } from './ui/Chip';
@@ -105,7 +106,7 @@ export function FilterBar({
           className="ml-1"
           checked={filters.openOnly}
           onChange={(openOnly) => {
-            onChange({ ...filters, openOnly });
+            onChange({ ...filters, openOnly, includeUnspecified: false });
           }}
         />
         <div className="ml-auto flex items-center gap-1">
@@ -123,6 +124,7 @@ export function FilterBar({
           <SearchBox value={search} onChange={onSearch} inputRef={searchRef} className="w-72" />
         </div>
       </div>
+      <OpenFilterOptions filters={filters} onChange={onChange} />
       <ActiveFilters filters={filters} onChange={onChange} />
     </section>
   );

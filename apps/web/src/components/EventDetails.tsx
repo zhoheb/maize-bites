@@ -1,4 +1,4 @@
-import type { Audience, ClassificationMethod, EventSource } from '@maize-bites/shared';
+import type { Audience, ClassificationMethod, EventDetail, EventSource } from '@maize-bites/shared';
 import {
   CalendarPlus,
   Clock,
@@ -49,12 +49,53 @@ const SOURCE_LABELS: Record<EventSource, string> = {
   submission: 'A community tip',
 };
 
-const AUDIENCE_TEXT: Record<Audience, string> = {
-  open: 'Open to everyone. Just show up.',
-  members: "For members of the host group. Please don't crash it for the food.",
+const AUDIENCE_TEXT: Record<Exclude<Audience, 'unknown'>, string> = {
+  open: 'Open to everyone.',
+  members:
+    "Only for a specific group (members, a program, or invitees). Please don't crash it for the food.",
   rsvp: 'You need to RSVP or register first. Check the listing for how.',
-  unknown: "The listing doesn't say who can come. Check it before you go.",
 };
+
+/**
+ * Who it's for. We state an audience only when the listing does, and quote it; otherwise we
+ * say we don't know and point to the listing.
+ */
+function AudienceInfo({
+  event,
+}: {
+  event: Pick<EventDetail, 'audience' | 'audienceEvidence' | 'url' | 'classification'>;
+}) {
+  if (event.audience === 'unknown')
+    return (
+      <p>
+        The listing doesn't say who can attend.{' '}
+        {event.url ? (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline underline-offset-2"
+          >
+            Check the event listing before you go →
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        ) : (
+          'Check with the host before you go.'
+        )}
+      </p>
+    );
+  const reviewed = event.classification?.method === 'manual';
+  return (
+    <>
+      <p>{AUDIENCE_TEXT[event.audience]}</p>
+      {event.audienceEvidence && (
+        <p className="text-xs text-ink-2">
+          {reviewed ? 'Our review: ' : 'Listing says: '}“{event.audienceEvidence}”
+        </p>
+      )}
+    </>
+  );
+}
 
 function DetailsSkeleton() {
   return (
@@ -213,7 +254,7 @@ export function EventDetails({
         </Section>
 
         <Section icon={Users} title="Who it's for">
-          <p>{AUDIENCE_TEXT[event.audience]}</p>
+          <AudienceInfo event={event} />
           {event.sponsor && <p className="text-sm text-ink-2">Hosted by {event.sponsor}</p>}
         </Section>
 
