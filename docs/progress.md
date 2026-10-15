@@ -768,3 +768,74 @@ hadn't run `pnpm build` locally; I do now.
   two-hop case; in production the only sign of a wrong setting would be uniques collapsing to
   about one a day. Worth a look once real traffic arrives.
 - **Production test data:** my 2 test page views on 2026-10-14 are in the production counts.
+
+## 2026-10-15: "who it's for" only from the listing (shipped)
+
+Branch `audience-unknown`, fast-forwarded into `main` (`82dea3c`..`eddebab`). Migration
+`0009_audience_unknown` (adds `unknown` to `audience`, `wrong_audience` to `report_kind`, and
+`classifications.audience_evidence`) applied by `migrate.yml`; CI, migrate, Render and Vercel all
+green. Production backfill run with `audience-backfill.yml` (dry run 38796558950, then 38796643215).
+
+**What it is.** open, members and rsvp are stated only with a phrase from the title or
+description, stored as `audience_evidence`; otherwise `unknown`. Rules (`classifier/audience.ts`,
+`AUDIENCE_RULES`) for rules mode and the backfill; the LLM must quote its evidence and is
+downgraded to unknown if the quote isn't in the listing. Reads enforce it as well
+(`effectiveAudience`), so an old verdict without evidence shows as unknown. The drawer quotes the
+evidence or links to the listing; cards badge only members/RSVP; emails, push and calendar files
+share `audienceNote`; "Wrong audience" reports put an event in the admin queue with a count until
+a reviewer records an audience with a note.
+
+**Production counts** (published current and upcoming events, 61 at the time):
+
+| audience | before | after |
+| -------- | -----: | ----: |
+| open     |     35 |     9 |
+| members  |      0 |     0 |
+| rsvp     |     26 |    24 |
+| unknown  |      0 |    28 |
+
+1112 machine verdicts on live events were rewritten; there were no manual verdicts to keep. The
+"before" column is the stored audience read at face value (what the old site showed). The run's
+log has 10 examples per audience with their evidence.
+
+**Verified.** Locally: lint, typecheck, `pnpm test`, `pnpm test:pg` and `pnpm build` pass; the
+built API answered `/api/health` (database ok) and served `audience`/`audienceEvidence`; the
+backfill ran against the dev database (open 34 → 7). Production: `/api/health` is ok after the
+deploy and after the backfill; `open_only` returns 9 events, with `include_unspecified` 37, of
+61; the Vercel bundle has the new filter.
+
+### Decisions to review
+
+- **Filter default: strict.** "Open to all" shows only listings that say so, with the note "Only
+  events whose listing says they're open". That hid most events (9 of 61), so there is an
+  "Include unspecified" checkbox, off by default, which adds unknown ones (37). Off, because the
+  label would otherwise promise "open" for events whose listing never said so. It resets when
+  "Open to all" is switched off.
+- **Alert subscriptions' "Open to all only" is strict too**, with no unspecified option. Anyone
+  who had it on now gets far fewer alerts. Worth revisiting if someone asks.
+- **No trained model exists**, so that path wasn't built. Neither feed has structured audience
+  or registration data (`docs/sources.md`), so evidence comes only from text.
+- **LLM needs_rsvp is gone**: the model returns one audience with members > rsvp > open, plus
+  `audience_evidence`. A bad quote downgrades to unknown without a retry (the food verdict
+  stands).
+- **The backfill rewrote LLM verdicts' audience with the rules**, in place. Few LLM audiences had
+  a quote to check, and re-asking the model would cost money. New content gets the LLM's checked
+  audience.
+- **Members is rare in practice (0 in production).** Patterns were tightened after a dry run on
+  real listings: "open to all degree-seeking students" and "open to all engineering students" are
+  unknown, not members (a wrong "Members only" badge is its own false claim), and patterns can't
+  span sentences. "Open to all UM students" is open.
+- **"members and friends welcome" → unknown** (neither open to anyone nor members only);
+  "members and non-members", "non-members welcome" → open; "open house" → unknown; "free for
+  members, $5 for non-members" → members; "no tickets required" → unknown, not rsvp.
+- **Wording.** A reviewer's evidence is shown as "Our review: …", not "Listing says: …". Unknown
+  without a source link (a tip) says "Check with the host before you go."
+- **Deploy order.** The web schema accepts the old API's `audience: null` and a missing
+  `audienceEvidence`. Old cached clients against the new API would fail to parse `unknown` until
+  the service worker updates them (autoUpdate + skipWaiting, so one reload).
+- **Between the deploy and the backfill (a few minutes)** every production event showed as
+  unknown, because no stored verdict had evidence yet.
+- **Known misses.** "Sign up"/"register" also match "sign up for our newsletter" or "register to
+  vote"; the rsvp list is the brief's. Recurring occurrences repeat in the samples.
+- **Flaky local timeouts.** With the machine at load ~20, single API/worker tests timed out at
+  15s (different ones each run) and passed on rerun; unrelated to this change.
