@@ -50,9 +50,10 @@ pnpm db:generate       # after editing packages/db/src/schema.ts; commit the gen
 pnpm ingest:once        # one ingestion pass over the enabled sources (needs INGEST_CONTACT_EMAIL; obeys the per-source guard)
 pnpm digest:once        # send the morning digest once (DIGEST_CRON set: only if that UTC schedule is 7:30 AM in Ann Arbor today)
 pnpm cleanup:once       # delete expired sessions and sign-in links, events past EVENT_RETENTION_DAYS; roll up analytics
+pnpm --filter worker audience:backfill  # reapply the audience rules to current and upcoming events (keeps manual verdicts; --dry-run); audience-backfill.yml runs it in production
 pnpm --filter worker eval  # score rules vs rules+LLM on eval/labeled.json (LLM part costs money; --rules-only, --max-llm-calls N, --mode rules)
 pnpm db:seed           # upsert the 73 UMich buildings (idempotent); run after a fresh migrate
-pnpm db:seed:demo      # 20 "[demo]" events covering every state (live, soon, later, members, RSVP, likely over); --clear removes them; refuses production
+pnpm db:seed:demo      # 20 "[demo]" events covering every state (live, soon, later, open, members, RSVP, unknown audience, likely over); --clear removes them; refuses production
 pnpm db:migrate | db:studio | db:up | db:down
 pnpm --filter @maize-bites/api test   # target a single package
 ```
@@ -87,6 +88,12 @@ pnpm --filter @maize-bites/api test   # target a single package
     - **Limits:** at most 3 requests in flight, and `LLM_MAX_CALLS_PER_RUN` (default 100, retries included) caps the rest, which defer to the next run. An auth error stops the stage. Without `ANTHROPIC_API_KEY`, only the prefilter runs and nothing from a feed is published.
   - **`rules`.** No LLM; the Anthropic client is never built. `rules-mode.ts` is the final judge and is tuned for precision (`RULES_MODE` in `rules-config.ts`): it publishes only on an explicit statement that food is given away, or a "Free Food" tag, and money, potlucks, food trucks, and dining halls veto it. It stores a `rules` row with `rules_mode = true` at 0.75 (0.85 for the tag), which is above `PUBLISH_CONFIDENCE`, or 0.2 for a negative. Don't loosen the prefilter to help rules mode, and don't loosen rules mode to pad the list.
   - **Switching modes.** `classifications.rules_mode` tells a rules-mode verdict from a prefilter row. Each mode re-judges content whose newest rules row came from the other, so turning llm mode on writes a fresh prefilter row over every rules-mode verdict (hiding it, as llm mode always does until the model decides) and sends candidates to the LLM; rules-mode rows never block that. Rules mode leaves content the LLM already judged alone. Manual verdicts win in both modes.
+- **Audience** (who an event is for: `open | members | rsvp | unknown`) is stated only when the listing says so. `classifications.audience_evidence` holds the listing's words (for a manual row, the reviewer's note); open, members and rsvp need it, and absence of a restriction is never "open".
+  - Rules (both modes and the backfill): `detectAudience` in `classifier/audience.ts` with `AUDIENCE_RULES` in `rules-config.ts`; members > rsvp > open; no match is unknown. `audience.test.ts` is the contract (including "open house" → unknown, "members and friends welcome" → unknown).
+  - LLM: returns `audience` and a verbatim `audience_evidence`; `checkedAudience` downgrades to unknown when the quote isn't in the title or description (no retry). There is no trained model.
+  - Reads enforce it too: `effectiveAudience` (shared) serves a machine audience without evidence as unknown, and the open-only filter mirrors that in SQL. Manual verdicts stand.
+  - Neither feed has a structured audience or registration field (docs/sources.md), so evidence comes only from text.
+  - Wording everywhere comes from one place per surface: `audienceNote` (shared) for email, push and ICS; `AudienceInfo` in `EventDetails` for the drawer (quote, or "check the listing" with a link). Cards badge only members and rsvp.
 - Measure classifier changes with `pnpm --filter worker eval` before and after (`--mode rules` scores rules mode). `eval/labeled.json` holds hand labels; `null` labels are skipped.
 - **API conventions:**
   - Parse every `req.query` and `req.params` with a schema from `@maize-bites/shared`; a thrown ZodError becomes a 400.
@@ -102,7 +109,8 @@ pnpm --filter @maize-bites/api test   # target a single package
   - Colours, type, radius and shadows are tokens in `src/index.css` (`bg-page`, `bg-panel`, `bg-card`, `bg-raised`, `bg-sunken`, `text-ink`, `text-ink-2`, `text-ink-3`, `border-line`, `now`/`soon` with `-soft` and `-ink`, `members`, `rsvp`, `danger`, `meal-*`). Use them, not raw palette classes, so dark mode works. `lib/tokens.test.ts` checks every text/background pair for WCAG AA; add new pairs there.
   - Maize is for map pins, the selected card or row, the nav underline and the logo, and nothing else. Active controls use `bg-active`/`bg-primary` (ink). The token test lists the files allowed to name maize.
   - Build from `components/ui/` (Button, IconButton, Segmented, Toggle, DropdownPill, Chip, Badge, StatusPill, MealTile, ProgressBar, SectionHeader, Skeleton, Drawer, Sheet). A file that exports a component exports nothing else (fast refresh lint), so helpers live in `lib/`.
-  - The list is an agenda (`EventList`): `NowCard` for events that are live or start within 30 minutes (`isUrgent`), `AgendaRow` for the rest and for anything likely over. Each event shows its time once. `lib/status.ts` has the time logic, `lib/grouping.ts` the sections, `lib/hero.ts` the headline (computed from the list shown) and data freshness, `lib/badges.ts` the exception badges (never "Open to all").
+  - The list is an agenda (`EventList`): `NowCard` for events that are live or start within 30 minutes (`isUrgent`), `AgendaRow` for the rest and for anything likely over. Each event shows its time once. `lib/status.ts` has the time logic, `lib/grouping.ts` the sections, `lib/hero.ts` the headline (computed from the list shown) and data freshness, `lib/badges.ts` the exception badges (members and RSVP only; never "Open to all", never anything for unknown).
+  - The "Open to all" filter (`open=1`) shows only events whose listing says they're open; "Include unspecified" (`unspec=1`, API `include_unspecified`) adds unknown ones. Alert subscriptions' "Open to all only" is the strict form.
   - Show food only from extracted `foodItems` or the classifier's `mealType` (`foodText`); with neither, show nothing.
   - `[demo]` events are hidden unless `VITE_SHOW_DEMO=true`.
   - Components that show a time read the shared clock (`useNow`) themselves; don't pass `now` down through the list.

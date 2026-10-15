@@ -41,6 +41,15 @@ Checked 2026-10-09. Recheck robots.txt and terms before building against any sou
 | Eventbrite                           | No                              | Terms forbid scraping; no public search API      |
 | User-submitted tips                  | Yes (our own data)              | Phase 7 `/api/submissions`, not built yet        |
 
+## Who an event is for (audience)
+
+Neither feed has a structured audience, visibility, or registration field, checked 2026-10-15
+against the captured fixtures. Happening's `cost` is free text ("Free - no tickets required")
+and its tags ("Undergraduate Students", "Graduate Students") describe topics, not who may come.
+The Maize Pages public feeds list only events published publicly, which says who can _see_ an
+event, not who can attend. So audience evidence comes only from the title and description
+(`classifier/audience.ts`); if a source adds such a field, use it as evidence and say so here.
+
 ## How confident each quote is
 
 "Verbatim" means I fetched the file or page and copied the text. Where a page refused the

@@ -55,6 +55,27 @@ interface DemoSpec {
   likelyOver?: boolean;
 }
 
+/**
+ * The words each demo listing uses to say who it's for, appended when the description lacks
+ * them, so the evidence quoted on the site is really in the listing. Unknown says nothing.
+ */
+const AUDIENCE_WORDS: Record<Exclude<Audience, 'unknown'>, string> = {
+  open: 'All are welcome',
+  members: 'Members only',
+  rsvp: 'RSVP required',
+};
+
+function audienceText(d: Pick<DemoSpec, 'description' | 'audience'>): {
+  description: string;
+  audienceEvidence: string | null;
+} {
+  if (d.audience === 'unknown') return { description: d.description, audienceEvidence: null };
+  const words = AUDIENCE_WORDS[d.audience];
+  return d.description.toLowerCase().includes(words.toLowerCase())
+    ? { description: d.description, audienceEvidence: words }
+    : { description: `${d.description} ${words}.`, audienceEvidence: words };
+}
+
 const SPECS: DemoSpec[] = [
   // Live now or starting soon.
   {
@@ -93,7 +114,7 @@ const SPECS: DemoSpec[] = [
     foodItems: ['cookies', 'lemonade'],
     mealType: 'snacks',
     dietary: ['vegetarian'],
-    audience: 'open',
+    audience: 'unknown',
     startsInMinutes: -45,
     durationMinutes: 75,
     likelyOver: true,
@@ -192,7 +213,7 @@ const SPECS: DemoSpec[] = [
     foodItems: ['samosas', 'chai'],
     mealType: 'snacks',
     dietary: ['vegetarian', 'halal'],
-    audience: 'open',
+    audience: 'unknown',
     day: 0,
     hour: 14,
     durationMinutes: 120,
@@ -278,7 +299,7 @@ const SPECS: DemoSpec[] = [
     foodItems: ['cookies', 'coffee'],
     mealType: 'snacks',
     dietary: ['vegetarian'],
-    audience: 'open',
+    audience: 'unknown',
     day: 2,
     hour: 15.75,
     durationMinutes: 90,
@@ -320,7 +341,7 @@ const SPECS: DemoSpec[] = [
     foodItems: ['bagels', 'lox'],
     mealType: 'breakfast',
     dietary: ['kosher'],
-    audience: 'open',
+    audience: 'unknown',
     day: 5,
     hour: 10.5,
     durationMinutes: 120,
@@ -415,6 +436,7 @@ export async function seedDemoEvents(db: Database, now: Date = new Date()): Prom
     );
 
   for (const [index, d] of demo.entries()) {
+    const { description, audienceEvidence } = audienceText(d);
     const { event } = await upsertEvent(
       db,
       {
@@ -422,7 +444,7 @@ export async function seedDemoEvents(db: Database, now: Date = new Date()): Prom
         sourceEventId: `${DEMO_ID_PREFIX}${index + 1}`,
         occurrenceId: '0',
         title: `${DEMO_TITLE_PREFIX}${d.title}`,
-        description: `${d.description}\n\nThis is demo data, not a real event.`,
+        description: `${description}\n\nThis is demo data, not a real event.`,
         startsAt: d.startsAt,
         endsAt: d.endsAt,
         locationName: d.building,
@@ -447,6 +469,7 @@ export async function seedDemoEvents(db: Database, now: Date = new Date()): Prom
       mealType: d.mealType,
       dietary: d.dietary,
       audience: d.audience,
+      audienceEvidence,
       evidence: 'Demo data',
       createdAt: now,
     });
