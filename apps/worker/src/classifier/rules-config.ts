@@ -152,8 +152,6 @@ export interface RulesModeConfig {
   dietary: Readonly<
     Record<'vegan' | 'vegetarian' | 'halal' | 'kosher' | 'gluten_free', readonly string[]>
   >;
-  membersPhrases: readonly string[];
-  rsvpPhrases: readonly string[];
   /**
    * A meal named in the text decides the meal type. First match in this order wins. With none
    * named the meal type stays null; it is never inferred from the start time.
@@ -366,23 +364,6 @@ export const RULES_MODE: RulesModeConfig = {
     gluten_free: ['gluten-free', 'gluten free', 'gf options', 'gf option'],
   },
 
-  membersPhrases: [
-    'members only',
-    'members-only',
-    'for members',
-    'for club members',
-    'dues-paying',
-  ],
-  rsvpPhrases: [
-    'rsvp',
-    'register',
-    'registration required',
-    'registration is required',
-    'sign up',
-    'signup',
-    'reserve your spot',
-  ],
-
   mealWords: [
     ['breakfast', ['breakfast', 'brunch']],
     ['lunch', ['lunch', 'luncheon']],
@@ -391,4 +372,112 @@ export const RULES_MODE: RulesModeConfig = {
 
   confidence: { perk: 0.85, strong: 0.75, negative: 0.2 },
   evidenceContextChars: 30,
+};
+
+// ── Who an event is for ─────────────────────────────────────────────────────────────────────
+// Every classifier path ends with this rule: open, members, or rsvp only when the listing says
+// so, otherwise unknown. Absence of a restriction is not evidence of "open". Used by rules mode,
+// by the audience backfill, and as the contract the LLM's audience is checked against.
+// audience.test.ts has the behavior contract.
+
+export interface AudienceRules {
+  /** The listing says anyone may come. */
+  openPhrases: readonly string[];
+  /** The listing limits who may come. */
+  membersPhrases: readonly string[];
+  /** Restrictions built around a group name. Case-insensitive; no /g flag. */
+  membersPatterns: readonly RegExp[];
+  /** Contain a members word but don't restrict anyone. Removed before the members match. */
+  notMembersPhrases: readonly string[];
+  /** Attendees must sign up first. */
+  rsvpPhrases: readonly string[];
+  /** Say no sign-up is needed. Removed before the rsvp match, so "no tickets required" isn't rsvp. */
+  notRsvpPhrases: readonly string[];
+  /** Words of the listing kept on each side of the match in the stored evidence. */
+  evidenceContextWords: number;
+}
+
+export const AUDIENCE_RULES: AudienceRules = {
+  openPhrases: [
+    'open to all',
+    'open to the public',
+    'open to everyone',
+    'all are welcome',
+    'all welcome',
+    'everyone welcome',
+    'everyone is welcome',
+    'all students welcome',
+    'all students are welcome',
+    'free and open',
+    'no registration required',
+    'members of the public are welcome',
+    'non-members welcome',
+    'nonmembers welcome',
+    'members and non-members',
+    'members and nonmembers',
+  ],
+  membersPhrases: [
+    'members only',
+    'members-only',
+    'for members',
+    'for club members',
+    'dues-paying',
+    'invite only',
+    'invite-only',
+    'invitation only',
+    'by invitation',
+    'lab members',
+    'staff only',
+    'employees only',
+    'closed event',
+  ],
+  membersPatterns: [
+    // "for MBA students only", "for Ross BBA students only"
+    /\bfor\s+(?:[a-z0-9&'’.-]+\s+){1,4}students\s+only\b/i,
+    // "open to SWE members", "open only to members of Phi Delta"
+    /\bopen\s+(?:only\s+)?to\s+(?:all\s+)?(?:[a-z0-9&'’.-]+\s+){0,4}?members\b/i,
+    // "open to all engineering students": one program, not everyone. "open to all students",
+    // "...all U-M students" and "...all graduate and undergraduate students" stay open.
+    /\bopen\s+to\s+all\s+(?!(?:u-?m|umich|u\s+of\s+m|university\s+of\s+michigan|michigan|current|interested|undergraduate\s+and\s+graduate|graduate\s+and\s+undergraduate)\b)(?:[a-z0-9&'’.-]+\s+){1,3}?(?:students|staff|faculty|employees)\b/i,
+  ],
+  notMembersPhrases: [
+    'members of the public',
+    'members and non-members',
+    'members and nonmembers',
+    'non-members',
+    'nonmembers',
+    'community members',
+  ],
+  rsvpPhrases: [
+    'rsvp',
+    'register',
+    'pre-register',
+    'preregister',
+    'registration required',
+    'registration is required',
+    'sign up',
+    'signup',
+    'sign-up',
+    'reserve your spot',
+    'tickets',
+    'ticket required',
+    'eventbrite',
+  ],
+  notRsvpPhrases: [
+    'no rsvp',
+    'rsvp not required',
+    'rsvp is not required',
+    'no need to rsvp',
+    'no registration',
+    'registration not required',
+    'registration is not required',
+    'no need to register',
+    'no sign up',
+    'no sign-up',
+    'no signup',
+    'no tickets',
+    'no ticket',
+    'tickets are not required',
+  ],
+  evidenceContextWords: 5,
 };

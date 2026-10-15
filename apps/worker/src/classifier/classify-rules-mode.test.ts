@@ -99,7 +99,8 @@ describe('classifyPendingEvents in rules mode', () => {
         foodItems: ['pizza'],
         mealType: null, // no meal named, and the 10 AM start is not used to guess one
         dietary: [],
-        audience: 'open',
+        audience: 'unknown', // the listing doesn't say who can come
+        audienceEvidence: null,
         evidence: 'Robotics build night Free pizza and pop while we sort parts.',
       }),
     ]);
@@ -134,6 +135,7 @@ describe('classifyPendingEvents in rules mode', () => {
       mealType: null,
       dietary: ['vegan', 'halal'],
       audience: 'members',
+      audienceEvidence: 'Members only',
     });
     expect(active?.confidence).toBeCloseTo(0.85);
     expect(await published()).toEqual(['Chapter meeting']);

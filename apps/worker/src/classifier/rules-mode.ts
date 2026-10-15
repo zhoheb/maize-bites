@@ -7,6 +7,7 @@ import {
   type RulesModeConfig,
 } from './rules-config.js';
 import { compile, type Phrase } from './rules.js';
+import { detectAudience } from './audience.js';
 
 // The decision layer for CLASSIFIER_MODE=rules, where no LLM checks the rules' work. It favors
 // precision: an event is published only when the listing plainly says food is being given
@@ -36,7 +37,9 @@ export interface RulesModeVerdict {
   foodItems: string[];
   mealType: MealType | null;
   dietary: DietaryTag[];
+  /** From AUDIENCE_RULES: unknown unless the listing says who may come. */
   audience: Audience;
+  audienceEvidence: string | null;
 }
 
 interface Hit {
@@ -75,8 +78,6 @@ export interface CompiledRulesMode {
   exemptions: Phrase[];
   price: RegExp;
   dietary: [DietaryTag, Phrase[]][];
-  members: Phrase[];
-  rsvp: Phrase[];
   mealWords: [MealType, Phrase[]][];
 }
 
@@ -102,8 +103,6 @@ export function compileRulesMode(
     dietary: (Object.entries(config.dietary) as [DietaryTag, readonly string[]][]).map(
       ([tag, phrases]) => [tag, compile(phrases)],
     ),
-    members: compile(config.membersPhrases),
-    rsvp: compile(config.rsvpPhrases),
     mealWords: config.mealWords.map(([meal, words]) => [meal, compile(words)]),
   };
 }
@@ -147,12 +146,13 @@ export function decideRulesMode(
   const foodHits = hits(rules.food, text);
   const named = [...new Set(foodHits.map((h) => h.phrase.toLowerCase()))];
   const specific = named.filter((word) => !rules.generic.has(word));
-  const audience: Audience = any(rules.members) ? 'members' : any(rules.rsvp) ? 'rsvp' : 'open';
+  const { audience, evidence: audienceEvidence } = detectAudience(input);
   const details = {
     foodItems: specific.length > 0 ? specific : named,
     mealType: mealTypeOf(text, rules),
     dietary: rules.dietary.filter(([, phrases]) => any(phrases)).map(([tag]) => tag),
     audience,
+    audienceEvidence,
   };
   const no = (reason: RulesModeReason, evidence: string | null): RulesModeVerdict => ({
     hasFreeFood: false,

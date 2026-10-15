@@ -254,12 +254,20 @@ describe('decideRulesMode: extracted details', () => {
     expect(decide('Dinner', 'Free food').dietary).toEqual([]);
   });
 
-  it('reads the audience: members, then RSVP, otherwise open', () => {
+  it('reads the audience from the listing: members, then RSVP, then open, otherwise unknown', () => {
     expect(decide('Chapter', 'Free pizza for members only.').audience).toBe('members');
-    expect(decide('Panel', 'Lunch provided. RSVP by Friday.').audience).toBe('rsvp');
+    expect(decide('Panel', 'Lunch provided. RSVP by Friday.')).toMatchObject({
+      audience: 'rsvp',
+      audienceEvidence: 'RSVP by Friday',
+    });
     expect(decide('Panel', 'Lunch provided. Please register here.').audience).toBe('rsvp');
     expect(decide('Chapter', 'Members only. Register for free pizza.').audience).toBe('members');
-    expect(decide('Social', 'Free pizza').audience).toBe('open');
+    expect(decide('Social', 'Free pizza. All are welcome.').audience).toBe('open');
+    // Nothing said about who can come is not "open".
+    expect(decide('Social', 'Free pizza')).toMatchObject({
+      audience: 'unknown',
+      audienceEvidence: null,
+    });
   });
 });
 

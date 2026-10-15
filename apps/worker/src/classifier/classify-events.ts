@@ -90,6 +90,7 @@ async function classifyInRulesMode(
       mealType: verdict.mealType,
       dietary: verdict.dietary,
       audience: verdict.audience,
+      audienceEvidence: verdict.audienceEvidence,
       evidence: verdict.hasFreeFood || !isTip ? verdict.evidence : 'community tip',
     });
     stats.rulesClassified += 1;
