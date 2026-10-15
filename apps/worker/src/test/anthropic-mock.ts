@@ -33,8 +33,8 @@ export function verdictJson(overrides: Partial<LlmVerdict> = {}): string {
     food_items: ['Pizza'],
     meal_type: 'dinner',
     dietary: [],
-    audience: 'open',
-    needs_rsvp: false,
+    audience: 'rsvp',
+    audience_evidence: 'RSVP on MaizePages',
     evidence: 'free pizza',
     ...overrides,
   };

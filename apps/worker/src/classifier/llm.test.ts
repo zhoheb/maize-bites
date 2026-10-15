@@ -43,7 +43,7 @@ describe('request', () => {
       'meal_type',
       'dietary',
       'audience',
-      'needs_rsvp',
+      'audience_evidence',
       'evidence',
     ]);
   });
@@ -86,7 +86,8 @@ describe('parsing', () => {
       foodItems: ['pizza'],
       mealType: 'dinner',
       dietary: ['vegetarian', 'gluten_free'],
-      audience: 'open',
+      audience: 'rsvp',
+      audienceEvidence: 'RSVP on MaizePages',
       evidence: 'free pizza',
     });
   });
@@ -199,16 +200,45 @@ describe('toClassification', () => {
   const base = JSON.parse(verdictJson()) as Parameters<typeof toClassification>[0];
 
   it.each([
-    [{ audience: 'unknown' as const, needs_rsvp: false }, null],
-    [{ audience: 'open' as const, needs_rsvp: true }, 'rsvp'],
-    [{ audience: 'members' as const, needs_rsvp: true }, 'members'],
-    [{ audience: 'rsvp' as const, needs_rsvp: false }, 'rsvp'],
-  ])('maps %j to audience %j', (fields, audience) => {
-    expect(toClassification({ ...base, ...fields }).audience).toBe(audience);
+    // Quote found in the listing (case, spacing and curly quotes don't matter): kept.
+    [{ audience: 'rsvp', audience_evidence: 'RSVP on MaizePages' }, 'rsvp', 'RSVP on MaizePages'],
+    [
+      { audience: 'open', audience_evidence: 'bubble  tea" for EVERYONE' },
+      'open',
+      'bubble  tea" for EVERYONE',
+    ],
+    // Quote not in the listing: unknown, whatever the model claimed.
+    [{ audience: 'open', audience_evidence: 'open to all students' }, 'unknown', null],
+    [{ audience: 'members', audience_evidence: 'members only' }, 'unknown', null],
+    // No quote at all.
+    [{ audience: 'rsvp', audience_evidence: '' }, 'unknown', null],
+    [{ audience: 'open', audience_evidence: '   ' }, 'unknown', null],
+    // Unknown stays unknown and stores no evidence.
+    [{ audience: 'unknown', audience_evidence: 'RSVP on MaizePages' }, 'unknown', null],
+  ] as const)('maps %j to %s', (fields, audience, audienceEvidence) => {
+    expect(toClassification({ ...base, ...fields }, input)).toMatchObject({
+      audience,
+      audienceEvidence,
+    });
+  });
+
+  it('downgrades a made-up audience quote without failing the verdict', async () => {
+    const create = mockAnthropic(
+      fakeMessage(verdictJson({ audience: 'open', audience_evidence: 'all are welcome' })),
+    );
+    const outcome = await classifyWithLlm(create, input, budget());
+    expect(create).toHaveBeenCalledTimes(1); // no retry
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    expect(outcome.classification).toMatchObject({
+      hasFreeFood: true,
+      audience: 'unknown',
+      audienceEvidence: null,
+    });
   });
 
   it('drops meal_type when there is no free food', () => {
-    expect(toClassification({ ...base, has_free_food: false }).mealType).toBeNull();
+    expect(toClassification({ ...base, has_free_food: false }, input).mealType).toBeNull();
   });
 });
 
