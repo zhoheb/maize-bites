@@ -839,3 +839,79 @@ deploy and after the backfill; `open_only` returns 9 events, with `include_unspe
   vote"; the rsvp list is the brief's. Recurring occurrences repeat in the samples.
 - **Flaky local timeouts.** With the machine at load ~20, single API/worker tests timed out at
   15s (different ones each run) and passed on rerun; unrelated to this change.
+
+## Neon compute: letting the database sleep (2026-11-01)
+
+Neon ran out of its monthly compute because the database never suspended. UptimeRobot kept the
+API awake and Render's health check ran three queries on `/api/health` every few seconds. Now
+only real work wakes it.
+
+**What changed.** `/api/health` is liveness only (no database, mounted ahead of the session
+middleware so a cookie can't reach it either). `/api/health/deep` has the old checks, cached 60 s
+with concurrent requests sharing one check. The API no longer queries on boot. postgres.js closes
+idle connections after 30 s and retires them after 10 minutes. Ingest, classify, notify and
+housekeeping share one window (`jobs/schedule.ts`).
+
+**Recurring queries**
+
+| What                      | Before                         | After                               |
+| ------------------------- | ------------------------------ | ----------------------------------- |
+| Render health check       | 3 queries every ~5 s           | none                                |
+| UptimeRobot               | 3 queries every 5 min          | none                                |
+| API boot                  | `select 1`                     | none                                |
+| Home "updated" stamp      | every 60 s per visible tab     | every 10 min, shared 60 s cache     |
+| Event list and detail     | every 5 min per visible tab    | every 10 min                        |
+| Admin metrics             | every 60 s while open          | every 5 min while open              |
+| Admin analytics           | every 5 min while open         | unchanged                           |
+| Production ingest         | 8 a day scheduled              | 19 windows a day, 4 more stand down |
+| Production cleanup        | daily, its own wake-up         | daily, inside the 5:05 AM window    |
+| Production digest         | daily, its own wake-up         | unchanged                           |
+| Local worker ingest       | hourly at :23                  | the same windows as production      |
+| Local worker prune        | hourly                         | daily, in the 5:05 AM window        |
+| Local worker auth, rollup | daily at 4:17 and 4:37         | daily, in the 5:05 AM window        |
+| Session lookup, page view | per request or page (visitors) | unchanged, except health checks     |
+
+There was no minute-by-minute "is it due?" poll anywhere, and no session timer. Hidden tabs have
+never polled.
+
+**Verified locally,** on the built API against real Postgres: 0 connections after boot and after
+liveness calls, 1 after `/api/health/deep`, 0 again 36 s later. `ingest:once` and `cleanup:once`
+stand down cleanly with an unreachable `DATABASE_URL`. Moving the health mount back behind the
+session middleware fails the no-database test.
+
+### Decisions to review
+
+- **Production ingestion was every 3 hours, not hourly.** The brief says keep hourly by day, and
+  that is what is built, so production now schedules more ingest runs (19 a day against 8), not
+  fewer. They still fit the allowance. Dropping to every 2 or 3 hours by day is the first thing
+  to cut if compute runs short.
+- **GitHub's cron can't hold a clock.** In the week to Nov 1, ingest ran 4 to 6 times a day
+  against 8 scheduled, the digest fired around 1 PM rather than 7:30 AM, and cleanup ran about
+  6.5 hours late. So the windows are a schedule, not a promise. "One window" is only guaranteed
+  for steps in one job, which is why housekeeping became a step of `ingest.yml`. The digest is
+  still its own wake-up, and the 7:00 ingest is not guaranteed to land before it. Fixing the
+  timing needs an outside trigger calling `workflow_dispatch`.
+- **Stand-downs read the schedule that fired, not the clock,** as the digest does, so a run
+  hours late keeps its meaning. That is why `ingest.yml` lists single-hour lines for the
+  season-dependent hours. Four runs a day stand down. Public-repo minutes are free.
+- **7:00 AM is on the hour, the rest at :05,** because the brief names 7:00. `ingest.yml` notes
+  the top of the hour is when GitHub is busiest, so 7:05 would be slightly safer.
+- **Housekeeping is daily, at 5:05 AM,** rather than hourly: it deletes expired rows, and there
+  is no ingest at 4 AM to share. `PRUNE_INTERVAL_MINUTES` is gone, since an hourly prune would
+  mean nothing but a wake-up. A leftover value in an env file is ignored.
+- **The digest workflow doesn't duplicate anything.** Production has no worker, so
+  `digest.yml` is the only sender; `digestJob` is what `pnpm dev` runs. Keep both. Should both
+  ever point at one database, `claimNotification` stops a second send.
+- **Home reads `/api/health/deep` too,** not only the admin page: its "updated" stamp needs
+  `lastSuccessfulIngestionAt`, which `/api/health` no longer has.
+- **Web polling went to 10 minutes.** Shorter than Neon's 5-minute timeout, a tab left open in
+  the foreground would keep the database awake indefinitely. Returning to a tab still refreshes.
+- **A failed deep check is cached for the 60 s too,** so an outage isn't retried per request.
+- **`version` is `RENDER_GIT_COMMIT`,** shortened, or "dev".
+- **An uptime monitor on `/api/health` no longer sees the database or pipeline.** The admin
+  page's System health panel does. Nothing alerts on a failing pipeline now.
+- **`INGESTION_STALE_MS` stays 3 hours,** so overnight the stamp can briefly say "may be out of
+  date". That was already true at the old cadence.
+- **Not caused by this work:** `events.umich.edu` has been returning 503 for robots.txt on some
+  runs (Oct 24, 29, 31, Nov 1), which fails Happening for that run, as designed.
+- **Local tests:** one Home test timed out under load in one run, then passed on every rerun.

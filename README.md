@@ -69,7 +69,8 @@ pnpm dev                # starts Postgres in Docker, applies migrations, runs we
 pnpm db:seed            # once: the 73 campus buildings
 ```
 
-Open http://localhost:5173. The API is at http://localhost:3001/api/health.
+Open http://localhost:5173. The API is at http://localhost:3001/api/health (liveness) and
+http://localhost:3001/api/health/deep (database and pipeline, cached for 60 s).
 
 Events are published only after the LLM confirms them, which needs `ANTHROPIC_API_KEY`. Without
 a key, load sample data instead:
@@ -109,7 +110,6 @@ All configuration comes from the root `.env` locally, or the host's environment 
 | `RESEND_API_KEY`, `EMAIL_FROM`                           | api, worker | in production          | Sign-in links and alert emails                                                  |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | api, worker | for push               | Web Push; generate with `pnpm --filter worker vapid:keys`                       |
 | `EVENT_RETENTION_DAYS`                                   | worker      | no (`30`)              | Ended events older than this are deleted                                        |
-| `PRUNE_INTERVAL_MINUTES`                                 | worker      | no (`60`)              | How often the prune job runs                                                    |
 
 ## Scripts
 
@@ -170,12 +170,12 @@ always-on worker. Nothing deploys until you connect the hosts.
 4. **Jobs and migrations: GitHub Actions.** Add the repository secrets and variables listed in
    each workflow's `env` block (Settings → Secrets and variables → Actions).
 
-   | Workflow      | When                                       | Runs                                  |
-   | ------------- | ------------------------------------------ | ------------------------------------- |
-   | `ingest.yml`  | every 3 hours                              | `pnpm ingest:once`                    |
-   | `digest.yml`  | 7:30 AM Ann Arbor (two UTC times, for DST) | `pnpm digest:once`                    |
-   | `cleanup.yml` | daily                                      | `pnpm cleanup:once`                   |
-   | `migrate.yml` | every push to `main`                       | migrations, then Render's deploy hook |
+   | Workflow      | When                                                 | Runs                                                        |
+   | ------------- | ---------------------------------------------------- | ----------------------------------------------------------- |
+   | `ingest.yml`  | hourly by day, 3-hourly overnight, 7:00 AM Ann Arbor | `pnpm ingest:once`, then `pnpm cleanup:once` (5:05 AM only) |
+   | `digest.yml`  | 7:30 AM Ann Arbor (two UTC times, for DST)           | `pnpm digest:once`                                          |
+   | `cleanup.yml` | by hand                                              | `pnpm cleanup:once`                                         |
+   | `migrate.yml` | every push to `main`                                 | migrations, then Render's deploy hook                       |
 
    Each can also be started by hand from the Actions tab.
 
@@ -186,13 +186,17 @@ What the free plans cost you:
 
 - **The API sleeps** after 15 minutes without a request and takes about a minute to wake. The
   web app retries through it and shows "Waking up the server".
-- **Updates are every 3 hours, not hourly,** and "instant" alerts go out with the next ingest
-  run. GitHub may start scheduled runs late or skip one under load, and it switches schedules
-  off in a repository with no activity for 60 days.
-- **`/api/health` reports `degraded` between runs,** because its staleness limit is 3 hours and
-  runs are 3 hours apart. Don't alert on it without raising `INGESTION_STALE_MS`.
+- **Scheduled times are a floor, not a promise,** and "instant" alerts go out with the next
+  ingest run. GitHub starts scheduled runs late (hours late, in practice) or skips them under
+  load, and it switches schedules off in a repository with no activity for 60 days.
+- **`/api/health/deep` can report `degraded` overnight,** because its staleness limit is 3 hours
+  and overnight runs are 3 hours apart. `/api/health` is liveness only, so an uptime monitor
+  pointed at it won't see this, or a failing pipeline: the admin page shows those.
+- **Neon's free plan** allows 100 CU-hours a month and suspends the database after 5 idle
+  minutes. Keep it that way: the health check doesn't query, and jobs share one wake-up
+  (`apps/worker/src/jobs/schedule.ts`).
 
-To run a worker instead (hourly ingestion, alerts within the hour), `apps/worker` still starts a
+To run a worker instead (the same windows, on time), `apps/worker` still starts a
 long-running scheduler with `node dist/index.js`, and `apps/worker/Dockerfile` builds it.
 
 To build the images yourself, from the repository root:

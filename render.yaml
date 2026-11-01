@@ -19,6 +19,8 @@ services:
     dockerContext: .
     plan: free
     autoDeploy: false
+    # Liveness only, and Render calls it every few seconds, so it must never query the database:
+    # that would keep Neon from suspending. /api/health/deep has the database checks.
     healthCheckPath: /api/health
     envVars:
       # Render sets PORT itself; the API listens on it (API_PORT is only the local default).
