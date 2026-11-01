@@ -99,7 +99,7 @@ const EVENTS = [live, soon, nextWeek];
 function api(events: FoodEvent[] = EVENTS) {
   return mockApi({
     'GET /api/me': SIGNED_OUT,
-    'GET /api/health': HEALTH,
+    'GET /api/health/deep': HEALTH,
     'GET /api/events': { events, nextCursor: null },
     'GET /api/events/now': { events: events.filter((e) => e !== nextWeek), nextCursor: null },
     [`GET /api/events/${live.id}`]: makeDetail({ ...live }),
@@ -163,7 +163,7 @@ describe('HomePage', () => {
     const withHealth = (minutesAgo: number) =>
       mockApi({
         'GET /api/me': SIGNED_OUT,
-        'GET /api/health': healthAt(minutesAgo),
+        'GET /api/health/deep': healthAt(minutesAgo),
         'GET /api/events/now': { events: [live], nextCursor: null },
       });
 
@@ -394,7 +394,7 @@ describe('HomePage', () => {
       let calls = 0;
       mockApi({
         'GET /api/me': SIGNED_OUT,
-        'GET /api/health': HEALTH,
+        'GET /api/health/deep': HEALTH,
         'GET /api/events/now': () =>
           calls++ < failures
             ? apiError(503, 'service_unavailable', 'Service unavailable')
@@ -462,7 +462,7 @@ describe('HomePage', () => {
     let fail = true;
     mockApi({
       'GET /api/me': SIGNED_OUT,
-      'GET /api/health': HEALTH,
+      'GET /api/health/deep': HEALTH,
       'GET /api/events/now': () =>
         fail
           ? {

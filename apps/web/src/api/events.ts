@@ -68,7 +68,7 @@ export function fetchEventDetail(
 
 /** A stale pipeline may answer 503 with the same body; that's still useful for the "updated" stamp. */
 export function fetchHealth(options: Pick<RequestOptions, 'signal'> = {}): Promise<HealthResponse> {
-  return getJson('/api/health', healthResponseSchema, { ...options, acceptStatuses: [503] });
+  return getJson('/api/health/deep', healthResponseSchema, { ...options, acceptStatuses: [503] });
 }
 
 export const icsUrl = (id: string) => `/api/events/${encodeURIComponent(id)}/ics`;

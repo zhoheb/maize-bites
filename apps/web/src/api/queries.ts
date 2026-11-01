@@ -3,7 +3,12 @@ import type { Filters, Tab } from '../lib/filters';
 import { ApiRequestError } from './client';
 import { fetchEventDetail, fetchEventPage, fetchHealth } from './events';
 
-const FIVE_MINUTES = 5 * 60_000;
+/**
+ * How often a visible page refreshes (hidden ones don't; returning to a tab does). Feeds change
+ * hourly at most, and anything shorter than the database's 5-minute idle timeout would hold it
+ * awake for as long as a tab stays open.
+ */
+const REFRESH_MS = 10 * 60_000;
 
 export const queryKeys = {
   events: (tab: Tab, filters: Filters) => ['events', tab, filters] as const,
@@ -46,7 +51,7 @@ export function useEventsInfinite(tab: Tab, filters: Filters) {
     queryFn: ({ pageParam, signal }) => fetchEventPage(tab, filters, pageParam, { signal }),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
-    refetchInterval: FIVE_MINUTES,
+    refetchInterval: REFRESH_MS,
     placeholderData: keepPreviousData,
   });
 }
@@ -55,7 +60,7 @@ export function useEventDetail(id: string) {
   return useQuery({
     queryKey: queryKeys.event(id),
     queryFn: ({ signal }) => fetchEventDetail(id, { signal }),
-    refetchInterval: FIVE_MINUTES,
+    refetchInterval: REFRESH_MS,
   });
 }
 
@@ -63,6 +68,6 @@ export function useHealth() {
   return useQuery({
     queryKey: queryKeys.health,
     queryFn: ({ signal }) => fetchHealth({ signal }),
-    refetchInterval: 60_000,
+    refetchInterval: REFRESH_MS,
   });
 }

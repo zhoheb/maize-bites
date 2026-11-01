@@ -18,10 +18,12 @@ import {
   useReviewSubmission,
 } from '../api/admin';
 import { useBuildings } from '../api/crowd';
+import { useHealth } from '../api/queries';
 import { AnalyticsPanel } from '../components/AnalyticsPanel';
 import { Badge } from '../components/ui/Badge';
 import { card, inputClass, primaryButton, secondaryButton } from '../components/forms';
 import { EmptyState, ErrorState } from '../components/States';
+import { useNow } from '../hooks/useNow';
 import { formatRelative, formatTimeRange } from '../lib/format';
 import { AUDIENCE_LABELS, MEAL_LABELS } from '../lib/labels';
 
@@ -356,6 +358,40 @@ function MissRow({
   );
 }
 
+/** /api/health/deep: what an uptime monitor can no longer see from /api/health. */
+function SystemHealthPanel() {
+  const health = useHealth();
+  const now = useNow();
+  return (
+    <Panel title="System health">
+      {health.isError ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="danger">Unavailable</Badge>
+          <p className="text-sm text-ink-2">The last check failed.</p>
+        </div>
+      ) : health.data ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={health.data.status === 'ok' ? 'ok' : 'danger'}>
+              {health.data.status === 'ok' ? 'OK' : 'Degraded'}
+            </Badge>
+            <span className="text-sm text-ink-2">Database {health.data.database}</span>
+          </div>
+          <p className="mt-1 text-sm text-ink-2">
+            Last ingestion:{' '}
+            {health.data.lastSuccessfulIngestionAt
+              ? formatRelative(new Date(health.data.lastSuccessfulIngestionAt), now)
+              : 'never'}
+            {health.data.ingestionStale && ' · stale'}
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-ink-2">Checking…</p>
+      )}
+    </Panel>
+  );
+}
+
 export function AdminPage() {
   const me = useMe();
   const isAdmin = me.isSuccess && me.data?.isAdmin === true;
@@ -423,6 +459,8 @@ export function AdminPage() {
       {metrics.isError && (
         <ErrorState message="Couldn't load the metrics." onRetry={() => void metrics.refetch()} />
       )}
+      <SystemHealthPanel />
+
       {metrics.data && (
         <>
           <Panel title="Ingestion">

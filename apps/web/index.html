@@ -24,7 +24,7 @@
     <!-- Start the landing view's two requests while the script downloads. The URLs must match
          src/api/events.ts exactly (the Now tab with no filters) or the browser fetches twice. -->
     <link rel="preload" href="/api/events/now?limit=100" as="fetch" crossorigin />
-    <link rel="preload" href="/api/health" as="fetch" crossorigin />
+    <link rel="preload" href="/api/health/deep" as="fetch" crossorigin />
     <!-- Sets the theme before first paint so there is no flash. Kept in step with lib/theme.ts. -->
     <script>
       (function () {

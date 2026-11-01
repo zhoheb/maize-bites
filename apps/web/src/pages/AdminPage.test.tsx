@@ -6,6 +6,7 @@ import type {
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN, BUILDINGS, SIGNED_IN, mockApi, renderApp } from '../test/api-mock';
+import { HEALTH } from '../test/fixtures';
 import { AdminPage } from './AdminPage';
 
 afterEach(() => {
@@ -139,6 +140,7 @@ const routes = (extra: Parameters<typeof mockApi>[0] = {}) =>
     'GET /api/admin/analytics': analytics,
     'GET /api/admin/review-queue': queue,
     'GET /api/admin/metrics': metrics,
+    'GET /api/health/deep': { ...HEALTH, status: 'degraded', ingestionStale: true },
     'GET /api/buildings': BUILDINGS,
     ...extra,
   });
@@ -197,6 +199,11 @@ describe('AdminPage', () => {
     expect(within(queuePanel).getByText('Maybe snacks')).toBeTruthy();
     expect(within(queuePanel).getByText('llm 55%')).toBeTruthy();
     expect(within(queuePanel).getByText(/snacks may be provided/)).toBeTruthy();
+
+    const health = await screen.findByRole('region', { name: 'System health' });
+    expect(await within(health).findByText('Degraded')).toBeTruthy();
+    expect(health.textContent).toContain('Database ok');
+    expect(health.textContent).toContain('stale');
 
     const ingestion = await screen.findByRole('region', { name: 'Ingestion' });
     const [happening, maizepages] = within(ingestion).getAllByRole('listitem');

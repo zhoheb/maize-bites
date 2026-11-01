@@ -35,7 +35,7 @@ export function useAdminMetrics(enabled: boolean) {
     queryKey: adminKeys.metrics,
     queryFn: ({ signal }) => getJson('/api/admin/metrics', adminMetricsResponseSchema, { signal }),
     enabled,
-    refetchInterval: 60_000,
+    refetchInterval: 5 * 60_000,
   });
 }
 
