@@ -16,4 +16,6 @@ export interface ApiContext {
   rateLimits: RateLimits;
   /** Normalized addresses granted admin when they sign in (ADMIN_EMAILS). */
   adminEmails: readonly string[];
+  /** The deployed commit, or "dev". */
+  version: string;
 }

@@ -15,7 +15,7 @@ export const AUTO_PUBLISH_TRUST_LEVEL = 3;
 export function shouldAutoPublish(trustLevel: number): boolean {
   return trustLevel >= AUTO_PUBLISH_TRUST_LEVEL;
 }
-/** /api/health reports degraded when the last complete ingestion is older than this. */
+/** /api/health/deep reports degraded when the last complete ingestion is older than this. */
 export const INGESTION_STALE_MS = 3 * 60 * 60 * 1000;
 /**
  * The same limit per feed source. Maize Pages is read every five hours, so it gets two missed
@@ -25,7 +25,7 @@ export const SOURCE_STALE_MS = {
   happening: INGESTION_STALE_MS,
   maizepages: 11 * 60 * 60 * 1000,
 } as const;
-/** A source with no run started in this long is treated as switched off and left out of /api/health. */
+/** A source with no run started in this long is treated as switched off and left out of /api/health/deep. */
 export const SOURCE_ACTIVE_MS = 48 * 60 * 60 * 1000;
 
 export const nowEventsQuerySchema = listEventsQuerySchema.omit({ from: true, to: true });
@@ -79,6 +79,17 @@ export const sourceFreshnessSchema = z.object({
   stale: z.boolean(),
 });
 
+/** GET /api/health: the process is up. Says nothing about the database, and never touches it. */
+export const livenessResponseSchema = z.object({
+  status: z.literal('ok'),
+  /** Seconds since this process started. */
+  uptime: z.number().min(0),
+  /** The deployed commit, or "dev". */
+  version: z.string().min(1),
+});
+export type LivenessResponse = z.infer<typeof livenessResponseSchema>;
+
+/** GET /api/health/deep: the database and the pipeline's freshness. */
 export const healthResponseSchema = z.object({
   /** "degraded" when any source below is stale, or nothing has ingested lately. */
   status: z.enum(['ok', 'degraded']),

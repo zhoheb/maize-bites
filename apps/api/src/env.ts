@@ -23,6 +23,8 @@ export const apiEnvSchema = databaseEnvSchema
      */
     PORT: z.preprocess(emptyAsUndefined, z.coerce.number().int().min(1).max(65535).optional()),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+    /** Set by Render to the deployed commit; /api/health reports it. */
+    RENDER_GIT_COMMIT: z.preprocess(emptyAsUndefined, z.string().min(1).optional()),
     /** The only browser origin allowed by CORS, e.g. https://maizebites.app. No trailing slash. */
     WEB_ORIGIN: z
       .url({ protocol: /^https?$/ })

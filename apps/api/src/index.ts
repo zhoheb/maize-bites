@@ -1,4 +1,4 @@
-import { createDb, loadRootEnvFile, sql } from '@maize-bites/db';
+import { createDb, loadRootEnvFile } from '@maize-bites/db';
 import { createMailer } from '@maize-bites/email';
 import { createApp } from './app.js';
 import { listenPort, parseEnv } from './env.js';
@@ -8,9 +8,8 @@ loadRootEnvFile();
 const env = parseEnv(process.env);
 const logger = createLogger(env);
 
+// Connects on the first query. Booting must not wake a suspended database, or depend on it.
 const { db, close } = createDb(env.DATABASE_URL);
-await db.execute(sql`select 1`);
-logger.info('connected to postgres');
 
 if (!env.RESEND_API_KEY)
   logger.warn('RESEND_API_KEY not set: emails (sign-in links) are printed to this log');
@@ -25,6 +24,7 @@ const app = createApp({
   vapidPublicKey: env.VAPID_PUBLIC_KEY ?? null,
   trustProxy: env.TRUST_PROXY,
   adminEmails: env.ADMIN_EMAILS,
+  version: env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'dev',
 });
 const port = listenPort(env);
 const server = app.listen(port, () => {

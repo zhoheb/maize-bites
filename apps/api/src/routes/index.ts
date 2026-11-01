@@ -15,9 +15,10 @@ import { submissionsRouter } from './submissions.js';
 /** Everything under /api. */
 export function apiRouter(ctx: ApiContext): Router {
   const router = Router();
+  // Ahead of the session lookup: a health check must not reach the database through a cookie.
+  router.use('/health', healthRouter(ctx.db, ctx.now, ctx.version));
   router.use(writeProtection(ctx.webOrigin));
   router.use(sessionMiddleware(ctx.db, ctx.now));
-  router.use('/health', healthRouter(ctx.db, ctx.now));
   router.use('/events', eventsRouter(ctx));
   router.use('/buildings', buildingsRouter(ctx.db));
   router.use('/auth', authRouter(ctx));

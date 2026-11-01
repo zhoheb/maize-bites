@@ -1,16 +1,36 @@
 import { finishIngestionRun, startIngestionRun } from '@maize-bites/db';
-import { apiErrorSchema, healthResponseSchema } from '@maize-bites/shared';
+import { apiErrorSchema, healthResponseSchema, livenessResponseSchema } from '@maize-bites/shared';
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { at, createTestApi, type TestApi } from '../test/seed.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AppDeps } from '../app.js';
+import { NOW, at, createTestApi, type TestApi } from '../test/seed.js';
+import { DEEP_HEALTH_TTL_MS } from './health.js';
 
 let api: TestApi;
+let spied: TestApi[] = [];
 beforeEach(async () => {
   api = await createTestApi();
+  spied = [];
 });
 afterEach(async () => {
   await api.handle.close().catch(() => undefined);
+  await Promise.all(spied.map((other) => other.handle.close()));
 });
+
+/** An app whose database handle records every use: any query starts with one of those reads. */
+async function appWithDbSpy(overrides: Partial<AppDeps> = {}) {
+  const calls: string[] = [];
+  const db = new Proxy(api.handle.db, {
+    get(target, property, receiver) {
+      calls.push(String(property));
+      return Reflect.get(target, property, receiver) as unknown;
+    },
+  });
+  const other = await createTestApi({ db, ...overrides });
+  spied.push(other);
+  calls.length = 0;
+  return { app: other.app, calls };
+}
 
 const stats = {
   fetched: 10,
@@ -32,11 +52,82 @@ async function run(
 }
 
 const health = async () =>
-  healthResponseSchema.parse((await request(api.app).get('/api/health')).body);
+  healthResponseSchema.parse((await request(api.app).get('/api/health/deep')).body);
 
 describe('GET /api/health', () => {
+  it('reports the process, with its version and uptime', async () => {
+    const { app } = await appWithDbSpy({ version: 'abc1234' });
+    const res = await request(app).get('/api/health');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(livenessResponseSchema.parse(res.body)).toEqual({
+      status: 'ok',
+      uptime: expect.any(Number) as number,
+      version: 'abc1234',
+    });
+  });
+
+  it('makes no database calls, even with a session cookie', async () => {
+    const { app, calls } = await appWithDbSpy();
+
+    const res = await request(app)
+      .get('/api/health')
+      .set('Cookie', `mb_session=${'a'.repeat(43)}`);
+
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([]);
+  });
+
+  it('stays up when the database is down', async () => {
+    await api.handle.close();
+    expect((await request(api.app).get('/api/health')).status).toBe(200);
+  });
+});
+
+describe('GET /api/health/deep caching', () => {
+  it('answers from memory for 60 s, then checks again', async () => {
+    const clock = vi.fn(() => NOW);
+    const { app, calls } = await appWithDbSpy({ now: clock });
+    const get = () => request(app).get('/api/health/deep');
+
+    expect((await get()).status).toBe(200);
+    const afterFirst = calls.length;
+    expect(afterFirst).toBeGreaterThan(0);
+
+    clock.mockReturnValue(new Date(NOW.getTime() + DEEP_HEALTH_TTL_MS - 1));
+    expect((await get()).status).toBe(200);
+    expect(calls).toHaveLength(afterFirst);
+
+    clock.mockReturnValue(new Date(NOW.getTime() + DEEP_HEALTH_TTL_MS));
+    expect((await get()).status).toBe(200);
+    expect(calls.length).toBeGreaterThan(afterFirst);
+  });
+
+  it('shares one check between concurrent requests', async () => {
+    const one = await appWithDbSpy();
+    await request(one.app).get('/api/health/deep');
+
+    const many = await appWithDbSpy();
+    await Promise.all(Array.from({ length: 5 }, () => request(many.app).get('/api/health/deep')));
+
+    expect(many.calls).toHaveLength(one.calls.length);
+  });
+
+  it('keeps a failure for the same 60 s, so an outage is not retried per request', async () => {
+    const { app, calls } = await appWithDbSpy();
+    await api.handle.close();
+
+    expect((await request(app).get('/api/health/deep')).status).toBe(503);
+    const afterFirst = calls.length;
+    expect((await request(app).get('/api/health/deep')).status).toBe(503);
+    expect(calls).toHaveLength(afterFirst);
+  });
+});
+
+describe('GET /api/health/deep', () => {
   it('is degraded before any ingestion has completed', async () => {
-    const res = await request(api.app).get('/api/health');
+    const res = await request(api.app).get('/api/health/deep');
 
     expect(res.status).toBe(200);
     expect(res.headers['cache-control']).toBe('no-store');
@@ -51,7 +142,7 @@ describe('GET /api/health', () => {
 
   it('is ok with a recent complete ingestion', async () => {
     await run(1);
-    expect(healthResponseSchema.parse((await request(api.app).get('/api/health')).body)).toEqual({
+    expect(await health()).toEqual({
       status: 'ok',
       database: 'ok',
       lastSuccessfulIngestionAt: at(-1).toISOString(),
@@ -70,7 +161,7 @@ describe('GET /api/health', () => {
   it('is degraded when the last complete ingestion is over 3 hours old', async () => {
     await run(4);
     await run(0.5, false); // a recent but incomplete run doesn't count
-    const body = healthResponseSchema.parse((await request(api.app).get('/api/health')).body);
+    const body = await health();
     expect(body).toMatchObject({
       status: 'degraded',
       ingestionStale: true,
@@ -131,7 +222,7 @@ describe('GET /api/health', () => {
 
   it('returns 503 in the standard error format when the database is down', async () => {
     await api.handle.close();
-    const res = await request(api.app).get('/api/health');
+    const res = await request(api.app).get('/api/health/deep');
 
     expect(res.status).toBe(503);
     expect(apiErrorSchema.parse(res.body).error).toMatchObject({
