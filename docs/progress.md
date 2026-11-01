@@ -879,6 +879,14 @@ liveness calls, 1 after `/api/health/deep`, 0 again 36 s later. `ingest:once` an
 stand down cleanly with an unreachable `DATABASE_URL`. Moving the health mount back behind the
 session middleware fails the no-database test.
 
+**Verified in production** (`70dd4dc`): the deploy took 94 s. `/api/health` and
+`/api/health/deep` both answer 200 with the deployed commit and `database: ok`, the live page
+preloads the deep URL, and the admin bundle has the System health panel. Nobody has looked at
+that panel signed in; a component test covers it. CI passed on the commit, real Postgres
+included. One manual `ingest.yml` run succeeded in about 4 minutes (Happening 1174 fetched,
+Maize Pages held by its 5-hour guard, housekeeping skipped as a manual run should). No scheduled
+window or stand-down has run on GitHub yet.
+
 ### Decisions to review
 
 - **Production ingestion was every 3 hours, not hourly.** The brief says keep hourly by day, and
