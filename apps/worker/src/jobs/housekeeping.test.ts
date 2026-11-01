@@ -37,7 +37,7 @@ afterEach(async () => {
 });
 
 describe('authCleanupJob', () => {
-  it('runs daily and deletes only expired sessions and used or expired links', async () => {
+  it('deletes only expired sessions and used or expired links', async () => {
     const user = await upsertUserByEmail(db, 'wolverine@umich.edu');
     await createSession(db, { userId: user.id, tokenHash: 'expired', expiresAt: ago(1) });
     await createSession(db, { userId: user.id, tokenHash: 'live', expiresAt: ago(-DAY) });
@@ -48,7 +48,6 @@ describe('authCleanupJob', () => {
     await createMagicLink(db, { email, tokenHash: 'link-fresh', expiresAt: ago(-60_000) });
 
     const job = authCleanupJob(db, logger, () => NOW);
-    expect(job.schedule).toBe('17 4 * * *');
     expect(await job.run()).toBe(3);
 
     const s = await db.select({ tokenHash: sessions.tokenHash }).from(sessions);
@@ -70,7 +69,7 @@ describe('pruneEventsJob', () => {
     await insertClassification(db, old);
     await insertClassification(db, recent);
 
-    const job = pruneEventsJob(db, logger, { retentionDays: 30, intervalMinutes: 60 }, () => NOW);
+    const job = pruneEventsJob(db, logger, { retentionDays: 30 }, () => NOW);
     expect(await job.run()).toBe(1);
 
     const left = await db.select({ id: events.id }).from(events);
@@ -80,15 +79,6 @@ describe('pruneEventsJob', () => {
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringContaining('ended before 2026-09-01T16:00:00.000Z'),
     );
-  });
-
-  it('schedules from PRUNE_INTERVAL_MINUTES', () => {
-    const job = (intervalMinutes: number) =>
-      pruneEventsJob(db, logger, { retentionDays: 30, intervalMinutes });
-    expect(job(60).schedule).toBe('0 * * * *');
-    expect(job(15).schedule).toBe('*/15 * * * *');
-    expect(job(360).schedule).toBe('0 */6 * * *');
-    expect(() => job(45)).toThrow(/Unsupported interval/);
   });
 });
 
@@ -115,7 +105,6 @@ describe('analyticsRollupJob', () => {
     ]);
 
     const job = analyticsRollupJob(db, logger, () => NOW);
-    expect(job.schedule).toBe('37 4 * * *');
     expect(await job.run()).toBe(2);
 
     const daily = await db.select().from(analyticsDaily);

@@ -1,13 +1,14 @@
 import { createDb, loadRootEnvFile, sql } from '@maize-bites/db';
 import { parseEnv } from './env.js';
-import { analyticsRollupJob, authCleanupJob, pruneEventsJob } from './jobs/housekeeping.js';
+import { housekeepingSteps } from './jobs/housekeeping.js';
 import {
   deliveryFromEnv,
   digestJob,
   ingestDeps,
-  ingestJob,
   llmDepsFromEnv,
+  morningIngestJob,
   sourcesFromEnv,
+  windowJob,
 } from './jobs/index.js';
 import { createPinoLogger, toJobLogger } from './logger.js';
 import { startScheduler, type Job } from './scheduler.js';
@@ -25,15 +26,7 @@ if (!env.RESEND_API_KEY)
   logger.warn('[worker] RESEND_API_KEY is not set; alert emails are printed to this log');
 if (!env.VAPID_PRIVATE_KEY) logger.warn('[worker] VAPID keys are not set; push alerts will fail');
 
-const jobs: Job[] = [
-  digestJob(db, logger, delivery, env.WEB_ORIGIN),
-  authCleanupJob(db, logger),
-  analyticsRollupJob(db, logger),
-  pruneEventsJob(db, logger, {
-    retentionDays: env.EVENT_RETENTION_DAYS,
-    intervalMinutes: env.PRUNE_INTERVAL_MINUTES,
-  }),
-];
+const jobs: Job[] = [digestJob(db, logger, delivery, env.WEB_ORIGIN)];
 const sources = sourcesFromEnv(db, env, logger);
 const llm = llmDepsFromEnv(env);
 if (env.CLASSIFIER_MODE === 'rules')
@@ -50,18 +43,18 @@ if (sources.length > 0) {
       : '[worker] INGEST_CONTACT_EMAIL is not set; nothing will be fetched',
   );
 }
-// The job runs even with no source to fetch: community tips still need classifying and alerts.
+// These run even with no source to fetch: community tips still need classifying and alerts.
+const ingest = ingestDeps(
+  db,
+  sources,
+  logger,
+  llm,
+  { delivery, webOrigin: env.WEB_ORIGIN },
+  env.CLASSIFIER_MODE,
+);
 jobs.push(
-  ingestJob(
-    ingestDeps(
-      db,
-      sources,
-      logger,
-      llm,
-      { delivery, webOrigin: env.WEB_ORIGIN },
-      env.CLASSIFIER_MODE,
-    ),
-  ),
+  windowJob(ingest, housekeepingSteps(db, logger, { retentionDays: env.EVENT_RETENTION_DAYS })),
+  morningIngestJob(ingest),
 );
 
 const scheduler = startScheduler(jobs, { logger });

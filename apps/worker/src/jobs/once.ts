@@ -8,18 +8,11 @@ import type { NotifyStats } from '../notify/notifier.js';
 export const DIGEST_LOCAL_TIME = { hour: 7, minute: 30 };
 
 /**
- * Whether a scheduled digest run is the one meant for today.
- *
- * GitHub's cron is in UTC, and 7:30 AM in Ann Arbor is 11:30 UTC in summer and 12:30 UTC in
- * winter, so the workflow is scheduled at both and each run asks here whether it is the right
- * one. The answer comes from the schedule that fired (`cron`), not from the clock: scheduled
- * runs often start many minutes late, and a clock check would then skip the digest entirely.
- *
- * `cron` is the expression that triggered the run ("30 11 * * *"). With none (a manual run),
- * the answer is yes.
+ * The Ann Arbor time a fixed-time UTC cron stands for today ("30 11 * * *"). It comes from the
+ * schedule, not the clock: scheduled runs often start hours late, and a clock check would then
+ * skip them.
  */
-export function isDigestRunForToday(cron: string | undefined, now: Date): boolean {
-  if (cron === undefined || cron.trim() === '') return true;
+export function scheduledLocalTime(cron: string, now: Date): { hour: number; minute: number } {
   const [minuteField, hourField] = cron.trim().split(/\s+/);
   const minute = Number(minuteField);
   const hour = Number(hourField);
@@ -33,7 +26,22 @@ export function isDigestRunForToday(cron: string | undefined, now: Date): boolea
     hour,
     minute,
   );
-  const local = wallTimeOf(scheduled, CAMPUS_TIME_ZONE);
+  return wallTimeOf(scheduled, CAMPUS_TIME_ZONE);
+}
+
+/**
+ * Whether a scheduled digest run is the one meant for today.
+ *
+ * GitHub's cron is in UTC, and 7:30 AM in Ann Arbor is 11:30 UTC in summer and 12:30 UTC in
+ * winter, so the workflow is scheduled at both and each run asks here whether it is the right
+ * one.
+ *
+ * `cron` is the expression that triggered the run ("30 11 * * *"). With none (a manual run),
+ * the answer is yes.
+ */
+export function isDigestRunForToday(cron: string | undefined, now: Date): boolean {
+  if (cron === undefined || cron.trim() === '') return true;
+  const local = scheduledLocalTime(cron, now);
   return local.hour === DIGEST_LOCAL_TIME.hour && local.minute === DIGEST_LOCAL_TIME.minute;
 }
 

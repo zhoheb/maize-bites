@@ -22,7 +22,9 @@ import { createHostRateLimiter } from '../sources/http/rate-limit.js';
 import { createRobotsChecker } from '../sources/http/robots.js';
 import { createMaizepagesSource } from '../sources/maizepages/index.js';
 import type { Source } from '../sources/types.js';
+import type { HousekeepingStep } from './housekeeping.js';
 import { ingestIfDue, type IngestDeps } from './ingest.js';
+import { MORNING_INGEST_CRON, WINDOW_CRON, isHousekeepingHour } from './schedule.js';
 
 /** Null in rules mode (the Anthropic client is never built) and when there is no API key. */
 export function llmDepsFromEnv(env: WorkerEnv): LlmDeps | null {
@@ -114,14 +116,33 @@ export function ingestDeps(
   };
 }
 
-/** Hourly at :23 (off the top of the hour). ingestIfDue decides which sources are due. */
-export function ingestJob(deps: IngestDeps): Job {
+/**
+ * The window: ingest (which classifies and alerts), then, in the one window a day that carries
+ * it, housekeeping, back to back so the database wakes once. Housekeeping runs even if the
+ * ingest step fails. ingestIfDue decides which sources are due.
+ */
+export function windowJob(
+  deps: IngestDeps,
+  housekeeping: readonly HousekeepingStep[],
+  now = () => new Date(),
+): Job {
   return {
-    name: 'ingest',
-    schedule: '23 * * * *',
+    name: 'window',
+    schedule: WINDOW_CRON,
     runOnStart: true,
-    run: () => ingestIfDue(deps),
+    run: async () => {
+      try {
+        await ingestIfDue(deps);
+      } finally {
+        if (isHousekeepingHour(now())) for (const step of housekeeping) await step.run();
+      }
+    },
   };
+}
+
+/** 7:00 AM Ann Arbor time, so the 7:30 digest goes out on fresh data. */
+export function morningIngestJob(deps: IngestDeps): Job {
+  return { name: 'morning-ingest', schedule: MORNING_INGEST_CRON, run: () => ingestIfDue(deps) };
 }
 
 /** 7:30 AM Ann Arbor time. Not run on start: a restart must not send an extra digest. */

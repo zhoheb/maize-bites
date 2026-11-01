@@ -8,15 +8,21 @@ import {
   type Database,
 } from '@maize-bites/db';
 import { localDateOf } from '@maize-bites/shared';
-import { everyMinutesCron, type Job, type Logger } from '../scheduler.js';
+import type { Job, Logger } from '../scheduler.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Daily at 4:17 AM Ann Arbor time: drop expired sessions and used or expired sign-in links. */
-export function authCleanupJob(db: Database, logger: Logger, now = () => new Date()): Job {
+/** One daily step of housekeeping. They have no schedule of their own: see jobs/schedule.ts. */
+export type HousekeepingStep = Pick<Job, 'name' | 'run'>;
+
+/** Drop expired sessions and used or expired sign-in links. */
+export function authCleanupJob(
+  db: Database,
+  logger: Logger,
+  now = () => new Date(),
+): HousekeepingStep {
   return {
     name: 'auth-cleanup',
-    schedule: '17 4 * * *',
     run: async () => {
       const deleted = await deleteExpiredAuthRows(db, now());
       logger.info(`[auth-cleanup] deleted ${deleted} expired session(s) and sign-in link(s)`);
@@ -27,19 +33,17 @@ export function authCleanupJob(db: Database, logger: Logger, now = () => new Dat
 
 export interface PruneOptions {
   retentionDays: number;
-  intervalMinutes: number;
 }
 
-/** Every `intervalMinutes`: delete events that ended more than `retentionDays` ago. */
+/** Delete events that ended more than `retentionDays` ago. */
 export function pruneEventsJob(
   db: Database,
   logger: Logger,
-  { retentionDays, intervalMinutes }: PruneOptions,
+  { retentionDays }: PruneOptions,
   now = () => new Date(),
-): Job {
+): HousekeepingStep {
   return {
     name: 'prune-events',
-    schedule: everyMinutesCron(intervalMinutes),
     run: async () => {
       const cutoff = new Date(now().getTime() - retentionDays * DAY_MS);
       const deleted = await pruneEndedEvents(db, cutoff);
@@ -50,14 +54,17 @@ export function pruneEventsJob(
 }
 
 /**
- * Daily at 4:37 AM Ann Arbor time: roll finished days of page views into analytics_daily, then
- * delete raw page views past their retention and salts from before yesterday. Rolling up first
- * means no day is deleted before its totals are kept.
+ * Roll finished days of page views into analytics_daily, then delete raw page views past
+ * their retention and salts from before yesterday. Rolling up first means no day is deleted
+ * before its totals are kept.
  */
-export function analyticsRollupJob(db: Database, logger: Logger, now = () => new Date()): Job {
+export function analyticsRollupJob(
+  db: Database,
+  logger: Logger,
+  now = () => new Date(),
+): HousekeepingStep {
   return {
     name: 'analytics-rollup',
-    schedule: '37 4 * * *',
     run: async () => {
       const today = localDateOf(now());
       const rolled = await rollUpPageViews(db, today);
@@ -70,4 +77,18 @@ export function analyticsRollupJob(db: Database, logger: Logger, now = () => new
       return rolled.length;
     },
   };
+}
+
+/** All of housekeeping, in the order it runs. */
+export function housekeepingSteps(
+  db: Database,
+  logger: Logger,
+  options: PruneOptions,
+  now = () => new Date(),
+): HousekeepingStep[] {
+  return [
+    authCleanupJob(db, logger, now),
+    pruneEventsJob(db, logger, options, now),
+    analyticsRollupJob(db, logger, now),
+  ];
 }

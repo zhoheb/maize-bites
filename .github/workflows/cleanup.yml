@@ -4,11 +4,11 @@ name: Cleanup
 # than EVENT_RETENTION_DAYS ago; rolls page views into daily totals and deletes raw page views
 # past 90 days and analytics salts from before yesterday. `pnpm cleanup:once` is the same
 # thing locally.
+#
+# Run by hand only. The daily run is a step of ingest.yml, so it shares the database's 5:05 AM
+# wake-up instead of causing its own.
 
 on:
-  schedule:
-    # 08:47 UTC: 4:47 AM in Ann Arbor in summer, 3:47 AM in winter. The hour doesn't matter.
-    - cron: '47 8 * * *'
   workflow_dispatch:
 
 concurrency:

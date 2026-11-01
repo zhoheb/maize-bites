@@ -14,7 +14,6 @@ describe('parseEnv', () => {
       CLASSIFIER_MODE: 'llm',
       LLM_MAX_CALLS_PER_RUN: 100,
       EVENT_RETENTION_DAYS: 30,
-      PRUNE_INTERVAL_MINUTES: 60,
       WEB_ORIGIN: 'http://localhost:5173',
       EMAIL_FROM: 'Maize Bites <noreply@zachhoheb.dev>',
     });
@@ -52,15 +51,12 @@ describe('parseEnv', () => {
     expect(() => parseEnv({})).toThrow(/DATABASE_URL/);
   });
 
-  it('reads the retention window and prune interval', () => {
-    expect(
-      parseEnv({ DATABASE_URL, EVENT_RETENTION_DAYS: '14', PRUNE_INTERVAL_MINUTES: '30' }),
-    ).toMatchObject({ EVENT_RETENTION_DAYS: 14, PRUNE_INTERVAL_MINUTES: 30 });
+  it('reads the retention window', () => {
+    expect(parseEnv({ DATABASE_URL, EVENT_RETENTION_DAYS: '14' })).toMatchObject({
+      EVENT_RETENTION_DAYS: 14,
+    });
     expect(() => parseEnv({ DATABASE_URL, EVENT_RETENTION_DAYS: '0' })).toThrow(
       /EVENT_RETENTION_DAYS/,
-    );
-    expect(() => parseEnv({ DATABASE_URL, PRUNE_INTERVAL_MINUTES: '45' })).toThrow(
-      /PRUNE_INTERVAL_MINUTES/,
     );
   });
 

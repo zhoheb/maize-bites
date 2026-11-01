@@ -4,16 +4,27 @@
 // After editing the rules-mode vocabulary: `pnpm ingest:once --reclassify` (rules mode only)
 // drops the stored rules-mode verdicts first, so every live event is judged with the new lists.
 // Exits 1 when a source did not complete, 2 when it is not configured to fetch anything.
+//
+// From a scheduler set WINDOW_CRON to the UTC cron expression that fired. ingest.yml lists the
+// UTC times for both daylight and standard time, and this stands down, without touching the
+// database, on the ones that aren't a window today (see jobs/schedule.ts). Without WINDOW_CRON
+// it always runs.
 import { clearRulesModeVerdicts, createDb, loadRootEnvFile } from '@maize-bites/db';
 import { parseEnv } from '../env.js';
 import { ingestIfDue } from '../jobs/ingest.js';
 import { deliveryFromEnv, ingestDeps, llmDepsFromEnv, sourcesFromEnv } from '../jobs/index.js';
+import { isIngestRun } from '../jobs/schedule.js';
 
 loadRootEnvFile();
 const env = parseEnv(process.env);
 if (!env.INGEST_CONTACT_EMAIL) {
   console.error('INGEST_CONTACT_EMAIL must be set (it goes in the User-Agent). Add it to .env.');
   process.exit(2);
+}
+
+if (!isIngestRun(process.env['WINDOW_CRON'], new Date())) {
+  console.info(`Not an ingestion window: "${process.env['WINDOW_CRON'] ?? ''}". Nothing done.`);
+  process.exit(0);
 }
 
 const { db, close } = createDb(env.DATABASE_URL, { maxConnections: 2 });

@@ -1,14 +1,28 @@
 name: Ingest
 
-# Fetches the event feeds, classifies what changed, and sends instant alerts: one pass, then it
-# exits. This replaces the long-running worker's hourly job. `pnpm ingest:once` is the same thing
-# locally.
+# The window: fetches the event feeds, classifies what changed, sends instant alerts, and once a
+# day does the housekeeping, as steps of one job so the database wakes once for all of it. Then
+# it exits. This replaces the long-running worker's schedule. `pnpm ingest:once` and
+# `pnpm cleanup:once` are the same things locally.
 
 on:
   schedule:
-    # Every 3 hours at :17 UTC. Off the top of the hour, when GitHub's scheduler is busiest and
-    # most likely to start runs late or drop them.
-    - cron: '17 */3 * * *'
+    # On the Ann Arbor clock: hourly at :05 from 8 AM to 10 PM, 7:00 AM, then 11:05 PM, 2:05 AM
+    # and 5:05 AM overnight (apps/worker/src/jobs/schedule.ts). GitHub's cron is UTC and knows
+    # nothing of daylight time, so:
+    # These UTC hours are a window all year.
+    - cron: '5 0-3,13-23 * * *'
+    # These are a window in only one season. Each run works out which from the schedule that
+    # fired, and stands down before touching the database if it isn't today. schedule.test.ts
+    # checks this list against every day of a year.
+    - cron: '5 4 * * *' # 11:05 PM EST
+    - cron: '5 6 * * *' # 2:05 AM EDT
+    - cron: '5 7 * * *' # 2:05 AM EST
+    - cron: '5 9 * * *' # 5:05 AM EDT
+    - cron: '5 10 * * *' # 5:05 AM EST
+    - cron: '0 11 * * *' # 7:00 AM EDT
+    - cron: '0 12 * * *' # 7:00 AM EST
+    - cron: '5 12 * * *' # 8:05 AM EDT
   workflow_dispatch:
 
 # Never two at once. A run that is still going when the next is due makes the next one wait.
@@ -25,6 +39,8 @@ jobs:
     timeout-minutes: 20
     env:
       NODE_ENV: production
+      # Empty on a manual run, which always ingests.
+      WINDOW_CRON: ${{ github.event.schedule }}
       # Secrets (Settings → Secrets and variables → Actions → Secrets).
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       UMICH_INTEGRATION_TOKEN: ${{ secrets.UMICH_INTEGRATION_TOKEN }}
@@ -43,6 +59,7 @@ jobs:
       # "rules" costs nothing. "llm" needs ANTHROPIC_API_KEY and is billed per call.
       CLASSIFIER_MODE: ${{ vars.CLASSIFIER_MODE || 'rules' }}
       LLM_MAX_CALLS_PER_RUN: ${{ vars.LLM_MAX_CALLS_PER_RUN || '100' }}
+      EVENT_RETENTION_DAYS: ${{ vars.EVENT_RETENTION_DAYS || '30' }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -50,3 +67,7 @@ jobs:
           package: '@maize-bites/worker'
       # Exits 1 if a source did not complete, 2 if nothing is configured to be fetched.
       - run: pnpm ingest:once
+      # Stands down except in the daily housekeeping window. Runs even if a source failed above.
+      - name: Housekeeping
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        run: pnpm cleanup:once
